@@ -17,16 +17,164 @@ import { SECRETS } from '../data/seedSecrets';
 import { RUNES_CATALOG, RUNE_FORMULAS } from '../data/seedRunes';
 import { SEED_LESSONS, SEED_POINT_TRANSACTIONS } from '../data/seedLessons';
 import { SEED_TIMETABLE, DAYS_OF_WEEK, TIME_SLOTS } from '../data/seedTimetable';
+import { CATEGORY_BANNERS } from '../data/categoryBanners';
+import { DEFAULT_BLOCK_GRAPHICS, DURMSTRANG_PRESET_IMAGES, IMAGE_DIMENSIONS_GUIDE } from '../data/blockGraphics';
+import { INITIAL_DOCUMENTS } from '../data/seedDocuments';
+
+const ROUTE_ALIASES = {
+  '/': 'home',
+  '/glowna': 'home',
+  '/start': 'home',
+  '/home': 'home',
+  '/zasady': 'rules-guide',
+  '/regulamin': 'rules-guide',
+  '/kodeks': 'rules-guide',
+  '/przewodnik': 'rules-guide',
+  '/faq': 'rules-guide',
+  '/zasady-oceniania': 'rules-guide',
+  '/pakt': 'rules-guide',
+  '/rules': 'rules-guide',
+  '/dekrety': 'documents',
+  '/edykty': 'documents',
+  '/regulamin-dc': 'documents',
+  '/regulamin-discord': 'documents',
+  '/statut': 'documents',
+  '/zabawy': 'documents',
+  '/gry': 'documents',
+  '/dokumenty': 'documents',
+  '/dokument': 'documents',
+  '/podstrony': 'documents',
+  '/codex': 'documents',
+  '/plan': 'timetable',
+  '/plan-lekcji': 'timetable',
+  '/harmonogram': 'timetable',
+  '/timetable': 'timetable',
+  '/grafik': 'timetable',
+  '/dziennik': 'journals',
+  '/dzienniki': 'journals',
+  '/lekcje': 'journals',
+  '/journals': 'journals',
+  '/przedmioty': 'academic',
+  '/katedry': 'academic',
+  '/akademia': 'academic',
+  '/nauka': 'academic',
+  '/academic': 'academic',
+  '/domy': 'houses',
+  '/zakony': 'houses',
+  '/houses': 'houses',
+  '/reinhall': 'houses',
+  '/bjornhall': 'houses',
+  '/ravnheim': 'houses',
+  '/otergard': 'houses',
+  '/ceremonia': 'ceremony',
+  '/przydzial': 'ceremony',
+  '/kamien-przysiegi': 'ceremony',
+  '/ceremony': 'ceremony',
+  '/warsztat': 'rune-workshop',
+  '/galdrastofa': 'rune-workshop',
+  '/runy': 'rune-workshop',
+  '/alchemia': 'rune-workshop',
+  '/workshop': 'rune-workshop',
+  '/mapa': 'map',
+  '/cytadela': 'map',
+  '/teren': 'map',
+  '/map': 'map',
+  '/rynek': 'markethall',
+  '/sklep': 'markethall',
+  '/kaupangr': 'markethall',
+  '/targ': 'markethall',
+  '/market': 'markethall',
+  '/bank': 'bank',
+  '/skarbiec': 'bank',
+  '/skirnir': 'bank',
+  '/waluta': 'bank',
+  '/profil': 'profile',
+  '/karta-postaci': 'profile',
+  '/ekwipunek': 'profile',
+  '/paszport': 'profile',
+  '/profile': 'profile',
+  '/lore': 'lore',
+  '/kroniki': 'lore',
+  '/archiwum': 'lore',
+  '/historia': 'lore',
+  '/bestiariusz': 'lore',
+  '/poczta': 'raven-post',
+  '/kruki': 'raven-post',
+  '/wiadomosci': 'raven-post',
+  '/raven-post': 'raven-post',
+  '/admin': 'admin',
+  '/cms': 'admin',
+  '/dyrekcja': 'admin'
+};
+
+const parseHashRoute = () => {
+  if (typeof window === 'undefined') return { view: 'home' };
+  const rawHash = window.location.hash.replace(/^#/, '').trim();
+  if (!rawHash || rawHash === '/' || rawHash === '') return { view: 'home' };
+
+  const normalized = rawHash.startsWith('/') ? rawHash : `/${rawHash}`;
+  const parts = normalized.split('?')[0].split('/').filter(Boolean);
+  const root = `/${parts[0] || ''}`.toLowerCase();
+
+  if (root === '/dokument' || root === '/strona' || root === '/podstrona') {
+    if (parts[1]) return { view: 'documents', docSlug: parts[1] };
+    return { view: 'documents' };
+  }
+  if (['/dekrety', '/wizytacje', '/hospitacje', '/regulamin-dc', '/regulamin-discord', '/statut', '/zabawy', '/dokumenty'].includes(root)) {
+    return { view: 'documents', docCategory: root.replace('/', '') };
+  }
+
+  if (root === '/lekcja' || root === '/dziennik') {
+    if (parts[1]) return { view: 'lesson-detail', lessonId: parts[1] };
+    return { view: 'journals' };
+  }
+  if (root === '/przedmiot' || root === '/katedra') {
+    if (parts[1]) return { view: 'subject-detail', subjectId: parts[1] };
+    return { view: 'academic' };
+  }
+  if (root === '/domy' || root === '/zakony') {
+    if (parts[1]) return { view: 'houses', houseId: parts[1] };
+    return { view: 'houses' };
+  }
+  if (['/reinhall', '/bjornhall', '/ravnheim', '/otergard'].includes(root)) {
+    return { view: 'houses', houseId: parts[0] };
+  }
+  if (root === '/zasady' || root === '/regulamin' || root === '/kodeks' || root === '/przewodnik' || root === '/faq') {
+    return { view: 'rules-guide', tab: parts[1] || null };
+  }
+
+  if (ROUTE_ALIASES[root]) {
+    return { view: ROUTE_ALIASES[root] };
+  }
+
+  return { view: 'home' };
+};
 
 const SchoolContext = createContext();
 
 export const SchoolProvider = ({ children }) => {
-  // Navigation
-  const [activeView, setActiveView] = useState('home');
-  const [activeHouseTab, setActiveHouseTab] = useState(null);
-  const [activeSubjectId, setActiveSubjectId] = useState(null);
-  const [activeLessonId, setActiveLessonId] = useState(null);
+  // Navigation with Initial URL Route Sync
+  const initialRoute = parseHashRoute();
+  const [activeView, setActiveView] = useState(initialRoute.view || 'home');
+  const [activeHouseTab, setActiveHouseTab] = useState(initialRoute.houseId || null);
+  const [activeSubjectId, setActiveSubjectId] = useState(initialRoute.subjectId || null);
+  const [activeLessonId, setActiveLessonId] = useState(initialRoute.lessonId || null);
   const [activeLessonTab, setActiveLessonTab] = useState('journal'); // 'journal' | 'log'
+  const [activeDocumentSlug, setActiveDocumentSlug] = useState(initialRoute.docSlug || null);
+  const [activeDocumentCategory, setActiveDocumentCategory] = useState(initialRoute.docCategory || 'all');
+
+  const navigateToDocumentModule = (category, slug = null) => {
+    setActiveDocumentCategory(category || 'all');
+    setActiveDocumentSlug(slug);
+    setActiveView('documents');
+    if (slug) {
+      window.location.hash = `#/dokument/${slug}`;
+    } else if (category && category !== 'all') {
+      window.location.hash = `#/${category}`;
+    } else {
+      window.location.hash = '#/dokumenty';
+    }
+  };
 
   // Users Database & Active Account
   const [users, setUsers] = useState(() => {
@@ -109,6 +257,274 @@ Dyrektor Cytadeli Durmstrang`
     const saved = localStorage.getItem('durmstrang_admin');
     return saved ? JSON.parse(saved) : DEMO_ACCOUNTS.admin;
   });
+
+  // Category Banners & Block Graphics CMS
+  const [categoryBanners, setCategoryBanners] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_category_banners');
+    if (!saved) return CATEGORY_BANNERS;
+    try {
+      const parsed = JSON.parse(saved);
+      const updated = CATEGORY_BANNERS.map(def => {
+        const custom = parsed.find(p => p.id === def.id);
+        if (!custom) return def;
+        return {
+          ...def,
+          ...custom,
+          bgImage: custom.bgImage || def.bgImage
+        };
+      });
+      return updated;
+    } catch {
+      return CATEGORY_BANNERS;
+    }
+  });
+
+  const [blockGraphics, setBlockGraphics] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_block_graphics');
+    if (!saved) return DEFAULT_BLOCK_GRAPHICS;
+    try {
+      const parsed = JSON.parse(saved);
+      const updated = DEFAULT_BLOCK_GRAPHICS.map(def => {
+        const custom = parsed.find(p => p.id === def.id);
+        if (!custom) return def;
+        return {
+          ...def,
+          ...custom,
+          bgImage: custom.bgImage || def.bgImage
+        };
+      });
+      return updated;
+    } catch {
+      return DEFAULT_BLOCK_GRAPHICS;
+    }
+  });
+
+  // Official Documents & Custom Subpages State
+  const [documents, setDocuments] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_documents_db');
+    if (!saved) return INITIAL_DOCUMENTS;
+    try {
+      const parsed = JSON.parse(saved);
+      const missing = INITIAL_DOCUMENTS.filter(d => !parsed.some(p => p.id === d.id));
+      if (missing.length > 0) {
+        const merged = [...parsed, ...missing];
+        localStorage.setItem('durmstrang_documents_db', JSON.stringify(merged));
+        return merged;
+      }
+      return parsed;
+    } catch {
+      return INITIAL_DOCUMENTS;
+    }
+  });
+
+  const saveDocument = (doc) => {
+    setDocuments(prev => {
+      const exists = prev.some(d => d.id === doc.id || d.slug === doc.slug);
+      let updated;
+      if (exists) {
+        updated = prev.map(d => (d.id === doc.id || d.slug === doc.slug) ? { ...d, ...doc } : d);
+      } else {
+        updated = [doc, ...prev];
+      }
+      localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      return updated;
+    });
+    setActiveDocumentSlug(doc.slug);
+  };
+
+  const deleteDocument = (idOrSlug) => {
+    setDocuments(prev => {
+      const updated = prev.filter(d => d.id !== idOrSlug && d.slug !== idOrSlug);
+      localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const createCategoryBanner = (newCat) => {
+    const slug = newCat.id || newCat.categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const catObject = {
+      id: slug,
+      categoryName: newCat.categoryName.trim(),
+      defaultScript: newCat.defaultScript?.trim() || newCat.categoryName.toLowerCase().trim(),
+      themeColor: newCat.themeColor || 'var(--gold-ancient)',
+      description: newCat.description?.trim() || `Kategoria: ${newCat.categoryName}`,
+      bgGradient: newCat.bgGradient || 'radial-gradient(circle at 50% 60%, rgba(38, 28, 12, 0.95) 0%, rgba(6, 6, 8, 0.98) 100%)',
+      bgType: newCat.bgType || 'citadel',
+      bgImage: newCat.bgImage?.trim() || ''
+    };
+
+    setCategoryBanners(prev => {
+      const exists = prev.some(b => b.id === slug);
+      const updated = exists ? prev.map(b => b.id === slug ? { ...b, ...catObject } : b) : [...prev, catObject];
+      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      return updated;
+    });
+
+    showNotification('Nowa Kategoria Utworzona', `Dodano nową kategorię edyktów: ${catObject.categoryName}`, 'success');
+    return catObject;
+  };
+
+  const deleteCategoryBanner = (id) => {
+    setCategoryBanners(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      return updated;
+    });
+    showNotification('Kategoria Usunięta', 'Pomyślnie usunięto kategorię z rejestru.', 'info');
+  };
+
+  const updateCategoryBanner = (id, patch) => {
+    setCategoryBanners(prev => {
+      const updated = prev.map(b => b.id === id ? { ...b, ...patch } : b);
+      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      return updated;
+    });
+    showNotification('Baner Zaktualizowany', 'Zaktualizowano konfigurację grafiki dla wybranej kategorii.', 'success');
+  };
+
+  const createBlockGraphic = (newBlock) => {
+    const slug = newBlock.id || newBlock.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const blockObject = {
+      id: slug,
+      title: newBlock.title.trim(),
+      location: newBlock.location?.trim() || 'Panel Boczny',
+      rune: newBlock.rune?.trim() || 'ᛟ',
+      defaultIcon: newBlock.defaultIcon || 'Shield',
+      color: newBlock.color || 'var(--gold-ancient)',
+      bgImage: newBlock.bgImage?.trim() || '',
+      description: newBlock.description?.trim() || `Nagłówek sekcji ${newBlock.title}`
+    };
+
+    setBlockGraphics(prev => {
+      const exists = prev.some(b => b.id === slug);
+      const updated = exists ? prev.map(b => b.id === slug ? { ...b, ...blockObject } : b) : [...prev, blockObject];
+      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      return updated;
+    });
+
+    showNotification('Blok Dodany', `Dodano konfigurację dla bloku: ${blockObject.title}`, 'success');
+    return blockObject;
+  };
+
+  const deleteBlockGraphic = (id) => {
+    setBlockGraphics(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      return updated;
+    });
+    showNotification('Blok Usunięty', 'Usunięto konfigurację bloku.', 'info');
+  };
+
+  const updateBlockGraphic = (id, patch) => {
+    setBlockGraphics(prev => {
+      const updated = prev.map(b => b.id === id ? { ...b, ...patch } : b);
+      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      return updated;
+    });
+    showNotification('Grafika Bloku Zapisana', 'Zaktualizowano grafikę nagłówka wybranego bloku bocznego.', 'success');
+  };
+
+  const resetCategoryBanners = () => {
+    localStorage.removeItem('durmstrang_category_banners');
+    setCategoryBanners(CATEGORY_BANNERS);
+    showNotification('Przywrócono Domyślne', 'Przywrócono oryginalne banery runiczne kategorii.', 'info');
+  };
+
+  const resetBlockGraphics = () => {
+    localStorage.removeItem('durmstrang_block_graphics');
+    setBlockGraphics(DEFAULT_BLOCK_GRAPHICS);
+    showNotification('Przywrócono Domyślne', 'Przywrócono domyślne grafiki bloków bocznych.', 'info');
+  };
+
+  // Handle Browser Back/Forward and Hash Changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const parsed = parseHashRoute();
+      if (parsed.view) {
+        setActiveView(parsed.view);
+        if (parsed.houseId) setActiveHouseTab(parsed.houseId);
+        if (parsed.subjectId) setActiveSubjectId(parsed.subjectId);
+        if (parsed.lessonId) setActiveLessonId(parsed.lessonId);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Sync state changes to browser URL hash
+  useEffect(() => {
+    let targetHash = '#/';
+    switch (activeView) {
+      case 'home':
+        targetHash = '#/';
+        break;
+      case 'rules-guide':
+        targetHash = '#/zasady';
+        break;
+      case 'timetable':
+        targetHash = '#/plan';
+        break;
+      case 'journals':
+        targetHash = '#/dzienniki';
+        break;
+      case 'lesson-detail':
+        targetHash = activeLessonId ? `#/lekcja/${activeLessonId}` : '#/dzienniki';
+        break;
+      case 'academic':
+        targetHash = '#/przedmioty';
+        break;
+      case 'subject-detail':
+        targetHash = activeSubjectId ? `#/przedmiot/${activeSubjectId}` : '#/przedmioty';
+        break;
+      case 'houses':
+        targetHash = activeHouseTab ? `#/domy/${activeHouseTab}` : '#/domy';
+        break;
+      case 'ceremony':
+        targetHash = '#/ceremonia';
+        break;
+      case 'rune-workshop':
+        targetHash = '#/warsztat';
+        break;
+      case 'map':
+        targetHash = '#/mapa';
+        break;
+      case 'markethall':
+        targetHash = '#/rynek';
+        break;
+      case 'bank':
+        targetHash = '#/bank';
+        break;
+      case 'profile':
+        targetHash = '#/profil';
+        break;
+      case 'lore':
+        targetHash = '#/lore';
+        break;
+      case 'raven-post':
+        targetHash = '#/poczta';
+        break;
+      case 'admin':
+        targetHash = '#/admin';
+        break;
+      case 'professor-journal-editor':
+        targetHash = '#/redaguj-dziennik';
+        break;
+      default:
+        targetHash = `#/${activeView}`;
+    }
+
+    if (window.location.hash !== targetHash && !(activeView === 'home' && (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#'))) {
+      window.history.replaceState(null, '', targetHash);
+    }
+  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId]);
+
+  const navigateTo = useCallback((view, options = {}) => {
+    if (options.houseId) setActiveHouseTab(options.houseId);
+    if (options.subjectId) setActiveSubjectId(options.subjectId);
+    if (options.lessonId) setActiveLessonId(options.lessonId);
+    setActiveView(view);
+  }, []);
 
   // ==================== DZIENNIKI LEKCYJNE, KSIĘGA PUNKTÓW & RANKING ====================
 
@@ -546,7 +962,7 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const addNotification = (message, type = 'info') => {
-    showNotification('Cytadela Durmstrang', message, type);
+    showNotification('Twierdza Magii Durmstrang (TMD)', message, type);
   };
 
   // Update current user fields (avatar, gender, name, surname, points, xp, currency, inventory, etc.)
@@ -773,6 +1189,199 @@ Dyrektor Cytadeli Durmstrang`
   const setActiveBuff = (buff) => {
     if (!currentUser) return;
     updateCurrentUser({ activeBuff: buff });
+  };
+
+  // Submit Application from Character Creation Modal
+  const submitApplication = (appData) => {
+    const newApp = {
+      id: `app-${Date.now()}`,
+      studentId: `stud-${Date.now().toString().slice(-4)}`,
+      name: `${appData.name} ${appData.surname}`,
+      house: appData.preferredHouse || 'reinhall',
+      date: new Date().toISOString().split('T')[0],
+      avatar: appData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+      origin: appData.origin,
+      wand: appData.wand,
+      patronus: appData.patronus,
+      companion: appData.companion,
+      appearance: appData.appearance,
+      backstory: appData.backstory,
+      status: 'pending'
+    };
+
+    const nextApps = [newApp, ...pendingApplications];
+    setPendingApplications(nextApps);
+    try {
+      localStorage.setItem('durmstrang_apps', JSON.stringify(nextApps));
+    } catch (_) {}
+
+    // Send confirmation raven email
+    const confirmationEmail = {
+      id: `mail-app-${Date.now()}`,
+      toEmail: `${appData.name.toLowerCase()}@durmstrang.edu`,
+      toName: `${appData.name} ${appData.surname}`,
+      from: 'rekrutacja@durmstrang.edu',
+      fromName: 'Wrota Rekrutacji Cytadeli',
+      subject: '[POTWIERDZENIE] Twoje podanie do Cytadeli Durmstrang zostało przyjęte',
+      date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      read: false,
+      type: 'system',
+      body: `Witaj, ${appData.name} ${appData.surname}!\n\nTwoje podanie rekrutacyjne zostało pomyślnie złożone do Rady Mistrzów Cytadeli Durmstrang.\n\nWyposażenie: ${appData.wand}\nPatronus / Duch zwierzęcy: ${appData.patronus}\n\nOczekuj na oficjalny dekret Arcymistrzyni i wezwanie przed Kamień Przysięgi na Ceremonię Przydziału!`
+    };
+
+    const nextEmails = [confirmationEmail, ...emails];
+    setEmails(nextEmails);
+    try {
+      localStorage.setItem('durmstrang_emails_db', JSON.stringify(nextEmails));
+    } catch (_) {}
+
+    showNotification('Podanie Złożone!', 'Twoja karta tożsamości została przekazana Radzie Mistrzów. Sprawdź Kruczą Pocztę!', 'success');
+  };
+
+  // Sort into House after Sorting Ceremony
+  const sortIntoHouse = async (houseId) => {
+    const targetHouse = houseId?.toLowerCase() || 'reinhall';
+    const houseObj = houses[targetHouse] || Object.values(houses).find(h => h.id === targetHouse);
+    const houseName = houseObj?.name || targetHouse;
+
+    if (currentUser) {
+      const currentPoints = currentUser.points || 0;
+      const currentXp = currentUser.xp || 0;
+      const starterInventory = currentUser.inventory || [];
+      const houseRelic = {
+        id: `relic-${targetHouse}`,
+        name: `Pieczęć Zakonu ${houseName}`,
+        icon: houseObj?.crestIcon || '🛡️',
+        rarity: 'Pradawny Relikt',
+        price: 150,
+        description: `Święty emblemat przynależności do Zakonu ${houseName}. Emanuje aurą ${houseObj?.element || 'Północy'}.`
+      };
+
+      const updated = {
+        house: targetHouse,
+        points: currentPoints + 25,
+        xp: currentXp + 150,
+        inventory: starterInventory.some(i => i.id === houseRelic.id) ? starterInventory : [houseRelic, ...starterInventory]
+      };
+
+      await updateCurrentUser(updated);
+      awardHousePoints(25, `Przysięga wierności Zakonowi ${houseName} (Ceremonia)`);
+    } else {
+      setStudentProfile(prev => ({
+        ...prev,
+        house: targetHouse
+      }));
+    }
+
+    showNotification('Przydział Dokonany!', `Kamień Przysięgi ogłosił Twoją przynależność do Zakonu: ${houseName}! (+25 HP, +150 XP)`, 'success');
+  };
+
+  // Craft Rune Formula on Galdrastofa Altar
+  const craftRuneFormula = (runeIds, catalyst = 'Krew Renifera') => {
+    if (!runeIds || runeIds.length < 2) return null;
+    const sortedRunes = [...runeIds].sort();
+
+    const foundFormula = RUNE_FORMULAS.find(f => {
+      const fRunes = [...f.runes].sort();
+      return fRunes.length === sortedRunes.length && fRunes.every((val, idx) => val.toLowerCase() === sortedRunes[idx].toLowerCase());
+    });
+
+    const formulaId = foundFormula?.id || `formula-custom-${Date.now()}`;
+    const formulaName = foundFormula?.name || `Formuła Runiczna ${sortedRunes.map(r => r.toUpperCase()).join('-')}`;
+    const formulaType = foundFormula?.type || 'Bojowa / Ochronna';
+    const formulaEffect = foundFormula?.effect || `Wzmocnienie aury adeptem przy użyciu katalizatora: ${catalyst}.`;
+
+    if (!craftedFormulas.includes(formulaId)) {
+      const nextCrafted = [formulaId, ...craftedFormulas];
+      setCraftedFormulas(nextCrafted);
+      try {
+        localStorage.setItem('durmstrang_crafted_formulas', JSON.stringify(nextCrafted));
+      } catch (_) {}
+    }
+
+    awardHousePoints(15, `Ukucie Formuły: ${formulaName}`);
+    addCurrency(20, 'Nagroda za pracę rzemieślniczą (Galdrastofa)');
+
+    const result = {
+      id: formulaId,
+      name: formulaName,
+      type: formulaType,
+      effect: formulaEffect,
+      catalyst: catalyst,
+      runes: sortedRunes,
+      rewardPoints: 15,
+      rewardCurrency: 20
+    };
+
+    showNotification('Ukuto Formułę Runiczną!', `Stworzono: ${formulaName} (+15 HP, +20 Skirnirów)!`, 'success');
+    return result;
+  };
+
+  // Discover Hidden Secret Rune
+  const discoverSecret = (secretId) => {
+    if (discoveredSecrets.includes(secretId)) {
+      showNotification('Znana Tajemnica', 'Ta pradawna runa została już przez Ciebie odczytana.', 'info');
+      return;
+    }
+
+    const nextSecrets = [...discoveredSecrets, secretId];
+    setDiscoveredSecrets(nextSecrets);
+    try {
+      localStorage.setItem('durmstrang_secrets', JSON.stringify(nextSecrets));
+    } catch (_) {}
+
+    awardHousePoints(10, `Odkrycie Prastarej Runy Cytadeli (${secretId})`);
+    addCurrency(15, 'Skarb ukryty w runicznej szczelinie');
+    showNotification('Tajemnica Odkryta! ᚱ', 'Odczytałeś ukrytą runę Cytadeli! Zdobywasz +10 Punktów Domu i +15 Skirnirów!', 'success');
+  };
+
+  // Send Raven Post Message
+  const sendRavenMessage = (toRecipient, subject, body) => {
+    const newMsg = {
+      id: `msg-${Date.now()}`,
+      sender: currentUser?.fullName || 'Adept Durmstrangu',
+      senderRole: currentUser?.role === 'admin' ? 'Dyrekcja' : currentUser?.role === 'professor' ? 'Profesor' : 'Adept',
+      senderAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+      recipient: toRecipient,
+      subject: subject,
+      body: body,
+      date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      read: true,
+      starred: false,
+      tag: 'posłaniec'
+    };
+
+    const nextMessages = [newMsg, ...ravenMessages];
+    setRavenMessages(nextMessages);
+    try {
+      localStorage.setItem('durmstrang_messages', JSON.stringify(nextMessages));
+    } catch (_) {}
+
+    showNotification('Kruk Posłany!', `Twój pergamin z pieczęcią poleciał do: ${toRecipient}!`, 'success');
+    return newMsg;
+  };
+
+  // React to News
+  const reactToNews = (newsId, reactionType = 'admiration') => {
+    setNews(prev => {
+      const updated = prev.map(item => {
+        if (item.id === newsId) {
+          const currentReactions = item.reactions || { admiration: 0, awe: 0, fire: 0, skull: 0 };
+          return {
+            ...item,
+            reactions: {
+              ...currentReactions,
+              [reactionType]: (currentReactions[reactionType] || 0) + 1
+            }
+          };
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem('durmstrang_news', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
   };
 
   const [passwordRecoveryModalOpen, setPasswordRecoveryModalOpen] = useState(false);
@@ -1814,6 +2423,7 @@ Dyrektor Cytadeli Durmstrang`
       value={{
         activeView,
         setActiveView,
+        navigateTo,
         activeHouseTab,
         setActiveHouseTab,
         activeSubjectId,
@@ -1940,6 +2550,12 @@ Dyrektor Cytadeli Durmstrang`
         addInventoryItem,
         removeInventoryItem,
         setActiveBuff,
+        submitApplication,
+        sortIntoHouse,
+        craftRuneFormula,
+        discoverSecret,
+        sendRavenMessage,
+        reactToNews,
         // Dzienniki Lekcyjne & Ranking API
         lessons,
         setLessons,
@@ -1955,7 +2571,29 @@ Dyrektor Cytadeli Durmstrang`
         saveLessonDraft,
         deleteLesson,
         correctPointTransaction,
-        recalculateRankings
+        recalculateRankings,
+        // CMS Mediów, Banery & Grafiki Bloków
+        categoryBanners,
+        blockGraphics,
+        createCategoryBanner,
+        deleteCategoryBanner,
+        updateCategoryBanner,
+        createBlockGraphic,
+        deleteBlockGraphic,
+        updateBlockGraphic,
+        resetCategoryBanners,
+        resetBlockGraphics,
+        durmstrangPresets: DURMSTRANG_PRESET_IMAGES,
+        imageDimensionsGuide: IMAGE_DIMENSIONS_GUIDE,
+        // Dekrety, Regulamin DC, Statut, Opis Zabaw & Własne Podstrony
+        documents,
+        saveDocument,
+        deleteDocument,
+        activeDocumentSlug,
+        setActiveDocumentSlug,
+        activeDocumentCategory,
+        setActiveDocumentCategory,
+        navigateToDocumentModule
       }}
     >
       {children}

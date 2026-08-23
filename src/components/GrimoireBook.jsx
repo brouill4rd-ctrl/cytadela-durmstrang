@@ -211,7 +211,7 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
                 Grimoire Czarodzieja • Księga Zaklęć i Gestów
               </h3>
               <span style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', letterSpacing: '0.05em' }}>
-                ARKANA MAGII CYTADELI DURMSTRANG
+                ARKANA TWIERDZY MAGII DURMSTRANG (TMD)
               </span>
             </div>
           </div>

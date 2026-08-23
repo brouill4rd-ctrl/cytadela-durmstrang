@@ -37,11 +37,11 @@ export const RuneWorkshopView = () => {
   const [lastForgedResult, setLastForgedResult] = useState(null);
 
   const catalysts = [
-    { name: 'Krew Renifera', house: 'renifer', icon: '🦌', desc: 'Wzmacnia więzi rodowe i pieczęcie krwi' },
-    { name: 'Pył Meteorytowy', house: 'niedzwiedz', icon: '⚔️', desc: 'Zwiększa siłę uderzenia i penetrację tarcz' },
-    { name: 'Cień Kruka', house: 'kruk', icon: '🦅', desc: 'Przenika zasłonę zaświatów i odkrywa sekrety' },
-    { name: 'Woda Lodowcowa', house: 'wydra', icon: '🧪', desc: 'Stabilizuje transmutację i reakcje alchemiczne' },
-    { name: 'Pył Zorzy Polarnej', house: null, icon: '🌌', desc: 'Najrzadszy katalizator zdejmujący pradawne klątwy' }
+    { name: 'Krew Renifera', house: 'renifer', icon: 'ᚦ', desc: 'Wzmacnia więzi rodowe i pieczęcie krwi' },
+    { name: 'Pył Meteorytowy', house: 'niedzwiedz', icon: 'ᛉ', desc: 'Zwiększa siłę uderzenia i penetrację tarcz' },
+    { name: 'Cień Kruka', house: 'kruk', icon: 'ᚱ', desc: 'Przenika zasłonę zaświatów i odkrywa sekrety' },
+    { name: 'Woda Lodowcowa', house: 'wydra', icon: 'ᛞ', desc: 'Stabilizuje transmutację i reakcje alchemiczne' },
+    { name: 'Pył Zorzy Polarnej', house: null, icon: 'ᛋ', desc: 'Najrzadszy katalizator zdejmujący pradawne klątwy' }
   ];
 
   const handleAddRuneToAltar = (rune) => {

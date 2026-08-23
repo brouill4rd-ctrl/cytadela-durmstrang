@@ -112,7 +112,7 @@ export const CharacterCreationModal = ({ isOpen, onClose }) => {
         >
           <div>
             <span style={{ color: 'var(--gold-ancient)', fontSize: '0.78rem', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-              ᛞ Kancelaria Rekrutacji Cytadeli ᛞ
+              ᛞ Kancelaria Rekrutacji Twierdzy Magii (TMD) ᛞ
             </span>
             <h2 style={{ fontSize: '1.5rem', color: '#ffffff', marginTop: '0.15rem' }}>
               Stwórz Własną Postać Adepta
@@ -348,12 +348,12 @@ export const CharacterCreationModal = ({ isOpen, onClose }) => {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Historia Postaci (Lore & Motywacja Przybycia do Cytadeli)
+                Historia Postaci (Lore & Motywacja Przybycia do Twierdzy Magii)
               </label>
               <textarea
                 name="backstory"
                 rows={3}
-                placeholder="Jak odkryłeś swoje magiczne dziedzictwo? Dlaczego przybywasz do Cytadeli Durmstrang?"
+                placeholder="Jak odkryłeś swoje magiczne dziedzictwo? Dlaczego przybywasz do Twierdzy Magii Durmstrang (TMD)?"
                 value={formData.backstory}
                 onChange={handleChange}
                 className="gothic-textarea"
@@ -375,7 +375,7 @@ export const CharacterCreationModal = ({ isOpen, onClose }) => {
           }}
         >
           <div style={{ fontSize: '0.75rem', color: '#8c95a6' }}>
-            * Podanie trafi do weryfikacji przez Radę Mistrzów Cytadeli
+            * Podanie trafi do weryfikacji przez Radę Mistrzów Twierdzy Magii (TMD)
           </div>
 
           <div style={{ display: 'flex', gap: '0.8rem' }}>

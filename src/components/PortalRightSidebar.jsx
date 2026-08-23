@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
+import { RunicDuelModal } from './RunicDuelModal';
 import {
   Calendar,
   Compass,
@@ -19,7 +20,15 @@ import {
   Sun,
   Moon,
   Zap,
-  Wind
+  Wind,
+  ShoppingBag,
+  Coins,
+  Building,
+  Scroll,
+  Swords,
+  BookOpen,
+  Send,
+  Shield
 } from 'lucide-react';
 
 export const PortalRightSidebar = ({
@@ -33,8 +42,18 @@ export const PortalRightSidebar = ({
     houses,
     students,
     events,
-    setActiveHouseTab
+    blockGraphics,
+    setActiveHouseTab,
+    currentUser,
+    studentProfile,
+    emails,
+    setEmailInboxOpen,
+    showNotification
   } = useSchool();
+
+  const [duelModalOpen, setDuelModalOpen] = useState(false);
+
+  const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
   const {
     soundEnabled,
@@ -59,10 +78,17 @@ export const PortalRightSidebar = ({
           0. BLOK: AURA & PEJZAŻ DŹWIĘKOWY CYTADELI (ATMOSPHERE & AUDIO CONTROL)
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('atmosphere')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('atmosphere').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛉ</div>
-          <Sparkles size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.8 }} />
+          <div className="runic-watermark">{getBlockGraphic('atmosphere')?.rune || 'ᛋ'}</div>
+          <Sparkles size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
         </div>
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
@@ -177,10 +203,17 @@ export const PortalRightSidebar = ({
           1. BLOK: WYDARZENIA
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('events')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('events').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛃ</div>
-          <Calendar size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('events')?.rune || 'ᛃ'}</div>
+          <Calendar size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
@@ -224,10 +257,17 @@ export const PortalRightSidebar = ({
           2. BLOK: SALE & KOMNATY
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('locations')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('locations').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛏ</div>
-          <Compass size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('locations')?.rune || 'ᛏ'}</div>
+          <Compass size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
@@ -262,7 +302,9 @@ export const PortalRightSidebar = ({
             </li>
             <li>
               <button onClick={() => handleNav('map')}>
-                <span>🕯️ Krypta Siedmiu Kręgów</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Flame size={13} color="#a77de0" /> Krypta Siedmiu Kręgów
+                </span>
                 <span style={{ fontSize: '0.7rem', color: '#a77de0' }}>Rytuał</span>
               </button>
             </li>
@@ -274,26 +316,34 @@ export const PortalRightSidebar = ({
           </div>
           <ul>
             <li>
-              <button onClick={() => handleNav('houses', 'renifer')} style={{ color: '#c59f4e' }}>
-                <span>🦌 Sala Skandzy (Renifer)</span>
+              <button onClick={() => handleNav('houses', 'reinhall')} style={{ color: '#c59f4e' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Crown size={13} color="#c59f4e" /> Sala Skandzy (Renifer)
+                </span>
                 <ChevronRight size={13} />
               </button>
             </li>
             <li>
-              <button onClick={() => handleNav('houses', 'niedzwiedz')} style={{ color: '#ff9e9e' }}>
-                <span>🐻 Bastion Żelaza (Niedźwiedź)</span>
+              <button onClick={() => handleNav('houses', 'bjornhall')} style={{ color: '#ff9e9e' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Shield size={13} color="#c02b2b" /> Bastion Żelaza (Niedźwiedź)
+                </span>
                 <ChevronRight size={13} />
               </button>
             </li>
             <li>
-              <button onClick={() => handleNav('houses', 'kruk')} style={{ color: '#d8c2ff' }}>
-                <span>🦅 Wieża Szeptów (Kruk)</span>
+              <button onClick={() => handleNav('houses', 'ravnheim')} style={{ color: '#d8c2ff' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Eye size={13} color="#a77de0" /> Wieża Szeptów (Kruk)
+                </span>
                 <ChevronRight size={13} />
               </button>
             </li>
             <li>
-              <button onClick={() => handleNav('houses', 'wydra')} style={{ color: '#8cefe6' }}>
-                <span>🦦 Ogrody Cieplic (Wydra)</span>
+              <button onClick={() => handleNav('houses', 'otergard')} style={{ color: '#8cefe6' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Sparkles size={13} color="#2ec4b6" /> Ogrody Cieplic (Wydra)
+                </span>
                 <ChevronRight size={13} />
               </button>
             </li>
@@ -305,15 +355,22 @@ export const PortalRightSidebar = ({
           3. BLOK: WŁADZE CYTADELI
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('authorities')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('authorities').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛖ</div>
-          <Crown size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('authorities')?.rune || 'ᛖ'}</div>
+          <Crown size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᛉ</span>
-          <span>Władze Cytadeli</span>
+          <span>Władze Twierdzy (TMD)</span>
           <span className="rune-bracket">ᛉ</span>
         </div>
 
@@ -324,7 +381,7 @@ export const PortalRightSidebar = ({
                 <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Arcymistrzyni & Dyrektorka</div>
                 <strong style={{ color: 'var(--gold-glow)' }}>Valgerda Storm</strong>
               </div>
-              <span style={{ fontSize: '1.2rem' }}>👑</span>
+              <Crown size={15} color="var(--gold-ancient)" />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -332,7 +389,7 @@ export const PortalRightSidebar = ({
                 <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Opiekunka Zakonu Kruka</div>
                 <strong style={{ color: '#ffffff' }}>Prof. Morana Vane</strong>
               </div>
-              <span style={{ fontSize: '1.2rem' }}>👁️</span>
+              <Eye size={15} color="#a77de0" />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0' }}>
@@ -340,7 +397,7 @@ export const PortalRightSidebar = ({
                 <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Opiekun Zakonu Niedźwiedzia</div>
                 <strong style={{ color: '#ffffff' }}>Prof. Gunnar Vargson</strong>
               </div>
-              <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+              <Shield size={15} color="#c02b2b" />
             </div>
           </div>
           <hr />
@@ -354,10 +411,17 @@ export const PortalRightSidebar = ({
           4. BLOK: RANKING ADEPTÓW
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('ranking')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('ranking').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛞ</div>
-          <Trophy size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('ranking')?.rune || 'ᚠ'}</div>
+          <Trophy size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
@@ -370,7 +434,7 @@ export const PortalRightSidebar = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
             {(students || []).slice(0, 5).map((stud, idx) => {
               const h = houses[stud.house];
-              const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+              const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
 
               return (
                 <div
@@ -387,7 +451,9 @@ export const PortalRightSidebar = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.9rem', width: '20px' }}>{medal}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, width: '20px', color: idx === 0 ? 'var(--gold-ancient)' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#d97706' : '#6b7280', fontFamily: 'var(--font-heading)' }}>
+                      {rankLabels[idx] || `${idx + 1}.`}
+                    </span>
                     <strong style={{ color: h ? h.colors?.secondary : '#ffffff' }}>
                       {stud.name.split(' ')[0]} {stud.name.split(' ')[1]?.[0]}.
                     </strong>
@@ -409,6 +475,162 @@ export const PortalRightSidebar = ({
           </button>
         </div>
       </div>
+
+      {/* =========================================================================
+          5. BLOK: LIGA BOJOWA & HÓLMGANGA (DUELS)
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('duels')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('duels').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('duels')?.rune || 'ᛏ'}</div>
+          <Swords size={36} color="#ff5c5c" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: '#ff7b72' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Liga Bojowa Hólmganga</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
+            Pojedynki czarodziejów na skutych lodem pylonach. Zdobywaj sławę, chwałę i punkty dla swojego Zakonu!
+          </p>
+
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              if (!currentUser) {
+                showNotification('Wymagane Logowanie', 'Zaloguj się, aby stanąć do pojedynku.', 'warning');
+                return;
+              }
+              setDuelModalOpen(true);
+            }}
+            className="btn-durmstrang"
+            style={{
+              width: '100%',
+              padding: '0.45rem',
+              fontSize: '0.8rem',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.3) 0%, rgba(153, 27, 27, 0.5) 100%)',
+              border: '1px solid #ef4444',
+              color: '#fecaca',
+              gap: '0.4rem'
+            }}
+          >
+            <Swords size={13} color="#f87171" />
+            <span>Wejdź na Arenę Bojową ⚔️</span>
+          </button>
+        </div>
+      </div>
+
+
+
+      {/* =========================================================================
+          8. BLOK: KRONIKI & BESTIARIUSZ (LORE & ARCHIVE)
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('lore')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('lore').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('lore')?.rune || 'ᚦ'}</div>
+          <Scroll size={36} color="#a4c8e1" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: '#a4c8e1' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Kroniki & Bestiariusz</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
+            Księga Dziejów Twierdzy, 4 Pradawne Zakony, Bestie Morza Północnego i Kodeks Honorowy.
+          </p>
+
+          <button
+            onClick={() => handleNav('lore')}
+            className="btn-durmstrang-secondary"
+            style={{ width: '100%', padding: '0.45rem', fontSize: '0.78rem', justifyContent: 'center', gap: '0.4rem' }}
+          >
+            <Scroll size={13} />
+            <span>Archiwum Wiedzy Twierdzy →</span>
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          9. BLOK: POCZTA KRUKÓW (RAVEN POST)
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('raven')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('raven').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('raven')?.rune || 'ᚱ'}</div>
+          <Mail size={36} color="#b18cfe" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: '#d8b4fe' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Poczta Kruków</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.25)', borderRadius: '4px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
+            <span style={{ fontSize: '0.75rem', color: '#e9d5ff' }}>Skrzynka Krucza:</span>
+            <span style={{ fontSize: '0.75rem', color: '#c084fc', fontWeight: 700 }}>
+              {(emails || []).filter(e => !e.read).length} nowych listów
+            </span>
+          </div>
+
+          <button
+            onClick={() => {
+              if (currentUser) {
+                setEmailInboxOpen ? setEmailInboxOpen(true) : handleNav('raven-post');
+              } else {
+                handleNav('raven-post');
+              }
+            }}
+            className="btn-durmstrang"
+            style={{
+              width: '100%',
+              padding: '0.45rem',
+              fontSize: '0.8rem',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.25) 0%, rgba(88, 28, 135, 0.45) 100%)',
+              border: '1px solid #a855f7',
+              color: '#f3e8ff',
+              gap: '0.4rem'
+            }}
+          >
+            <Send size={13} />
+            <span>Napisz List Krukiem ✉️</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Runic Duel Modal */}
+      <RunicDuelModal isOpen={duelModalOpen} onClose={() => setDuelModalOpen(false)} />
     </aside>
   );
 };

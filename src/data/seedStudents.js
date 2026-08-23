@@ -25,7 +25,7 @@ export const DEMO_ACCOUNTS = {
       type: 'Kruk Mądrości',
       name: 'Hugin',
       affinityLevel: 6,
-      avatar: '🦅'
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
     },
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     grades: [
@@ -34,10 +34,10 @@ export const DEMO_ACCOUNTS = {
       { subjectId: 'klatwy-i-uroki', subjectName: 'Klątwy i Magia Bojowa', lessonTitle: 'Tarcza Żelaza', grade: 'Wybitny (W)', professor: 'Prof. Gunnar Vargson' }
     ],
     inventory: [
-      { id: 'item-1', name: 'Zimowa Opończa z Wilczym Kołnierzem', category: 'robes', rarity: 'rare', icon: '🧥' },
-      { id: 'item-2', name: 'Różdżka Cisowa (Wilcze Serce)', category: 'wands', rarity: 'epic', icon: '🪄' },
-      { id: 'item-3', name: 'Grimuar: Rytuały Ciemnego Przesilenia', category: 'grimoires', rarity: 'legendary', icon: '📖' },
-      { id: 'item-4', name: 'Krople Czystego Lodu (Eliksir Odporności)', category: 'potions', rarity: 'common', icon: '🧪' }
+      { id: 'item-1', name: 'Zimowa Opończa z Wilczym Kołnierzem', category: 'robes', rarity: 'rare', icon: 'Shirt' },
+      { id: 'item-2', name: 'Różdżka Cisowa (Wilcze Serce)', category: 'wands', rarity: 'epic', icon: 'Sparkles' },
+      { id: 'item-3', name: 'Grimuar: Rytuały Ciemnego Przesilenia', category: 'grimoires', rarity: 'legendary', icon: 'BookOpen' },
+      { id: 'item-4', name: 'Krople Czystego Lodu (Eliksir Odporności)', category: 'potions', rarity: 'common', icon: 'FlaskConical' }
     ]
   },
   professor: {

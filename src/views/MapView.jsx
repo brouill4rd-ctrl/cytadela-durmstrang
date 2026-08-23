@@ -70,7 +70,7 @@ export const MapView = () => {
   };
 
   const levelConfigs = [
-    { level: -1, name: 'Kondygnacja -1: Lochy & Podziemny Skarbiec', desc: 'Podziemne krypty wykute w lodzie, skarbiec Cytadeli oraz alchemiczne katakumby.' },
+    { level: -1, name: 'Kondygnacja -1: Lochy & Podziemny Skarbiec', desc: 'Podziemne krypty wykute w lodzie, skarbiec Twierdzy Magii oraz alchemiczne katakumby.' },
     { level: 0, name: 'Kondygnacja 0: Parter & Dziedziniec Walki', desc: 'Wielka Aula Hrafnhöll, Brama Bazaltowa, plac ćwiczeń szermierki i sale ceremonialne.' },
     { level: 1, name: 'Kondygnacja 1: Skrzydło Zakonów & Biblioteka', desc: 'Dormitoria czterech Zakonów, Archiwum Zakazanych Ksiąg i pracownie runiczne.' },
     { level: 2, name: 'Kondygnacja 2: Ptaszarnia Kruków & Obserwatorium', desc: 'Najwyższe iglice Skandów, Krucza Poczta, lunety astronomiczne i widok na lodowy fiord.' }
@@ -89,7 +89,7 @@ export const MapView = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <span style={{ color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-            Eksploracja Twierdzy • Żywa Mapa Cytadeli
+            Eksploracja Twierdzy • Żywa Mapa Twierdzy Magii (TMD)
           </span>
           <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.3rem', marginBottom: '0.5rem' }}>
             Architektura & Posterunki Północy

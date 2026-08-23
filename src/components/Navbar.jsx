@@ -23,7 +23,8 @@ import {
   MapPin,
   LogIn,
   Calendar,
-  Building
+  Building,
+  Search
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -89,62 +90,55 @@ export const Navbar = () => {
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        background: 'rgba(8, 11, 16, 0.92)',
+        background: 'rgba(8, 11, 16, 0.94)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(197, 159, 78, 0.25)',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.85)'
+        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.85)'
       }}
     >
       <div
         style={{
-          maxWidth: '1440px',
+          maxWidth: '1600px',
           margin: '0 auto',
-          padding: '0.65rem 2rem',
+          padding: '0.45rem 1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '2rem'
+          gap: '0.85rem'
         }}
       >
         {/* =========================================================================
-            1. CLEAN BRAND LOGO
+            1. CLEAN BRAND LOGO WITH OFFICIAL TMD HERB
             ========================================================================= */}
         <div
           onClick={() => handleNavClick('home')}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.85rem',
+            gap: '0.75rem',
             cursor: 'pointer',
-            userSelect: 'none'
+            userSelect: 'none',
+            flexShrink: 0
           }}
         >
-          <div
+          <img
+            src="/tmd_herb.png"
+            alt="Herb Twierdzy Magii Durmstrang"
             style={{
               width: '36px',
               height: '36px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #1f2633 0%, #0a0c10 100%)',
-              border: '1px solid var(--gold-ancient)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.35rem',
-              color: 'var(--gold-ancient)',
-              boxShadow: '0 0 15px rgba(197, 159, 78, 0.25)',
-              fontFamily: 'serif'
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 8px rgba(197, 159, 78, 0.45))'
             }}
-          >
-            ᛞ
-          </div>
+          />
           <div>
             <div
               style={{
                 fontFamily: 'var(--font-heading)',
-                fontSize: '1.05rem',
+                fontSize: '1rem',
                 fontWeight: 800,
-                letterSpacing: '0.12em',
+                letterSpacing: '0.1em',
                 color: '#ffffff',
                 lineHeight: 1.1
               }}
@@ -153,14 +147,14 @@ export const Navbar = () => {
             </div>
             <div
               style={{
-                fontSize: '0.65rem',
+                fontSize: '0.62rem',
                 color: 'var(--gold-ancient)',
-                letterSpacing: '0.18em',
+                letterSpacing: '0.16em',
                 textTransform: 'uppercase',
                 fontFamily: 'var(--font-heading)'
               }}
             >
-              Cytadela Północy
+              Twierdza Magii (TMD)
             </div>
           </div>
         </div>
@@ -173,24 +167,26 @@ export const Navbar = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '1rem'
+            gap: '0.4rem',
+            flexWrap: 'nowrap'
           }}
         >
           {/* Main Home Link */}
           <button
             onClick={() => handleNavClick('home')}
             style={{
-              padding: '0.45rem 0.85rem',
-              background: activeView === 'home' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
+              padding: '0.4rem 0.7rem',
+              background: activeView === 'home' ? 'rgba(197, 159, 78, 0.18)' : 'transparent',
               border: activeView === 'home' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '6px',
+              borderRadius: '5px',
               color: activeView === 'home' ? '#ffffff' : '#b0b7c3',
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.02rem',
+              fontSize: '0.88rem',
               letterSpacing: '0.04em',
               fontWeight: activeView === 'home' ? 700 : 500,
               textTransform: 'uppercase',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease'
             }}
           >
@@ -203,23 +199,24 @@ export const Navbar = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.45rem 0.85rem',
+              gap: '0.4rem',
+              padding: '0.4rem 0.7rem',
               background: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
               border: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '6px',
+              borderRadius: '5px',
               color: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? '#ffffff' : '#f7dca0',
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.02rem',
+              fontSize: '0.88rem',
               fontWeight: 700,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease'
             }}
           >
-            <Scroll size={14} color="var(--gold-glow)" />
-            <span>Dzienniki Lekcyjne</span>
+            <Scroll size={13} color="var(--gold-glow)" />
+            <span>Dzienniki</span>
           </button>
 
           {/* Plan Lekcji Link (Public) */}
@@ -228,22 +225,23 @@ export const Navbar = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.45rem 0.85rem',
+              gap: '0.4rem',
+              padding: '0.4rem 0.7rem',
               background: activeView === 'timetable' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
               border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '6px',
+              borderRadius: '5px',
               color: activeView === 'timetable' ? '#ffffff' : '#e2e8f0',
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.02rem',
+              fontSize: '0.88rem',
               fontWeight: 700,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease'
             }}
           >
-            <Calendar size={14} color="var(--gold-ancient)" />
+            <Calendar size={13} color="var(--gold-ancient)" />
             <span>Plan Lekcji</span>
           </button>
 
@@ -254,24 +252,25 @@ export const Navbar = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                background: ['academic', 'houses', 'ceremony', 'rune-workshop', 'timetable'].includes(activeView) ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                border: ['academic', 'houses', 'ceremony', 'rune-workshop', 'timetable'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-                borderRadius: '6px',
-                color: ['academic', 'houses', 'ceremony', 'rune-workshop', 'timetable'].includes(activeView) ? '#ffffff' : '#b0b7c3',
+                gap: '0.35rem',
+                padding: '0.4rem 0.7rem',
+                background: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? 'rgba(197, 159, 78, 0.18)' : 'transparent',
+                border: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+                borderRadius: '5px',
+                color: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? '#ffffff' : '#b0b7c3',
                 fontFamily: 'var(--font-heading)',
-                fontSize: '1.02rem',
+                fontSize: '0.88rem',
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.2s ease'
               }}
             >
-              <BookOpen size={14} color="var(--gold-ancient)" />
+              <BookOpen size={13} color="var(--gold-ancient)" />
               <span>Akademia</span>
-              <ChevronDown size={13} style={{ transform: openDropdown === 'academy' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+              <ChevronDown size={12} style={{ transform: openDropdown === 'academy' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
 
             {/* Dropdown Menu */}
@@ -364,6 +363,59 @@ export const Navbar = () => {
                   </span>
                 </button>
 
+                <button
+                  onClick={() => {
+                    handleNavClick('documents');
+                    window.location.hash = '#/dekrety';
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: activeView === 'documents' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                    borderRadius: '4px',
+                    border: activeView === 'documents' ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Scroll size={14} color="var(--gold-ancient)" /> Dekrety & Wizytacje
+                  </span>
+                  <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090c12', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 800 }}>
+                    KODEKS
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('rules-guide')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: activeView === 'rules-guide' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
+                    borderRadius: '4px',
+                    border: activeView === 'rules-guide' ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Shield size={14} color="var(--gold-glow)" /> Pakt 1294 & Taryfikator
+                  </span>
+                  <span style={{ fontSize: '0.62rem', background: 'rgba(197, 159, 78, 0.2)', color: 'var(--gold-glow)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                    PAKT
+                  </span>
+                </button>
+
                 {currentUser && (
                   <>
                     <button
@@ -424,24 +476,25 @@ export const Navbar = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                background: ['map', 'markethall', 'lore'].includes(activeView) ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                border: ['map', 'markethall', 'lore'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-                borderRadius: '6px',
-                color: ['map', 'markethall', 'lore'].includes(activeView) ? '#ffffff' : '#b0b7c3',
+                gap: '0.35rem',
+                padding: '0.4rem 0.7rem',
+                background: ['map', 'markethall', 'lore', 'bank'].includes(activeView) ? 'rgba(197, 159, 78, 0.18)' : 'transparent',
+                border: ['map', 'markethall', 'lore', 'bank'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+                borderRadius: '5px',
+                color: ['map', 'markethall', 'lore', 'bank'].includes(activeView) ? '#ffffff' : '#b0b7c3',
                 fontFamily: 'var(--font-heading)',
-                fontSize: '1.02rem',
+                fontSize: '0.88rem',
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.2s ease'
               }}
             >
-              <Compass size={14} color="var(--gold-ancient)" />
+              <Compass size={13} color="var(--gold-ancient)" />
               <span>Eksploracja</span>
-              <ChevronDown size={13} style={{ transform: openDropdown === 'explore' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+              <ChevronDown size={12} style={{ transform: openDropdown === 'explore' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
             </button>
 
             {/* Dropdown Menu */}
@@ -549,47 +602,6 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Raven Post Direct Link */}
-          {currentUser && (
-            <button
-              onClick={() => handleNavClick('raven-post')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.45rem 0.85rem',
-                background: activeView === 'raven-post' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                border: activeView === 'raven-post' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-                borderRadius: '6px',
-                color: activeView === 'raven-post' ? '#ffffff' : '#b0b7c3',
-                fontFamily: 'var(--font-heading)',
-                fontSize: '0.85rem',
-                fontWeight: activeView === 'raven-post' ? 700 : 500,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Mail size={14} color="var(--gold-ancient)" />
-              <span>Poczta</span>
-              {unreadMessagesCount > 0 && (
-                <span
-                  style={{
-                    background: 'var(--ruby-blood)',
-                    color: '#ffffff',
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    padding: '0.1rem 0.4rem',
-                    borderRadius: '10px'
-                  }}
-                >
-                  {unreadMessagesCount}
-                </span>
-              )}
-            </button>
-          )}
-
           {/* Admin CMS (Only for Prof/Admin) */}
           {(currentRole === 'admin' || currentRole === 'professor') && (
             <button
@@ -597,21 +609,22 @@ export const Navbar = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                background: activeView === 'admin' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                gap: '0.35rem',
+                padding: '0.35rem 0.65rem',
+                background: activeView === 'admin' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(255, 255, 255, 0.05)',
                 border: activeView === 'admin' ? '1px solid var(--gold-glow)' : '1px solid rgba(197, 159, 78, 0.3)',
-                borderRadius: '6px',
+                borderRadius: '5px',
                 color: '#ffffff',
                 fontFamily: 'var(--font-heading)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
-                letterSpacing: '0.05em',
+                letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              <Settings size={13} color="var(--gold-glow)" />
+              <Settings size={12} color="var(--gold-glow)" />
               <span>Panel CMS</span>
             </button>
           )}
@@ -620,7 +633,45 @@ export const Navbar = () => {
         {/* =========================================================================
             3. CLEAN PROFILE & UTILITY CLUSTER
             ========================================================================= */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+          {/* Quick Arcane Search / Command Palette Button */}
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+            }}
+            title="Magiczny Kompas Cytadeli (Szukaj / Teleportuj - Ctrl + K)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'rgba(20, 26, 38, 0.85)',
+              border: '1px solid rgba(197, 159, 78, 0.35)',
+              borderRadius: '20px',
+              padding: '0.3rem 0.65rem',
+              color: '#f3e5c8',
+              fontSize: '0.8rem',
+              fontFamily: 'var(--font-heading)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--gold-glow)';
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(197, 159, 78, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(197, 159, 78, 0.35)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <Search size={13} color="var(--gold-ancient)" />
+            <span className="hidden-mobile">Szukaj</span>
+            <kbd style={{ fontSize: '0.65rem', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', padding: '0.08rem 0.3rem', color: '#9ca3af' }}>
+              Ctrl K
+            </kbd>
+          </button>
+
           {/* Quick Sound & Snow Compact Pill */}
           <div
             style={{
@@ -629,8 +680,9 @@ export const Navbar = () => {
               background: 'rgba(15, 20, 30, 0.7)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '20px',
-              padding: '0.2rem 0.35rem',
-              gap: '0.2rem'
+              padding: '0.15rem 0.3rem',
+              gap: '0.15rem',
+              flexShrink: 0
             }}
           >
             <button
@@ -640,13 +692,13 @@ export const Navbar = () => {
                 background: 'none',
                 border: 'none',
                 color: soundEnabled ? 'var(--gold-glow)' : '#6b7280',
-                padding: '0.25rem 0.35rem',
+                padding: '0.2rem 0.3rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center'
               }}
             >
-              {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
             </button>
             <button
               onClick={() => setSnowEnabled(!snowEnabled)}
@@ -655,13 +707,13 @@ export const Navbar = () => {
                 background: 'none',
                 border: 'none',
                 color: snowEnabled ? '#a4c8e1' : '#6b7280',
-                padding: '0.25rem 0.35rem',
+                padding: '0.2rem 0.3rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center'
               }}
             >
-              <CloudSnow size={14} />
+              <CloudSnow size={13} />
             </button>
           </div>
 
@@ -673,17 +725,18 @@ export const Navbar = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 background: 'rgba(20, 26, 38, 0.8)',
                 border: '1px solid rgba(197, 159, 78, 0.35)',
                 borderRadius: '20px',
-                padding: '0.35rem 0.8rem',
+                padding: '0.3rem 0.65rem',
                 cursor: 'pointer',
+                flexShrink: 0,
                 transition: 'all 0.2s ease'
               }}
             >
-              <Coins size={14} color="var(--gold-ancient)" />
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: '#f7dca0', fontSize: '0.85rem' }}>
+              <Coins size={13} color="var(--gold-ancient)" />
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: '#f7dca0', fontSize: '0.82rem' }}>
                 {studentProfile.currency}
               </span>
             </div>
@@ -701,17 +754,18 @@ export const Navbar = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '34px',
-              height: '34px',
+              width: '32px',
+              height: '32px',
               borderRadius: '50%',
               background: 'rgba(16, 21, 30, 0.85)',
               border: '1px solid rgba(197, 159, 78, 0.35)',
               color: 'var(--gold-glow)',
               cursor: 'pointer',
+              flexShrink: 0,
               transition: 'all 0.2s ease'
             }}
           >
-            <Mail size={16} />
+            <Mail size={15} />
             {emails.filter(e => !e.read).length > 0 && (
               <span
                 style={{
@@ -737,17 +791,17 @@ export const Navbar = () => {
 
           {/* Profile Pill (if logged in) OR Login Button (if guest) */}
           {currentUser ? (
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <div
                 onClick={() => setOpenDropdown(openDropdown === 'user' ? null : 'user')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.6rem',
+                  gap: '0.5rem',
                   background: 'rgba(16, 21, 30, 0.85)',
                   border: userHouse ? `1px solid ${userHouse.colors.border}` : '1px solid rgba(197, 159, 78, 0.35)',
                   borderRadius: '24px',
-                  padding: '0.25rem 0.85rem 0.25rem 0.3rem',
+                  padding: '0.2rem 0.65rem 0.2rem 0.25rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   boxShadow: openDropdown === 'user' ? '0 0 15px rgba(197, 159, 78, 0.35)' : 'none'
@@ -757,22 +811,22 @@ export const Navbar = () => {
                   src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                   alt={currentUser?.fullName}
                   style={{
-                    width: '28px',
-                    height: '28px',
+                    width: '26px',
+                    height: '26px',
                     borderRadius: '50%',
                     objectFit: 'cover',
                     border: '1px solid var(--gold-ancient)'
                   }}
                 />
-                <div style={{ lineHeight: 1.1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-heading)', whiteSpace: 'nowrap' }}>
-                    {currentUser?.name}
+                <div style={{ lineHeight: 1.1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-heading)', maxWidth: '105px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentUser?.name || currentUser?.fullName}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: userHouse ? userHouse.colors.secondary : currentUser?.role === 'admin' ? '#ff9e9e' : currentUser?.role === 'professor' ? '#d8c2ff' : 'var(--gold-ancient)' }}>
+                  <div style={{ fontSize: '0.65rem', color: userHouse ? userHouse.colors.secondary : currentUser?.role === 'admin' ? '#ff9e9e' : currentUser?.role === 'professor' ? '#d8c2ff' : 'var(--gold-ancient)', maxWidth: '105px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {currentUser?.role === 'admin' ? '🛡️ Arcymistrz' : currentUser?.role === 'professor' ? '📖 Profesor' : userHouse ? userHouse.name : '🎓 Adept'}
                   </div>
                 </div>
-                <ChevronDown size={12} color="var(--gold-ancient)" style={{ transform: openDropdown === 'user' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', marginLeft: '0.1rem' }} />
+                <ChevronDown size={11} color="var(--gold-ancient)" style={{ transform: openDropdown === 'user' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
               </div>
 
             {/* User Dropdown Menu */}
@@ -963,6 +1017,23 @@ export const Navbar = () => {
             }}
           >
             📜 Dzienniki Lekcyjne
+          </button>
+          <button
+            onClick={() => handleNavClick('rules-guide')}
+            style={{
+              padding: '0.65rem 0.8rem',
+              background: activeView === 'rules-guide' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+              border: activeView === 'rules-guide' ? '1px solid var(--gold-ancient)' : 'none',
+              borderRadius: '4px',
+              color: '#ffffff',
+              textAlign: 'left',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            🛡️ Zasady & Kodeks Północy
           </button>
           {currentUser && (
             <button

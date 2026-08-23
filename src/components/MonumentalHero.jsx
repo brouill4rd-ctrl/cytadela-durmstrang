@@ -151,6 +151,52 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
 
       {/* Main Monumental Title & Hero Content */}
       <div className="hero-center-content">
+        {/* Official Durmstrang Crest Emblem */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            marginBottom: '0.9rem',
+            position: 'relative'
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '105px',
+              height: '105px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {/* Pulsing Magical Aura behind the Herb */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: '-15px',
+                background: 'radial-gradient(circle, rgba(197, 159, 78, 0.4) 0%, rgba(197, 159, 78, 0) 70%)',
+                borderRadius: '50%',
+                filter: 'blur(10px)',
+                animation: 'pulse 3s infinite alternate'
+              }}
+            />
+            <img
+              src="/tmd_herb.png"
+              alt="Herb Twierdzy Magii Durmstrang"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                position: 'relative',
+                zIndex: 2,
+                filter: 'drop-shadow(0 6px 20px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 15px rgba(197, 159, 78, 0.4))'
+              }}
+            />
+          </div>
+        </div>
+
         <div className="hero-crest-badge">
           <span className="rune-sign">ᛞ</span>
           <span>AKADEMIA CIEMNYCH SZTUK & MAGII PÓŁNOCY</span>
@@ -158,7 +204,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
         </div>
 
         <h1 className="hero-main-title">
-          CYTADELA DURMSTRANG
+          TWIERDZA MAGII DURMSTRANG
         </h1>
 
         <p className="hero-motto">

@@ -30,7 +30,7 @@ export const LoreArchiveView = () => {
             Wielkie Archiwum Skandzy
           </span>
           <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.3rem', marginBottom: '0.5rem' }}>
-            Kroniki & Lore Cytadeli
+            Kroniki & Lore Twierdzy Magii (TMD)
           </h1>
           <p style={{ color: '#9ca3af', maxWidth: '700px', fontSize: '0.98rem' }}>
             Ponad siedemset lat historii, zakazanych traktatów, legend o założycielach oraz tajemnic spoczywających pod wieczną zmarzliną.
@@ -132,7 +132,7 @@ export const LoreArchiveView = () => {
             gap: '0.4rem'
           }}
         >
-          <Key size={16} color="#d8c2ff" /> Centralna Tajemnica Cytadeli
+          <Key size={16} color="#d8c2ff" /> Centralna Tajemnica Twierdzy (TMD)
         </button>
       </div>
 
@@ -280,7 +280,7 @@ export const LoreArchiveView = () => {
           </p>
 
           <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1rem' }}>
-            Cztery Fragmenty Pieczęci w Cytadeli:
+            Cztery Fragmenty Pieczęci w Twierdzy Magii:
           </h3>
 
           <div className="grid-2">

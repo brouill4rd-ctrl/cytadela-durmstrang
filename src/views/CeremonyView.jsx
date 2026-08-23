@@ -8,7 +8,7 @@ export const CeremonyView = () => {
   const { houses, sortIntoHouse, studentProfile, setActiveView, setActiveHouseTab } = useSchool();
   const { playRuneChime, playSortingFanfare, playWandSwoosh } = useSound();
 
-  const [currentStep, setCurrentStep] = useState(0); // 0 = intro, 1..7 = questions, 8 = calculating/reveal, 9 = final
+  const [currentStep, setCurrentStep] = useState(0); // 0 = intro, 1..N = questions, 8 = calculating/reveal, 9 = final
   const [answers, setAnswers] = useState([]);
   const [selectedHouse, setSelectedHouse] = useState(null);
   const [isRevealing, setIsRevealing] = useState(false);
@@ -27,7 +27,6 @@ export const CeremonyView = () => {
     if (currentStep < CEREMONY_QUESTIONS.length) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Calculate winner house
       triggerCeremonyClimax(newAnswers);
     }
   };
@@ -37,12 +36,13 @@ export const CeremonyView = () => {
     setIsRevealing(true);
 
     // Count house votes
-    const counts = { renifer: 0, niedzwiedz: 0, kruk: 0, wydra: 0 };
+    const counts = { reinhall: 0, bjornhall: 0, ravnheim: 0, otergard: 0 };
     finalAnswers.forEach(h => {
-      if (counts[h] !== undefined) counts[h]++;
+      const normalized = h === 'renifer' ? 'reinhall' : h === 'niedzwiedz' ? 'bjornhall' : h === 'kruk' ? 'ravnheim' : h === 'wydra' ? 'otergard' : h;
+      if (counts[normalized] !== undefined) counts[normalized]++;
     });
 
-    let winningHouse = 'kruk';
+    let winningHouse = 'reinhall';
     let maxVotes = -1;
     Object.keys(counts).forEach(h => {
       if (counts[h] > maxVotes) {
@@ -57,7 +57,9 @@ export const CeremonyView = () => {
       setIsRevealing(false);
       setCurrentStep(9);
       playSortingFanfare();
-      sortIntoHouse(winningHouse);
+      if (sortIntoHouse) {
+        sortIntoHouse(winningHouse);
+      }
     }, 3200);
   };
 
@@ -68,7 +70,15 @@ export const CeremonyView = () => {
     setSelectedHouse(null);
   };
 
-  const assignedHouse = selectedHouse ? houses[selectedHouse] : null;
+  const houseObj = selectedHouse
+    ? (houses && houses[selectedHouse]) ||
+      (Array.isArray(houses) ? houses.find(h => h.id === selectedHouse) : null) ||
+      (houses && typeof houses === 'object' ? Object.values(houses).find(h => h.id === selectedHouse) : null)
+    : null;
+
+  const assignedHouse = houseObj || (houses && typeof houses === 'object' ? Object.values(houses)[0] : null);
+
+  const currentQ = currentStep >= 1 && currentStep <= CEREMONY_QUESTIONS.length ? CEREMONY_QUESTIONS[currentStep - 1] : null;
 
   return (
     <div style={{ maxWidth: '840px', margin: '0 auto', minHeight: '70vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -80,7 +90,8 @@ export const CeremonyView = () => {
             padding: '3.5rem 2.5rem',
             textAlign: 'center',
             background: 'radial-gradient(circle at 50% 30%, rgba(28, 35, 48, 0.95) 0%, rgba(10, 13, 18, 0.98) 100%)',
-            border: '1px solid var(--gold-ancient)'
+            border: '1px solid var(--gold-ancient)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.85)'
           }}
         >
           <div
@@ -105,7 +116,7 @@ export const CeremonyView = () => {
           <span style={{ color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
             Pradawny Rytuał Kamienia Przysięgi
           </span>
-          <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.4rem', marginBottom: '1rem' }}>
+          <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.4rem', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>
             Ceremonia Przydziału do Zakonu
           </h1>
 
@@ -123,7 +134,7 @@ export const CeremonyView = () => {
           </p>
 
           <p style={{ color: '#b0b7c3', fontSize: '0.98rem', lineHeight: 1.7, maxWidth: '620px', margin: '0 auto 2.5rem auto' }}>
-            Wkrocz do Kręgu Przysięgi. Odpowiedz na 7 pytań moralno-filozoficznych. Kamień Przysięgi zważy twoją determinację i wskaże Zakon, którego dziedzictwo poniesiesz przez lata nauki w Cytadeli.
+            Wkrocz do Kręgu Przysięgi. Odpowiedz na próby moralno-filozoficzne. Kamień Przysięgi zważy twoją determinację i wskaże Zakon, którego dziedzictwo poniesiesz przez lata nauki w Twierdzy Magii (TMD).
           </p>
 
           <button onClick={startCeremony} className="btn-durmstrang" style={{ padding: '1rem 2.5rem', fontSize: '1rem' }}>
@@ -133,19 +144,20 @@ export const CeremonyView = () => {
       )}
 
       {/* 2. QUESTION SCREEN */}
-      {currentStep >= 1 && currentStep <= CEREMONY_QUESTIONS.length && (
+      {currentStep >= 1 && currentStep <= CEREMONY_QUESTIONS.length && currentQ && (
         <div
           className="gothic-card runic-corners"
           style={{
             padding: '2.5rem',
             background: 'rgba(12, 15, 22, 0.95)',
-            border: '1px solid var(--gold-ancient)'
+            border: '1px solid var(--gold-ancient)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.85)'
           }}
         >
           {/* Progress Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.8rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '1rem' }}>
             <span style={{ fontFamily: 'var(--font-heading)', color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
-              Próba {currentStep} z {CEREMONY_QUESTIONS.length}
+              {currentQ.title || `Próba ${currentStep} z ${CEREMONY_QUESTIONS.length}`}
             </span>
             <div style={{ display: 'flex', gap: '0.35rem' }}>
               {CEREMONY_QUESTIONS.map((_, i) => (
@@ -166,21 +178,21 @@ export const CeremonyView = () => {
           {/* Question Prompt */}
           <h2
             style={{
-              fontSize: '1.4rem',
+              fontSize: '1.25rem',
               color: '#ffffff',
-              lineHeight: 1.5,
+              lineHeight: 1.6,
               marginBottom: '2rem',
               fontFamily: 'var(--font-lore)',
               fontStyle: 'italic',
-              fontWeight: 600
+              fontWeight: 500
             }}
           >
-            „{CEREMONY_QUESTIONS[currentStep - 1].prompt}”
+            „{currentQ.scenario || currentQ.prompt || currentQ.title}”
           </h2>
 
           {/* Options */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {CEREMONY_QUESTIONS[currentStep - 1].options.map((opt, idx) => (
+            {currentQ.options.map((opt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSelectOption(opt)}
@@ -211,7 +223,10 @@ export const CeremonyView = () => {
                   e.currentTarget.style.transform = 'translateX(0)';
                 }}
               >
-                <span>{opt.text}</span>
+                <div>
+                  <div style={{ fontWeight: 500, marginBottom: '0.2rem' }}>{opt.text}</div>
+                  {opt.reason && <div style={{ fontSize: '0.78rem', color: '#9ca3af', fontStyle: 'italic' }}>{opt.reason}</div>}
+                </div>
                 <ArrowRight size={16} color="var(--gold-ancient)" style={{ flexShrink: 0 }} />
               </button>
             ))}
@@ -242,8 +257,8 @@ export const CeremonyView = () => {
           >
             ᛞ
           </div>
-          <h2 style={{ fontSize: '1.8rem', color: '#ffffff', letterSpacing: '0.15em', marginBottom: '0.8rem' }}>
-            KAMIENIE PRZYSYPIEGU PRZEMAWIAJĄ...
+          <h2 style={{ fontSize: '1.8rem', color: '#ffffff', letterSpacing: '0.15em', marginBottom: '0.8rem', fontFamily: 'var(--font-heading)' }}>
+            KAMIENIE PRZYSIĘGI PRZEMAWIAJĄ...
           </h2>
           <p style={{ color: '#a0aec0', fontStyle: 'italic', fontFamily: 'var(--font-lore)', fontSize: '1.2rem' }}>
             Oddechy przodków łączą się z twoją wolą. Cienie układają się w święty znak...
@@ -258,9 +273,9 @@ export const CeremonyView = () => {
           style={{
             padding: '3.5rem 2.5rem',
             textAlign: 'center',
-            background: `radial-gradient(circle at 50% 30%, ${assignedHouse.colors.bgDark} 0%, rgba(8, 10, 15, 0.98) 85%)`,
-            border: `2px solid ${assignedHouse.colors.secondary}`,
-            boxShadow: `0 25px 60px rgba(0,0,0,0.95), 0 0 45px ${assignedHouse.colors.accentGlow}`
+            background: `radial-gradient(circle at 50% 30%, ${assignedHouse.colors?.primary || '#1c132e'}44 0%, rgba(8, 10, 15, 0.98) 85%)`,
+            border: `2px solid ${assignedHouse.colors?.secondary || 'var(--gold-ancient)'}`,
+            boxShadow: `0 25px 60px rgba(0,0,0,0.95), 0 0 45px ${assignedHouse.colors?.glow || 'rgba(197, 159, 78, 0.35)'}`
           }}
         >
           <div
@@ -268,37 +283,37 @@ export const CeremonyView = () => {
               width: '96px',
               height: '96px',
               borderRadius: '16px',
-              background: assignedHouse.colors.gradient,
-              border: `2px solid ${assignedHouse.colors.secondary}`,
+              background: `linear-gradient(135deg, ${assignedHouse.colors?.primary || '#1c132e'}, rgba(10,10,15,0.9))`,
+              border: `2px solid ${assignedHouse.colors?.secondary || 'var(--gold-ancient)'}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '3.5rem',
               margin: '0 auto 1.5rem auto',
-              boxShadow: `0 0 35px ${assignedHouse.colors.accentGlow}`
+              boxShadow: `0 0 35px ${assignedHouse.colors?.glow || 'rgba(197, 159, 78, 0.35)'}`
             }}
           >
-            {assignedHouse.crestIcon}
+            {assignedHouse.crestIcon || '🛡️'}
           </div>
 
-          <div style={{ color: assignedHouse.colors.secondary, letterSpacing: '0.25em', fontSize: '0.9rem', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
+          <div style={{ color: assignedHouse.colors?.secondary || 'var(--gold-ancient)', letterSpacing: '0.25em', fontSize: '0.9rem', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
             PRZEZNACZENIE PRZEMÓWIŁO
           </div>
 
-          <h1 style={{ fontSize: '2.8rem', color: '#ffffff', marginTop: '0.4rem', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '2.8rem', color: '#ffffff', marginTop: '0.4rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
             ZOSTAJESZ CZŁONKIEM {assignedHouse.name.toUpperCase()}!
           </h1>
 
-          <div style={{ fontSize: '1.1rem', color: assignedHouse.colors.secondary, fontStyle: 'italic', fontFamily: 'var(--font-heading)', marginBottom: '1.8rem' }}>
-            {assignedHouse.latinName} • Runa Przewodnia: {assignedHouse.runicSigil}
+          <div style={{ fontSize: '1.1rem', color: assignedHouse.colors?.secondary || 'var(--gold-ancient)', fontStyle: 'italic', fontFamily: 'var(--font-heading)', marginBottom: '1.8rem' }}>
+            {assignedHouse.fullName || assignedHouse.latinMotto || assignedHouse.name}
           </div>
 
-          <div style={{ background: 'rgba(0,0,0,0.5)', border: `1px solid ${assignedHouse.colors.secondary}55`, borderRadius: '6px', padding: '1.5rem', maxWidth: '640px', margin: '0 auto 2rem auto' }}>
+          <div style={{ background: 'rgba(0,0,0,0.5)', border: `1px solid ${assignedHouse.colors?.secondary || 'var(--gold-ancient)'}55`, borderRadius: '6px', padding: '1.5rem', maxWidth: '640px', margin: '0 auto 2rem auto' }}>
             <p style={{ fontFamily: 'var(--font-lore)', fontStyle: 'italic', fontSize: '1.25rem', color: '#f3e5c8', marginBottom: '0.8rem' }}>
-              „{assignedHouse.motto}”
+              {assignedHouse.motto}
             </p>
             <p style={{ color: '#c5cdd9', fontSize: '0.92rem', lineHeight: 1.6 }}>
-              {assignedHouse.description}
+              {assignedHouse.commonRoom || `Wkrocz do Sali Zakonu ${assignedHouse.name}. Otrzymujesz +25 Punktów Pucharu Północy oraz +150 XP do Twojej Karty Adepta!`}
             </p>
           </div>
 

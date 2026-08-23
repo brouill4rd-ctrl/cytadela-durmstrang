@@ -542,10 +542,10 @@ export const ProfessorJournalEditor = () => {
                           fontSize: '0.82rem'
                         }}
                       >
-                        <option value="reinhall">🦌 Reinhall</option>
-                        <option value="bjornhall">🐻 Björnhall</option>
-                        <option value="ravnheim">🐦 Ravnheim</option>
-                        <option value="otergard">🦦 Otergard</option>
+                        <option value="reinhall">ᚦ Reinhall</option>
+                        <option value="bjornhall">ᛉ Björnhall</option>
+                        <option value="ravnheim">ᚱ Ravnheim</option>
+                        <option value="otergard">ᛞ Otergard</option>
                       </select>
                     </div>
 

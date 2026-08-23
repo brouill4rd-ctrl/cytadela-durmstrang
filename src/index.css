@@ -42,12 +42,14 @@
   --otergard-secondary: #5eead4;
   --otergard-glow: rgba(15, 118, 110, 0.4);
 
-  /* Grand Typography Hierarchy with Germania One (Blackletter + Sans Hybrid) */
+  /* Grand Typography Hierarchy: Germania One (Headers) + Plus Jakarta Sans (UI/Body) + Cormorant Garamond (Lore) */
   --font-title: 'Germania One', 'Pirata One', 'Cinzel Decorative', cursive, serif;
-  --font-heading: 'Germania One', 'Pirata One', 'MedievalSharp', cursive, serif;
+  --font-heading: 'Germania One', 'Pirata One', 'Cinzel', serif;
+  --font-subheading: 'Cinzel', 'Germania One', serif;
   --font-gothic: 'Germania One', 'Uncial Antiqua', serif;
   --font-medieval: 'Cormorant Garamond', 'MedievalSharp', serif;
   --font-lore: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   --font-ui: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Borders & Shadows */
@@ -63,6 +65,16 @@
   --radius-lg: 12px;
 }
 
+/* ==========================================================================
+   DURMSTRANG NORDIC WAND CURSOR SYSTEM (DELICATE, CRISP, TASTEFUL)
+   ========================================================================== */
+
+:root {
+  --cursor-wand-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M2 2 L4.5 2.5 L22.5 20.5 L20.5 22.5 L2.5 4.5 Z' fill='rgba(0,0,0,0.55)' filter='blur(0.5px)' transform='translate(1, 1)'/%3E%3Cpath d='M2 2 L4 2.5 L22 20.5 L20.5 22 L2.5 4 Z' fill='%23201712' stroke='%23453123' stroke-width='0.5'/%3E%3Cline x1='9' y1='9' x2='11.5' y2='11.5' stroke='%23c59f4e' stroke-width='0.9'/%3E%3Cline x1='14' y1='14' x2='16.5' y2='16.5' stroke='%23a5c8e1' stroke-width='0.8'/%3E%3Ccircle cx='21' cy='21' r='1.5' fill='%23c59f4e' stroke='%23201712' stroke-width='0.4'/%3E%3Ccircle cx='2' cy='2' r='1.8' fill='%23ffe8aa'/%3E%3Ccircle cx='2' cy='2' r='0.8' fill='%23ffffff'/%3E%3Cline x1='2' y1='0' x2='2' y2='4' stroke='%23ffe8aa' stroke-width='0.75' stroke-linecap='round'/%3E%3Cline x1='0' y1='2' x2='4' y2='2' stroke='%23ffe8aa' stroke-width='0.75' stroke-linecap='round'/%3E%3C/svg%3E") 2 2, auto;
+
+  --cursor-wand-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M2 2 L4.5 2.5 L22.5 20.5 L20.5 22.5 L2.5 4.5 Z' fill='rgba(0,0,0,0.6)' filter='blur(0.5px)' transform='translate(1, 1)'/%3E%3Cpath d='M2 2 L4 2.5 L22 20.5 L20.5 22 L2.5 4 Z' fill='%232d1e16' stroke='%23c59f4e' stroke-width='0.6'/%3E%3Cline x1='8.5' y1='8.5' x2='11' y2='11' stroke='%23f3d995' stroke-width='1.1'/%3E%3Cline x1='13.5' y1='13.5' x2='16' y2='16' stroke='%235eead4' stroke-width='1'/%3E%3Ccircle cx='21' cy='21' r='1.6' fill='%23f3d995' stroke='%232d1e16' stroke-width='0.4'/%3E%3Ccircle cx='2' cy='2' r='2.8' fill='%235eead4' opacity='0.35'/%3E%3Ccircle cx='2' cy='2' r='1.8' fill='%23fef08a'/%3E%3Ccircle cx='2' cy='2' r='0.9' fill='%23ffffff'/%3E%3Cline x1='2' y1='-0.5' x2='2' y2='4.5' stroke='%23ffe8aa' stroke-width='0.8' stroke-linecap='round'/%3E%3Cline x1='-0.5' y1='2' x2='4.5' y2='2' stroke='%23ffe8aa' stroke-width='0.8' stroke-linecap='round'/%3E%3Cline x1='0.5' y1='0.5' x2='3.5' y2='3.5' stroke='%235eead4' stroke-width='0.7' stroke-linecap='round'/%3E%3Cline x1='3.5' y1='0.5' x2='0.5' y2='3.5' stroke='%235eead4' stroke-width='0.7' stroke-linecap='round'/%3E%3C/svg%3E") 2 2, pointer;
+}
+
 /* Global Reset */
 * {
   box-sizing: border-box;
@@ -72,14 +84,36 @@
 
 html, body {
   background-color: var(--bg-abyss);
-  color: #d1d8e6;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.65;
+  color: #cbd5e1;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  letter-spacing: 0.012em;
+  line-height: 1.62;
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  cursor: var(--cursor-wand-default);
+}
+
+button,
+a,
+select,
+summary,
+[role="button"],
+[role="tab"],
+.btn-durmstrang,
+.btn-durmstrang-secondary,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: var(--cursor-wand-pointer) !important;
+}
+
+button, input, textarea, select, label, table, p, span {
+  font-family: inherit;
 }
 
 /* Text selection highlight */
@@ -660,40 +694,79 @@ a:hover {
    ========================================================================== */
 
 .portal-ticker-bar {
-  background: rgba(8, 12, 18, 0.96);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--ice-border);
-  border-bottom: 1px solid var(--ice-border);
-  padding: 0.5rem 1.5rem;
+  background: rgba(8, 12, 18, 0.98);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(142, 202, 230, 0.18);
+  border-bottom: 1px solid rgba(197, 159, 78, 0.25);
+  padding: 0 1.25rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.85rem;
+  gap: 0.85rem;
+  height: 38px;
   overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
 }
-.ticker-label {
+
+.ticker-label-badge {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #0a0e16 80%, rgba(10, 14, 22, 0.95) 100%);
+  padding: 0.25rem 0.85rem 0.25rem 0;
+  border-right: 1px solid rgba(197, 159, 78, 0.35);
   font-family: var(--font-heading);
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   color: var(--gold-glow);
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   white-space: nowrap;
+  box-shadow: 6px 0 12px rgba(8, 12, 18, 0.9);
+}
+
+.ticker-label-badge .ticker-rune {
+  color: var(--gold-ancient);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.ticker-label-badge .ticker-title {
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.ticker-track-container {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent 0px, black 25px, black calc(100% - 25px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0px, black 25px, black calc(100% - 25px), transparent 100%);
 }
+
 .ticker-content {
   font-family: var(--font-ui);
-  color: #d1d5db;
-  font-size: 0.84rem;
+  color: #cbd5e1;
+  font-size: 0.82rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   white-space: nowrap;
-  animation: marqueeScroll 32s linear infinite;
+  display: inline-block;
+  padding-left: 20px;
+  animation: marqueeScroll 36s linear infinite;
 }
+
 .portal-ticker-bar:hover .ticker-content {
   animation-play-state: paused;
 }
+
 @keyframes marqueeScroll {
   0% { transform: translateX(100%); }
   100% { transform: translateX(-100%); }

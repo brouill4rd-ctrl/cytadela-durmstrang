@@ -143,7 +143,7 @@ export const RestrictedAccessView = ({ targetName = 'tych komnat i dzienników' 
             margin: '0 auto 1.8rem'
           }}
         >
-          Wstęp do <strong>{targetName}</strong> posiadają wyłącznie osoby, które <span style={{ color: 'var(--gold-glow)', fontWeight: 700 }}>zapisały się do Cytadeli Durmstrang</span> i zostały wpisane do Księgi Paktu.
+          Wstęp do <strong>{targetName}</strong> posiadają wyłącznie osoby, które <span style={{ color: 'var(--gold-glow)', fontWeight: 700 }}>zapisały się do Twierdzy Magii Durmstrang (TMD)</span> i zostały wpisane do Księgi Paktu.
         </p>
 
         {/* Benefits Box */}
@@ -227,7 +227,7 @@ export const RestrictedAccessView = ({ targetName = 'tych komnat i dzienników' 
               border: '1px solid #f7dca0'
             }}
           >
-            <UserPlus size={18} /> Zapisz się do Cytadeli!
+            <UserPlus size={18} /> Zapisz się do Twierdzy Magii!
           </button>
 
           {/* Secondary CTA: Zaloguj się */}
@@ -265,7 +265,7 @@ export const RestrictedAccessView = ({ targetName = 'tych komnat i dzienników' 
             onMouseEnter={(e) => (e.target.style.color = '#ffffff')}
             onMouseLeave={(e) => (e.target.style.color = '#9ca3af')}
           >
-            <ArrowLeft size={13} /> Wróć do Wrót Cytadeli
+            <ArrowLeft size={13} /> Wróć do Wrót Twierdzy (TMD)
           </button>
         </div>
       </div>

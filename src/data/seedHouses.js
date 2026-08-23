@@ -4,7 +4,8 @@ export const HOUSES = {
     name: 'Reinhall',
     fullName: 'Zakon Reinhall (Ordo Rangiferi)',
     symbolAnimal: 'Renifer Północy (Rangifer)',
-    crestIcon: '🦌',
+    crestIcon: 'ᚦ',
+    crestImage: '/crest_stag.jpg',
     element: 'Krew i Wieczna Zmarzlina',
     founder: 'Eirik Krwawy Róg (Eiríkr Blóðhorn)',
     colors: {
@@ -31,7 +32,8 @@ export const HOUSES = {
     name: 'Björnhall',
     fullName: 'Zakon Björnhall (Ordo Ursi)',
     symbolAnimal: 'Niedźwiedź Jaskiniowy (Ursus Spelaeus)',
-    crestIcon: '🐻',
+    crestIcon: 'ᛉ',
+    crestImage: '/crest_bear.jpg',
     element: 'Żelazo i Pęknięta Skala',
     founder: 'Torvald Żelaznoręki (Torvaldr Járnhönd)',
     colors: {
@@ -58,7 +60,8 @@ export const HOUSES = {
     name: 'Ravnheim',
     fullName: 'Zakon Ravnheim (Ordo Corvi)',
     symbolAnimal: 'Kruk Mądrości (Corvus Corax)',
-    crestIcon: '🐦',
+    crestIcon: 'ᚱ',
+    crestImage: '/crest_raven.jpg',
     element: 'Cień i Astralna Noc',
     founder: 'Morana Cień-Krocząca (Morana Skuggaganga)',
     colors: {
@@ -85,7 +88,8 @@ export const HOUSES = {
     name: 'Otergard',
     fullName: 'Zakon Otergard (Ordo Lutrae)',
     symbolAnimal: 'Wydra Polarna (Lutra Borealis)',
-    crestIcon: '🦦',
+    crestIcon: 'ᛞ',
+    crestImage: '/crest_otter.jpg',
     element: 'Lodowcowe Wody i Toksyny',
     founder: 'Astrid Złotooka (Astrid Gullauga)',
     colors: {

@@ -6,7 +6,8 @@ export const CATEGORY_BANNERS = [
     themeColor: '#4cc9f0',
     description: 'Katedra Eliksirów, destylacja wywarów i alchemia mroźna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 28, 48, 0.95) 0%, rgba(4, 8, 14, 0.98) 100%)',
-    bgType: 'potions'
+    bgType: 'potions',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001474392203304/An82NrY.png?ex=6a8c00f5&is=6a8aaf75&hm=9ec70e4e7fd7c7072e45480c16c17962b8f6df5827ce5dd63c971579ac7b124e&=&format=webp&quality=lossless'
   },
   {
     id: 'edykty',
@@ -15,7 +16,8 @@ export const CATEGORY_BANNERS = [
     themeColor: 'var(--gold-ancient)',
     description: 'Oficjalne dekrety, inauguracje i zarządzenia Rady Mistrzów',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(38, 28, 12, 0.95) 0%, rgba(6, 6, 8, 0.98) 100%)',
-    bgType: 'citadel'
+    bgType: 'citadel',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp'
   },
   {
     id: 'czarna-magia',
@@ -24,7 +26,8 @@ export const CATEGORY_BANNERS = [
     themeColor: '#b18cfe',
     description: 'Klątwy, pętanie cieni, nekromancja i rytuały północy',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(28, 14, 46, 0.95) 0%, rgba(4, 3, 8, 0.98) 100%)',
-    bgType: 'shadow'
+    bgType: 'shadow',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995757992054794/cm.jpg?ex=6a8bfba3&is=6a8aaa23&hm=31e7543b85e23f8b4f36c09796dcf210c189092898e91c0be721fbf28fc395c6&=&format=webp&width=3072&height=1445'
   },
   {
     id: 'liga-bojowa',
@@ -33,7 +36,8 @@ export const CATEGORY_BANNERS = [
     themeColor: '#ff5c5c',
     description: 'Pojedynki na lodzie, turnieje szermierki i magia defensywna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(44, 14, 14, 0.95) 0%, rgba(8, 3, 3, 0.98) 100%)',
-    bgType: 'duel'
+    bgType: 'duel',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995756603867166/B4C34M1Z2_The_Golden_Thread.jpg?ex=6a8bfba2&is=6a8aaa22&hm=e83c10d24847e06a8a473b087794dfc1aa3752fdc9c9b9fa2d2334312baabad4&=&format=webp'
   },
   {
     id: 'starozytne-runy',
@@ -42,7 +46,8 @@ export const CATEGORY_BANNERS = [
     themeColor: '#2ec4b6',
     description: 'Wykucie formuł runicznych (Galdr), inskrypcje i monolity',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(10, 36, 34, 0.95) 0%, rgba(3, 8, 8, 0.98) 100%)',
-    bgType: 'runes'
+    bgType: 'runes',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541000968911589447/IMG_0914.jpg?ex=6a8c007d&is=6a8aaefd&hm=95b03e770a59ed2b328d39b07802e7312ec857bbb7acde2adc5980897eb4fda8&=&format=webp'
   },
   {
     id: 'astronomia',

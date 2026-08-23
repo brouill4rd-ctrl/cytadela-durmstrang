@@ -90,7 +90,7 @@ export const ProfileView = () => {
   const xpPercentage = Math.min(100, Math.round(((activeUser.xp || 0) / (activeUser.nextLevelXp || 1000)) * 100));
 
   // Gender label helper
-  const genderLabel = activeUser.gender === 'czarownica' ? '🧙‍♀️ Czarownica' : activeUser.gender === 'mistyk' ? '🔮 Mistyk Północy' : '🧙‍♂️ Czarodziej';
+  const genderLabel = activeUser.gender === 'czarownica' ? 'Czarownica Północy' : activeUser.gender === 'mistyk' ? 'Mistyk Północy' : 'Czarodziej Północy';
 
   // Find user's lesson point transactions
   const userLessonTransactions = (pointLedger || []).filter(tx =>
@@ -211,7 +211,7 @@ export const ProfileView = () => {
                 {activeUser.fullName}
               </h1>
               <div style={{ fontSize: '0.9rem', color: '#a0aec0', marginTop: '0.3rem' }}>
-                {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Cytadeli' : 'Adept')} • {activeUser.origin || activeUser.office || 'Cytadela Durmstrang'}
+                {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Adept')} • {activeUser.origin || activeUser.office || 'Twierdza Magii Durmstrang (TMD)'}
               </div>
               <div style={{ fontSize: '0.78rem', color: currentAura.border, fontWeight: 700, marginTop: '0.3rem' }}>
                 ✨ {currentAura.name}
@@ -420,7 +420,7 @@ export const ProfileView = () => {
             gap: '0.5rem'
           }}
         >
-          <Sparkles size={16} color="#f59e0b" /> ✨ Aury & Tytuły Runiczne
+          <Sparkles size={16} color="#f59e0b" /> Aury & Tytuły Runiczne
         </button>
 
         <button
@@ -443,7 +443,7 @@ export const ProfileView = () => {
             gap: '0.5rem'
           }}
         >
-          <BookOpen size={16} color="#2ec4b6" /> 📖 Dziennik Lekcji ({userLessonTransactions.length})
+          <BookOpen size={16} color="#2ec4b6" /> Dziennik Lekcji ({userLessonTransactions.length})
         </button>
 
         <button
@@ -512,7 +512,7 @@ export const ProfileView = () => {
                 <div>
                   <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Godność Honorowa & Tytuł:</span>
                   <div style={{ color: 'var(--gold-glow)', fontWeight: 600, marginTop: '0.2rem' }}>
-                    {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Cytadeli' : 'Adept Północy')}
+                    {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Adept Północy')}
                   </div>
                 </div>
 
@@ -526,7 +526,7 @@ export const ProfileView = () => {
                 <div>
                   <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Siedziba / Dom / Katedra:</span>
                   <div style={{ color: '#cbd5e1', fontWeight: 600, marginTop: '0.2rem' }}>
-                    {house ? `Zakon ${house.name}` : activeUser.role === 'admin' ? (activeUser.office || 'Komnaty Najwyższej Wieży') : (activeUser.departmentName || 'Cytadela Durmstrang')}
+                    {house ? `Zakon ${house.name}` : activeUser.role === 'admin' ? (activeUser.office || 'Komnaty Najwyższej Wieży') : (activeUser.departmentName || 'Twierdza Magii Durmstrang (TMD)')}
                   </div>
                 </div>
               </div>
@@ -637,7 +637,7 @@ export const ProfileView = () => {
               <Sparkles size={18} color="var(--gold-ancient)" /> Wybierz Swoją Runiczną Aurę Wizualną
             </h3>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Aura manifestuje Twoją energię magiczną wokół portretu, profilu i osiągnięć w całej Cytadeli Durmstrang:
+              Aura manifestuje Twoją energię magiczną wokół portretu, profilu i osiągnięć w całej Twierdzy Magii Durmstrang (TMD):
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>

@@ -530,14 +530,16 @@ export const SubjectDetailView = () => {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {topStudents.map((s, i) => {
-                  const h = Object.values(houses || {}).find(hh => hh.id === s.house) || { crestIcon: '🛡️', name: s.house, colors: { secondary: '#c59f4e' } };
+                  const h = Object.values(houses || {}).find(hh => hh.id === s.house) || { crestIcon: 'ᛞ', name: s.house, colors: { secondary: '#c59f4e' } };
                   const avgVal = s.total / s.count;
                   const avg = HP_GRADES.find(g => g.value === Math.round(avgVal));
-                  const medals = ['🥇', '🥈', '🥉'];
+                  const rankBadges = ['I', 'II', 'III'];
                   return (
                     <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: i === 0 ? 'rgba(197,159,78,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${i === 0 ? 'rgba(197,159,78,0.3)' : 'rgba(255,255,255,0.05)'}`, borderRadius: '8px', padding: '0.7rem 1rem' }}>
-                      <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medals[i] || `#${i + 1}`}</span>
-                      <span style={{ color: h.colors?.secondary || '#c5cdd9', fontSize: '1rem', flexShrink: 0 }}>{h.crestIcon}</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, minWidth: '1.8rem', textAlign: 'center', color: i === 0 ? 'var(--gold-ancient)' : i === 1 ? '#cbd5e1' : i === 2 ? '#d97706' : '#6b7280', fontFamily: 'var(--font-heading)' }}>
+                        {rankBadges[i] || `#${i + 1}`}
+                      </span>
+                      <span style={{ color: h.colors?.secondary || '#c5cdd9', fontSize: '1rem', flexShrink: 0, fontFamily: 'serif' }}>{h.crestIcon}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>{s.name}</div>
                         <div style={{ color: '#9ca3af', fontSize: '0.78rem' }}>{h.name} • {s.count} ocen</div>

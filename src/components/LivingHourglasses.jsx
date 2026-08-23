@@ -1,44 +1,78 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { Sparkles, Trophy } from 'lucide-react';
 
 export const LivingHourglasses = () => {
   const { houses } = useSchool();
 
-  const maxPoints = Math.max(...(houses || []).map(h => h.points || 0), 100);
+  const houseList = Array.isArray(houses) ? houses : Object.values(houses || {});
+  const maxPoints = Math.max(...houseList.map(h => (h.startingPoints || h.points || 0)), 100);
 
   const houseThemes = {
+    reinhall: {
+      name: 'Reinhall',
+      gemColor: '#d4af37',
+      gemGlow: 'rgba(212, 175, 55, 0.6)',
+      symbol: '🦌',
+      border: 'rgba(212, 175, 55, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(122, 24, 24, 0.5) 0%, rgba(20, 10, 10, 0.85) 100%)'
+    },
+    bjornhall: {
+      name: 'Björnhall',
+      gemColor: '#ef4444',
+      gemGlow: 'rgba(239, 68, 68, 0.6)',
+      symbol: '🐻',
+      border: 'rgba(239, 68, 68, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(90, 18, 18, 0.5) 0%, rgba(15, 10, 10, 0.85) 100%)'
+    },
+    ravnheim: {
+      name: 'Ravnheim',
+      gemColor: '#a855f7',
+      gemGlow: 'rgba(168, 85, 247, 0.6)',
+      symbol: '🐦',
+      border: 'rgba(168, 85, 247, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(28, 19, 46, 0.5) 0%, rgba(10, 15, 25, 0.85) 100%)'
+    },
+    otergard: {
+      name: 'Otergard',
+      gemColor: '#2dd4bf',
+      gemGlow: 'rgba(45, 212, 191, 0.6)',
+      symbol: '🦦',
+      border: 'rgba(45, 212, 191, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(13, 45, 51, 0.5) 0%, rgba(10, 20, 18, 0.85) 100%)'
+    },
+    // Aliases for safety
     renifer: {
       name: 'Reinhall',
       gemColor: '#d4af37',
       gemGlow: 'rgba(212, 175, 55, 0.6)',
       symbol: '🦌',
       border: 'rgba(212, 175, 55, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(122, 24, 24, 0.4) 0%, rgba(20, 10, 10, 0.85) 100%)'
+      bgGrad: 'linear-gradient(180deg, rgba(122, 24, 24, 0.5) 0%, rgba(20, 10, 10, 0.85) 100%)'
     },
     niedzwiedz: {
       name: 'Björnhall',
-      gemColor: '#e53935',
-      gemGlow: 'rgba(229, 57, 53, 0.6)',
+      gemColor: '#ef4444',
+      gemGlow: 'rgba(239, 68, 68, 0.6)',
       symbol: '🐻',
-      border: 'rgba(229, 57, 53, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(90, 18, 18, 0.4) 0%, rgba(15, 10, 10, 0.85) 100%)'
+      border: 'rgba(239, 68, 68, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(90, 18, 18, 0.5) 0%, rgba(15, 10, 10, 0.85) 100%)'
     },
     kruk: {
       name: 'Ravnheim',
-      gemColor: '#29b6f6',
-      gemGlow: 'rgba(41, 182, 246, 0.6)',
+      gemColor: '#a855f7',
+      gemGlow: 'rgba(168, 85, 247, 0.6)',
       symbol: '🐦',
-      border: 'rgba(41, 182, 246, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(20, 45, 90, 0.4) 0%, rgba(10, 15, 25, 0.85) 100%)'
+      border: 'rgba(168, 85, 247, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(28, 19, 46, 0.5) 0%, rgba(10, 15, 25, 0.85) 100%)'
     },
     wydra: {
       name: 'Otergard',
-      gemColor: '#26a69a',
-      gemGlow: 'rgba(38, 166, 154, 0.6)',
+      gemColor: '#2dd4bf',
+      gemGlow: 'rgba(45, 212, 191, 0.6)',
       symbol: '🦦',
-      border: 'rgba(38, 166, 154, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(15, 60, 50, 0.4) 0%, rgba(10, 20, 18, 0.85) 100%)'
+      border: 'rgba(45, 212, 191, 0.4)',
+      bgGrad: 'linear-gradient(180deg, rgba(13, 45, 51, 0.5) 0%, rgba(10, 20, 18, 0.85) 100%)'
     }
   };
 
@@ -65,9 +99,10 @@ export const LivingHourglasses = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
-        {(houses || []).map((house) => {
-          const theme = houseThemes[house.id] || houseThemes.renifer;
-          const fillPercent = Math.min(Math.max(((house.points || 0) / maxPoints) * 100, 15), 100);
+        {houseList.map((house) => {
+          const theme = houseThemes[house.id] || houseThemes.reinhall;
+          const points = house.startingPoints || house.points || 0;
+          const fillPercent = Math.min(Math.max((points / maxPoints) * 100, 15), 100);
 
           return (
             <div
@@ -159,7 +194,7 @@ export const LivingHourglasses = () => {
                     fontFamily: 'var(--font-heading)'
                   }}
                 >
-                  {house.points || 0}
+                  {points}
                 </span>
                 <span style={{ display: 'block', fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase' }}>
                   Punktów

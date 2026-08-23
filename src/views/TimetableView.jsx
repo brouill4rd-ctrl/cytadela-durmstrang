@@ -26,7 +26,8 @@ import {
   Info,
   X,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Castle
 } from 'lucide-react';
 
 export const TimetableView = () => {
@@ -255,7 +256,7 @@ export const TimetableView = () => {
             </h1>
 
             <p style={{ color: '#a0aec0', fontSize: '0.92rem', maxWidth: '680px', lineHeight: 1.55 }}>
-              Oficjalny harmonogram zajęć w Cytadeli Durmstrang. Przeglądaj siatkę godzinową sal, sprawdzaj bieżące zastępstwa mistrzów i komunikaty o odwołaniach lekcji w fiordach.
+              Oficjalny harmonogram zajęć w Twierdzy Magii Durmstrang (TMD). Przeglądaj siatkę godzinową sal, sprawdzaj bieżące zastępstwa mistrzów i komunikaty o odwołaniach lekcji w fiordach.
             </p>
           </div>
 
@@ -315,8 +316,8 @@ export const TimetableView = () => {
               gap: '0.85rem'
             }}
           >
-            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-              📚
+            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen size={18} color="#38bdf8" />
             </div>
             <div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
@@ -339,8 +340,8 @@ export const TimetableView = () => {
               gap: '0.85rem'
             }}
           >
-            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-              🔁
+            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <RefreshCw size={18} color="#a855f7" />
             </div>
             <div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d8b4fe', fontFamily: 'var(--font-heading)' }}>
@@ -363,8 +364,8 @@ export const TimetableView = () => {
               gap: '0.85rem'
             }}
           >
-            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-              ❌
+            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <XCircle size={18} color="#ef4444" />
             </div>
             <div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fca5a5', fontFamily: 'var(--font-heading)' }}>
@@ -387,8 +388,8 @@ export const TimetableView = () => {
               gap: '0.85rem'
             }}
           >
-            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(197, 159, 78, 0.12)', border: '1px solid rgba(197, 159, 78, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-              🏰
+            <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(197, 159, 78, 0.12)', border: '1px solid rgba(197, 159, 78, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Castle size={18} color="var(--gold-ancient)" />
             </div>
             <div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)' }}>
@@ -749,7 +750,7 @@ export const TimetableView = () => {
                           </div>
                           {isToday && (
                             <div style={{ fontSize: '0.68rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                              ★ Dzisiaj w Cytadeli
+                              ★ Dzisiaj w Twierdzy
                             </div>
                           )}
                         </div>
@@ -864,7 +865,7 @@ export const TimetableView = () => {
                         </div>
                         {isToday && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--gold-glow)', fontWeight: 700 }}>
-                            ★ DZISIAJ W CYTADELI
+                            ★ DZISIAJ W TWIERDZY
                           </div>
                         )}
                       </div>

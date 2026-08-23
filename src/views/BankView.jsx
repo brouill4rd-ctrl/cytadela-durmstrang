@@ -115,13 +115,13 @@ export const BankView = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
           <span style={{ color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-            ᛟ Podziemia Granitowe Cytadeli ᛟ
+            ᛟ Podziemia Granitowe Twierdzy Magii (TMD) ᛟ
           </span>
           <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.3rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
             Kaupangr Skírnisbanki
           </h1>
           <p style={{ color: '#9ca3af', maxWidth: '650px', fontSize: '0.98rem' }}>
-            Oficjalny Bank Północy i Skarbiec Cytadeli Durmstrang. Przechowuj Skirniry, realizuj błyskawiczne przelewy runiczne, odbieraj stypendia oraz wypłaty profesorskie.
+            Oficjalny Bank Północy i Skarbiec Twierdzy Magii Durmstrang (TMD). Przechowuj Skirniry, realizuj błyskawiczne przelewy runiczne, odbieraj stypendia oraz wypłaty profesorskie.
           </p>
         </div>
 
@@ -455,8 +455,8 @@ export const BankView = () => {
                   style={{ width: '100%', padding: '0.7rem 0.9rem', fontSize: '0.9rem', background: 'rgba(8, 12, 18, 0.9)' }}
                 >
                   <option value="">-- Wybierz postać lub skarbiec --</option>
-                  <optgroup label="🏰 Skarbce Zakonów & Cytadeli">
-                    <option value="cytadela-treasury">Skarbiec Główny Cytadeli Durmstrang</option>
+                  <optgroup label="🏰 Skarbce Zakonów & Twierdzy (TMD)">
+                    <option value="cytadela-treasury">Skarbiec Główny Twierdzy Magii Durmstrang (TMD)</option>
                     <option value="house-treasury-reinhall">🦌 Skarbiec Zakonu Reinhall</option>
                     <option value="house-treasury-bjornhall">🐻 Skarbiec Zakonu Björnhall</option>
                     <option value="house-treasury-ravnheim">🐦 Skarbiec Zakonu Ravnheim</option>

@@ -47,7 +47,7 @@ export const RavenPostView = () => {
           Krucza Poczta (Hrafnapóstur)
         </h1>
         <p style={{ color: '#9ca3af', maxWidth: '650px', fontSize: '0.98rem' }}>
-          Oficjalny system wiadomości pomiędzy kadetami, profesorami Katedr a Radą Dyrekcji Cytadeli.
+          Oficjalny system wiadomości pomiędzy kadetami, profesorami Katedr a Radą Dyrekcji Twierdzy Magii (TMD).
         </p>
       </div>
 

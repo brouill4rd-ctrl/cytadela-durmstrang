@@ -140,7 +140,7 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'var(--font-heading)' }}>
-              ᛞ Oficjalny Zwój Cytadeli Durmstrang ᛞ
+              ᛞ Oficjalny Zwój Twierdzy Magii Durmstrang (TMD) ᛞ
             </span>
             {currentArticle.pinned && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(197, 159, 78, 0.2)', border: '1px solid var(--gold-ancient)', color: 'var(--gold-glow)', fontSize: '0.72rem', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>

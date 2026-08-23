@@ -14,6 +14,7 @@ import { IceFishingModal } from './IceFishingModal';
 import { BestiaryModal } from './BestiaryModal';
 import { BlackMarketModal } from './BlackMarketModal';
 import { TournamentGauntletModal } from './TournamentGauntletModal';
+import { CustomPageEditorModal } from './CustomPageEditorModal';
 import {
   Castle,
   UserPlus,
@@ -35,6 +36,7 @@ import {
   LogIn,
   LogOut,
   User,
+  Users,
   AlertCircle,
   Calendar,
   Clock,
@@ -47,7 +49,14 @@ import {
   Skull,
   Eye,
   Crown,
-  Edit3
+  Edit3,
+  Gamepad2,
+  Scale,
+  Map,
+  ShieldAlert,
+  ClipboardCheck,
+  MessageSquare,
+  Plus
 } from 'lucide-react';
 
 export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
@@ -57,6 +66,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     houses,
     currentUser,
     currentRole,
+    studentProfile,
     loginUser,
     logoutUser,
     setAuthModalOpen,
@@ -66,8 +76,13 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     setEmailInboxOpen,
     timetable,
     daysOfWeek,
-    showNotification
+    blockGraphics,
+    showNotification,
+    navigateToDocumentModule,
+    activeDocumentCategory
   } = useSchool();
+
+  const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
   const { playWandSwoosh, playRuneChime } = useSound();
 
@@ -89,6 +104,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
   const [bestiaryModalOpen, setBestiaryModalOpen] = useState(false);
   const [blackMarketModalOpen, setBlackMarketModalOpen] = useState(false);
   const [tournamentModalOpen, setTournamentModalOpen] = useState(false);
+  const [customPageEditorOpen, setCustomPageEditorOpen] = useState(false);
 
   const openActivity = (openFn, activityName = 'Gry i aktywności') => {
     playWandSwoosh();
@@ -136,10 +152,17 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           0. BLOK: KARTA TOŻSAMOŚCI / LOGOWANIE DO CYTADELI
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('identity')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('identity').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛟ</div>
-          <Shield size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.8 }} />
+          <div className="runic-watermark">{getBlockGraphic('identity')?.rune || 'ᛟ'}</div>
+          <Shield size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
         </div>
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
@@ -166,123 +189,119 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {currentUser.fullName || `${currentUser.name || ''} ${currentUser.surname || ''}`.trim() || currentUser.username}
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {currentUser.fullName || currentUser.name}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: house ? house.colors?.secondary : 'var(--gold-ancient)' }}>
-                    {house ? house.name : currentUser.role === 'admin' ? 'Arcymistrzyni' : 'Adept'} • {currentUser.role || 'Uczeń'}
+                  <div style={{ fontSize: '0.74rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontWeight: 600 }}>
+                    {currentUser.role === 'admin' ? 'Arcymistrzyni • admin' : currentUser.role === 'professor' ? 'Profesor Katedry' : house ? house.name : 'Adept'}
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons: Edit Profile, Passport & Profile */}
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
+              {/* Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
                 <button
-                  onClick={() => {
-                    playWandSwoosh();
-                    setProfileEditorModalOpen(true);
-                  }}
+                  onClick={() => setProfileEditorModalOpen(true)}
                   className="btn-durmstrang"
-                  style={{ flex: 1, padding: '0.4rem 0.2rem', fontSize: '0.72rem', justifyContent: 'center', background: 'linear-gradient(135deg, #c59f4e 0%, #8b6b23 100%)', color: '#06090e', fontWeight: 700 }}
-                  title="Edytuj dane, awatar i płeć postaci"
+                  style={{ padding: '0.4rem', fontSize: '0.72rem', justifyContent: 'center', gap: '0.3rem' }}
                 >
-                  <Edit3 size={11} /> Edytuj
+                  <Edit3 size={12} />
+                  <span>EDYTUJ</span>
                 </button>
-
                 <button
-                  onClick={() => {
-                    playRuneChime();
-                    setPassportModalOpen(true);
-                  }}
+                  onClick={() => setPassportModalOpen(true)}
                   className="btn-durmstrang-secondary"
-                  style={{ flex: 1, padding: '0.4rem 0.2rem', fontSize: '0.72rem', justifyContent: 'center' }}
+                  style={{ padding: '0.4rem', fontSize: '0.72rem', justifyContent: 'center', gap: '0.3rem' }}
                 >
-                  <Download size={11} /> Paszport
-                </button>
-
-                <button
-                  onClick={() => handleNav('profile')}
-                  className="btn-durmstrang-secondary"
-                  style={{ flex: 1, padding: '0.4rem 0.2rem', fontSize: '0.72rem', justifyContent: 'center' }}
-                >
-                  <User size={11} /> Profil
+                  <Scroll size={12} />
+                  <span>PASZPORT</span>
                 </button>
               </div>
+
+              <button
+                onClick={() => handleNav('profile')}
+                className="btn-durmstrang-secondary"
+                style={{ width: '100%', padding: '0.4rem', fontSize: '0.74rem', justifyContent: 'center', gap: '0.4rem' }}
+              >
+                <Users size={13} />
+                <span>MÓJ PROFIL & EKWIPUNEK</span>
+              </button>
 
               <button
                 onClick={logoutUser}
                 style={{
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
-                  color: '#ef4444',
+                  color: '#9ca3af',
                   fontSize: '0.72rem',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  justifyContent: 'center',
-                  padding: '0.2rem'
+                  padding: '0.2rem',
+                  textAlign: 'center',
+                  transition: 'color 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
               >
-                <LogOut size={12} /> Wyloguj z Cytadeli
+                [→ Wyloguj z Cytadeli
               </button>
             </div>
           ) : (
-            /* ================= LOGGED OUT SIDEBAR LOGIN FORM ================= */
-            <form onSubmit={handleSidebarLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.2rem' }}>
-                  Login Adepta / Profesora:
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="np. valdemar, morana"
-                  value={sideUsername}
-                  onChange={(e) => setSideUsername(e.target.value)}
-                  className="gothic-input"
-                  style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
-                />
-              </div>
+            /* ================= GUEST LOGIN FORM ================= */
+            <form onSubmit={handleMiniLogin}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Login:
+                  </label>
+                  <input
+                    type="text"
+                    value={sideUsername}
+                    onChange={(e) => setSideUsername(e.target.value)}
+                    placeholder="np. adept / valgerda"
+                    className="gothic-input"
+                    style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
+                  />
+                </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.2rem' }}>
-                  Hasło:
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••"
-                  value={sidePassword}
-                  onChange={(e) => setSidePassword(e.target.value)}
-                  className="gothic-input"
-                  style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
-                />
-              </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Hasło:
+                  </label>
+                  <input
+                    type="password"
+                    value={sidePassword}
+                    onChange={(e) => setSidePassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="gothic-input"
+                    style={{ padding: '0.45rem 0.65rem', fontSize: '0.8rem' }}
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="btn-durmstrang"
-                style={{ width: '100%', padding: '0.45rem', fontSize: '0.82rem', justifyContent: 'center', marginTop: '0.2rem' }}
-              >
-                <LogIn size={13} /> Zaloguj do Cytadeli
-              </button>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.4rem', fontSize: '0.72rem' }}>
                 <button
-                  type="button"
-                  onClick={() => setAuthModalOpen(true)}
-                  style={{ background: 'none', border: 'none', color: 'var(--gold-glow)', textAlign: 'left', cursor: 'pointer', padding: 0 }}
+                  type="submit"
+                  className="btn-durmstrang"
+                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.82rem', marginTop: '0.2rem', justifyContent: 'center' }}
                 >
-                  📝 Zarejestruj Adepta / Profesora
+                  <LogIn size={13} />
+                  <span>Zaloguj się</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPasswordRecoveryModalOpen(true)}
-                  style={{ background: 'none', border: 'none', color: '#9ca3af', textAlign: 'left', cursor: 'pointer', padding: 0 }}
-                >
-                  🗝️ Zapomniałeś hasła?
-                </button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { playWandSwoosh(); setPasswordRecoveryModalOpen(true); }}
+                    style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Zapomniałeś hasła?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playWandSwoosh(); setAuthModalOpen(true); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--gold-ancient)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Stwórz konto →
+                  </button>
+                </div>
               </div>
             </form>
           )}
@@ -293,9 +312,16 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           1. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid rgba(197, 159, 78, 0.4)' }}>
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('activities')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('activities').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛏ</div>
+          <div className="runic-watermark">{getBlockGraphic('activities')?.rune || 'ᛏ'}</div>
           <Zap size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
         </div>
 
@@ -312,7 +338,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setOracleModalOpen, 'Wyrocznia Przeznaczenia (Seidr)')}
                 style={{ color: '#ffe599' }}
               >
-                <span>🔮 Wyrocznia Przeznaczenia (Seidr)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Sparkles size={14} color="var(--gold-ancient)" /> Wyrocznia Przeznaczenia (Seidr)
+                </span>
                 <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   BUFF
                 </span>
@@ -321,10 +349,12 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
             <li>
               <button
-                onClick={() => openActivity(setExpeditionsModalOpen, 'Ekspedycje do Puszczy & Fjordów')}
+                onClick={() => openActivity(setExpeditionsModalOpen, 'Ekspedycje do Puszczy & Fiordów')}
                 style={{ color: '#4ade80' }}
               >
-                <span>🌲 Ekspedycje do Puszczy & Fjordów</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Compass size={14} color="#4ade80" /> Ekspedycje do Puszczy & Fiordów
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#22c55e', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   RPG
                 </span>
@@ -336,7 +366,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setTargetModalOpen, 'Runiczna Strzelnica Różdżkowa')}
                 style={{ color: '#38bdf8' }}
               >
-                <span>🎯 Runiczna Strzelnica Różdżkowa</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Crosshair size={14} color="#38bdf8" /> Runiczna Strzelnica Różdżkowa
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#38bdf8', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   ZRĘCZNOŚĆ
                 </span>
@@ -348,7 +380,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setEscapeModalOpen, 'Labirynt Tajemnic: Escape Room')}
                 style={{ color: '#fcd34d' }}
               >
-                <span>🗝️ Labirynt Tajemnic: Escape Room</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Key size={14} color="#f59e0b" /> Labirynt Tajemnic: Escape Room
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#f59e0b', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   ZAGADKI
                 </span>
@@ -360,7 +394,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setHnefataflModalOpen, 'Hnefatafl (Szachy Wikingów)')}
                 style={{ color: '#c084fc' }}
               >
-                <span>🎲 Hnefatafl (Szachy Wikingów)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Gamepad2 size={14} color="#a855f7" /> Hnefatafl (Szachy Wikingów)
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#a855f7', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   PLANSZA
                 </span>
@@ -369,10 +405,12 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
             <li>
               <button
-                onClick={() => openActivity(setFishingModalOpen, 'Połów w Zamarzniętym Fjordzie')}
+                onClick={() => openActivity(setFishingModalOpen, 'Połów w Zamarzniętym Fiordzie')}
                 style={{ color: '#93c5fd' }}
               >
-                <span>🎣 Połów w Zamarzniętym Fjordzie</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Anchor size={14} color="#0284c7" /> Połów w Zamarzniętym Fiordzie
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#0284c7', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   RELAKS
                 </span>
@@ -384,7 +422,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setTournamentModalOpen, 'Turniej Szermierki')}
                 style={{ color: '#f87171' }}
               >
-                <span>🏆 Turniej Szermierki: Droga Mistrza</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Award size={14} color="#ef4444" /> Turniej Szermierki: Droga Mistrza
+                </span>
                 <span style={{ fontSize: '0.62rem', background: '#ef4444', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   TURNIEJ
                 </span>
@@ -396,27 +436,49 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 onClick={() => openActivity(setBestiaryModalOpen, 'Bestiariusz Północy')}
                 style={{ color: '#fed7aa' }}
               >
-                <span>🐉 Bestiariusz Północy (Karty Bestii)</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Eye size={14} color="#f97316" /> Bestiariusz Północy (Karty Bestii)
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
 
             <li>
               <button
-                onClick={() => openActivity(setBlackMarketModalOpen, 'Czarny Rynek w Lochach')}
-                style={{ color: '#e9d5ff' }}
+                onClick={() => openActivity(setBlackMarketModalOpen, 'Czarny Rynek')}
+                style={{ color: '#cbd5e1' }}
               >
-                <span>🏴‍☠️ Czarny Rynek w Lochach</span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Skull size={14} color="#94a3b8" /> Czarny Rynek Przemytników (Svartálfar)
+                </span>
+                <span style={{ fontSize: '0.62rem', background: '#334155', color: '#f8fafc', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                  KONTRA
+                </span>
               </button>
             </li>
 
             <li>
               <button
-                onClick={() => openActivity(setGrimoireModalOpen, 'Grimoire Zaklęć & Gestów')}
-                style={{ color: '#ffe599' }}
+                onClick={() => openActivity(setDuelModalOpen, 'Sala Pojedynków')}
+                style={{ color: '#fca5a5' }}
               >
-                <span>⚡ Grimoire Zaklęć & Gestów</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Swords size={14} color="#ef4444" /> Wielka Sala Pojedynków (Hólmganga)
+                </span>
+                <span style={{ fontSize: '0.62rem', background: '#991b1b', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                  PVP
+                </span>
+              </button>
+            </li>
+
+            <li>
+              <button
+                onClick={() => openActivity(setGrimoireModalOpen, 'Grimuar Zaklęć')}
+                style={{ color: '#fde68a' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <BookOpen size={14} color="var(--gold-ancient)" /> Grimuar Pradawnych Zaklęć
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -425,18 +487,25 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       </div>
 
       {/* =========================================================================
-          2. BLOK: CYTADELA
+          2. BLOK: GŁÓWNA STRUKTURA TWIERDZY MAGII
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('locations')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('locations').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᛞ</div>
-          <Castle size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('locations')?.rune || 'ᛞ'}</div>
+          <Castle size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
-          <span>Cytadela</span>
+          <span>Twierdza Magii (TMD)</span>
           <span className="rune-bracket">ᚦ</span>
         </div>
 
@@ -451,7 +520,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   border: activeView === 'home' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                 }}
               >
-                <span>🏰 Wrota Wejściowe</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Castle size={14} color="var(--gold-ancient)" /> Wrota Wejściowe
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -465,7 +536,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   fontWeight: 700
                 }}
               >
-                <span>📜 Dzienniki Lekcyjne</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Scroll size={14} color="var(--gold-ancient)" /> Dzienniki Lekcyjne
+                </span>
                 <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                   DISCORD
                 </span>
@@ -481,7 +554,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   fontWeight: 700
                 }}
               >
-                <span>📅 Plan Lekcji & Grafik</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Calendar size={14} color="var(--gold-ancient)" /> Plan Lekcji & Grafik
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -494,7 +569,42 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   border: activeView === 'houses' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                 }}
               >
-                <span>🛡️ Cztery Zakony</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Shield size={14} color="var(--gold-ancient)" /> Cztery Zakony
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => handleNav('documents')}
+                style={{
+                  color: activeView === 'documents' ? '#ffffff' : '#f7dca0',
+                  background: activeView === 'documents' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(197, 159, 78, 0.08)',
+                  border: activeView === 'documents' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
+                  fontWeight: 700
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Scroll size={14} color="var(--gold-ancient)" /> Dekrety, Regulamin DC & Statut
+                </span>
+                <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  NOWE
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => handleNav('rules-guide')}
+                style={{
+                  color: activeView === 'rules-guide' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'rules-guide' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
+                  border: activeView === 'rules-guide' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Scale size={14} color="var(--gold-ancient)" /> Kodeks & Pakt 1294
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -503,12 +613,147 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       </div>
 
       {/* =========================================================================
+          2b. BLOK: WIELKA INKWIZYCJA & DEKRETY WŁADZ (DEDYKOWANY MODUŁ PRAWNY)
+          ========================================================================= */}
+      <div className="menuBlock" style={{ border: '1px solid rgba(239, 68, 68, 0.45)' }}>
+        <div
+          className="menuBlockHeaderImage"
+          style={{
+            backgroundImage: `linear-gradient(rgba(20, 5, 5, 0.65), rgba(8, 12, 18, 0.85)), url("/tmd_herb.png")`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center'
+          }}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">ᛏ</div>
+          <ShieldAlert size={36} color="#ef4444" style={{ position: 'relative', zIndex: 2, opacity: 0.9 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: '#fca5a5' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Inkwizycja & Dekrety</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <ul>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('dekrety'); }}
+                style={{
+                  color: '#fca5a5',
+                  background: activeView === 'documents' && activeDocumentCategory === 'dekrety' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'dekrety' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <ShieldAlert size={14} color="#ef4444" /> Dekrety Władz & Edykty
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#991b1b', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  EDYKT
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('wizytacje'); }}
+                style={{
+                  color: '#93c5fd',
+                  background: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <ClipboardCheck size={14} color="#38bdf8" /> Wizytacje Nauczycieli
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#0284c7', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  NADZÓR
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('statut'); }}
+                style={{
+                  color: '#fef08a',
+                  background: activeView === 'documents' && activeDocumentCategory === 'statut' ? 'rgba(234, 179, 8, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'statut' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Scale size={14} color="#eab308" /> Statut Instytutu TMD
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#a16207', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  USTAWA
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('regulamin-dc'); }}
+                style={{
+                  color: '#c7d2fe',
+                  background: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <MessageSquare size={14} color="#818cf8" /> Regulamin Serwera Discord
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#4f46e5', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  DC
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('zabawy'); }}
+                style={{
+                  color: '#a7f3d0',
+                  background: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Gamepad2 size={14} color="#34d399" /> Opis Zabaw & Gier RPG
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#059669', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  RPG
+                </span>
+              </button>
+            </li>
+          </ul>
+
+          {(currentUser?.role === 'admin' || currentRole === 'admin') && (
+            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <button
+                onClick={() => { playWandSwoosh(); setCustomPageEditorOpen(true); }}
+                className="btn-durmstrang"
+                style={{ width: '100%', padding: '0.45rem', fontSize: '0.76rem', justifyContent: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(197, 159, 78, 0.3) 100%)', border: '1px solid var(--gold-ancient)' }}
+              >
+                <Plus size={13} />
+                <span>+ Stwórz Nową Podstronę</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* =========================================================================
           3. BLOK: PLAN LEKCJI & HARMONOGRAM DNIA
           ========================================================================= */}
       <div className="menuBlock" style={{ border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : undefined }}>
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('curriculum')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('curriculum').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᚠ</div>
+          <div className="runic-watermark">{getBlockGraphic('curriculum')?.rune || 'ᚠ'}</div>
           <Calendar size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
         </div>
 
@@ -550,13 +795,157 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       </div>
 
       {/* =========================================================================
+          3b. BLOK: GRIMUAR ZAKLĘĆ & MAGIA
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('grimoire')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('grimoire').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('grimoire')?.rune || 'ᚨ'}</div>
+          <BookOpen size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Grimuar & Magia</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
+            Inkantacje nordyckie, kucie formuł runicznych (Galdr) oraz archiwum wiedzy tajemnej.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <button
+              onClick={() => openActivity(setGrimoireModalOpen, 'Mroczny Grimuar')}
+              className="btn-durmstrang"
+              style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem', justifyContent: 'center', gap: '0.4rem' }}
+            >
+              <Sparkles size={13} />
+              <span>Otwórz Mroczny Grimuar</span>
+            </button>
+
+            <button
+              onClick={() => handleNav('rune-workshop')}
+              className="btn-durmstrang-secondary"
+              style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center', gap: '0.4rem' }}
+            >
+              <Sparkles size={12} color="#2ec4b6" />
+              <span>Pracownia Run (Galdr)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          3c. BLOK: RYNEK KAUPANGR (MARKETHALL & KRAMY)
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('markethall')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('markethall').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('markethall')?.rune || 'ᚲ'}</div>
+          <ShoppingBag size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Rynek Kaupangr</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          {currentUser && studentProfile && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(197, 159, 78, 0.1)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '4px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>Stan Sakiewki:</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--gold-glow)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Coins size={13} color="var(--gold-ancient)" /> {studentProfile.currency || 0} Skirnirów
+              </span>
+            </div>
+          )}
+
+          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
+            Wyprawki szkolne, kramy różdżkarskie, kociołki, rzadkie składniki alchemiczne i eliksiry.
+          </p>
+
+          <button
+            onClick={() => handleNav('markethall')}
+            className="btn-durmstrang"
+            style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem', justifyContent: 'center', gap: '0.4rem' }}
+          >
+            <ShoppingBag size={13} />
+            <span>Odwiedź Kramy Kaupangr →</span>
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          3d. BLOK: BANK SKIRNIRÓW (BANK & SKARBIEC)
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('bank')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('bank').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('bank')?.rune || 'ᛒ'}</div>
+          <Coins size={36} color="var(--gold-glow)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Bank Skirnirów</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
+            Oficjalny skarbiec Północy. Wymiana Galionów na Skirniry, skrytki depozytowe i depozyty rodowe.
+          </p>
+
+          <button
+            onClick={() => handleNav('bank')}
+            className="btn-durmstrang"
+            style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem', justifyContent: 'center', gap: '0.4rem' }}
+          >
+            <Coins size={13} />
+            <span>Otwórz Skarbiec Skirnirów →</span>
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
           4. BLOK: EKSPLORACJA
           ========================================================================= */}
       <div className="menuBlock">
-        <div className="menuBlockHeaderImage">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('exploration')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('exploration').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
           <div className="frost-overlay" />
-          <div className="runic-watermark">ᚱ</div>
-          <Compass size={36} color="rgba(164, 200, 225, 0.4)" style={{ position: 'relative', zIndex: 2 }} />
+          <div className="runic-watermark">{getBlockGraphic('exploration')?.rune || 'ᚱ'}</div>
+          <Compass size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
         </div>
 
         <div className="menuBlockTitle">
@@ -576,7 +965,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   border: activeView === 'map' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                 }}
               >
-                <span>🗺️ Żywa Mapa Twierdzy</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Map size={14} color="var(--gold-ancient)" /> Żywa Mapa Twierdzy
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -591,9 +982,11 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                     fontWeight: 700
                   }}
                 >
-                  <span>🏦 Bank Skirnirów (Skarbiec)</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Coins size={14} color="var(--gold-ancient)" /> Bank Skirnirów (Skarbiec)
+                  </span>
                   <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                    GRINGOTT
+                    BANK
                   </span>
                 </button>
               </li>
@@ -608,7 +1001,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                     border: activeView === 'markethall' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                   }}
                 >
-                  <span>🛍️ Rynek Kaupangr & Wyprawki</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <ShoppingBag size={14} color="var(--gold-ancient)" /> Rynek Kaupangr & Wyprawki
+                  </span>
                   <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
                 </button>
               </li>
@@ -622,7 +1017,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   border: activeView === 'lore' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                 }}
               >
-                <span>📜 Kroniki & Bestiariusz</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <BookOpen size={14} color="var(--gold-ancient)" /> Kroniki & Bestiariusz
+                </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
@@ -636,7 +1033,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                     border: activeView === 'raven-post' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
                   }}
                 >
-                  <span>✉️ Krucza Poczta</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Mail size={14} color="var(--gold-ancient)" /> Krucza Poczta
+                  </span>
                   <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
                 </button>
               </li>
@@ -659,6 +1058,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <BestiaryModal isOpen={bestiaryModalOpen} onClose={() => setBestiaryModalOpen(false)} />
       <BlackMarketModal isOpen={blackMarketModalOpen} onClose={() => setBlackMarketModalOpen(false)} />
       <TournamentGauntletModal isOpen={tournamentModalOpen} onClose={() => setTournamentModalOpen(false)} />
+      <CustomPageEditorModal isOpen={customPageEditorOpen} onClose={() => setCustomPageEditorOpen(false)} />
     </aside>
   );
 };

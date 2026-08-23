@@ -116,7 +116,7 @@ export const JournalsListView = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
               <span style={{ background: 'rgba(197, 159, 78, 0.15)', border: '1px solid var(--gold-ancient)', color: 'var(--gold-glow)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                📖 Kancelaria Dydaktyczna Cytadeli
+                📖 Kancelaria Dydaktyczna Twierdzy Magii (TMD)
               </span>
               <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>•</span>
               <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Archiwum Wątków Discord & Pakt 1294</span>
@@ -136,7 +136,7 @@ export const JournalsListView = () => {
             </h1>
 
             <p style={{ color: '#c5cdd9', fontSize: '0.95rem', maxWidth: '680px', marginTop: '0.6rem', lineHeight: 1.6 }}>
-              Oficjalny rejestr zajęć dydaktycznych prowadzonych w salach Cytadeli i na Discordzie. Każdy dziennik zawiera zweryfikowany wykaz obecności, przydzielone punkty do Pucharu Zakonów oraz wierne cyfrowe archiwum wątku z mediami i replikami zaklęć.
+              Oficjalny rejestr zajęć dydaktycznych prowadzonych w salach Twierdzy Magii (TMD) i na Discordzie. Każdy dziennik zawiera zweryfikowany wykaz obecności, przydzielone punkty do Pucharu Zakonów oraz wierne cyfrowe archiwum wątku z mediami i replikami zaklęć.
             </p>
           </div>
 

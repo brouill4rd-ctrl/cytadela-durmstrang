@@ -84,7 +84,7 @@ export const HousesView = () => {
       {/* Header */}
       <div style={{ textAlign: 'center' }}>
         <span style={{ color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-          Dziedzictwa Cytadeli
+          Dziedzictwa Twierdzy Magii (TMD)
         </span>
         <h1 style={{ fontSize: '2.6rem', color: '#ffffff', marginTop: '0.3rem', marginBottom: '0.8rem' }}>
           Cztery Zakony Durmstrangu
@@ -116,7 +116,7 @@ export const HousesView = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Award size={22} color="var(--gold-glow)" />
               <h2 style={{ margin: 0, color: '#ffffff', fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
-                🏆 PUCHAR CYTADELI — RANKING ZAKONÓW
+                🏆 PUCHAR TWIERDZY MAGII (TMD) — RANKING ZAKONÓW
               </h2>
             </div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>

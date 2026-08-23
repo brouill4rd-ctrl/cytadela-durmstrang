@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { api } from '../api';
 import { NewsEditorModal } from '../components/NewsEditorModal';
 import { NewsDetailModal } from '../components/NewsDetailModal';
+import { CategoryBanner } from '../components/CategoryBanner';
 import {
   Settings,
   Users,
@@ -37,7 +38,16 @@ import {
   HardDrive,
   Cpu,
   Activity,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon,
+  LayoutGrid,
+  Palette,
+  Sliders,
+  Info,
+  Copy,
+  ExternalLink,
+  HelpCircle,
+  Maximize2
 } from 'lucide-react';
 
 export const AdminCMSView = () => {
@@ -74,12 +84,45 @@ export const AdminCMSView = () => {
     updateSubject,
     createSubject,
     deleteSubject,
-    setActiveSubjectId
+    setActiveSubjectId,
+    categoryBanners,
+    blockGraphics,
+    createCategoryBanner,
+    deleteCategoryBanner,
+    updateCategoryBanner,
+    createBlockGraphic,
+    deleteBlockGraphic,
+    updateBlockGraphic,
+    resetCategoryBanners,
+    resetBlockGraphics,
+    durmstrangPresets,
+    imageDimensionsGuide
   } = useSchool();
 
   const { playWandSwoosh, playRuneChime } = useSound();
 
-  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
+  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'graphics' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
+  const [graphicsSubTab, setGraphicsSubTab] = useState('banners'); // 'banners' | 'blocks' | 'guide'
+  const [selectedCatId, setSelectedCatId] = useState('edykty');
+  const [selectedBlockId, setSelectedBlockId] = useState('identity');
+  const [customBannerUrlInput, setCustomBannerUrlInput] = useState('');
+  const [customBlockUrlInput, setCustomBlockUrlInput] = useState('');
+
+  // Category creation modal
+  const [showCreateCatModal, setShowCreateCatModal] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatScript, setNewCatScript] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#c59f4e');
+  const [newCatImage, setNewCatImage] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+
+  // Block creation modal
+  const [showCreateBlockModal, setShowCreateBlockModal] = useState(false);
+  const [newBlockTitle, setNewBlockTitle] = useState('');
+  const [newBlockLocation, setNewBlockLocation] = useState('Lewy Panel');
+  const [newBlockRune, setNewBlockRune] = useState('ᛟ');
+  const [newBlockImage, setNewBlockImage] = useState('');
+  const [newBlockDesc, setNewBlockDesc] = useState('');
 
   // Points manager form
   const [selectedHouse, setSelectedHouse] = useState('reinhall');
@@ -313,6 +356,30 @@ export const AdminCMSView = () => {
           <span>Edykty Dyrekcji</span>
           <span style={{ background: 'rgba(197, 159, 78, 0.25)', color: 'var(--gold-glow)', fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
             {news.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => { playWandSwoosh(); setActiveTab('graphics'); }}
+          style={{
+            padding: '0.65rem 1.2rem',
+            background: activeTab === 'graphics' ? 'rgba(236, 72, 153, 0.18)' : 'rgba(236, 72, 153, 0.06)',
+            border: activeTab === 'graphics' ? '1px solid #ec4899' : '1px solid rgba(236, 72, 153, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'graphics' ? '#f472b6' : '#cbd5e1',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <ImageIcon size={14} color="#ec4899" />
+          <span>Grafiki & Banery</span>
+          <span style={{ background: '#ec4899', color: '#090d14', fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+            MEDIA
           </span>
         </button>
 
@@ -1327,6 +1394,793 @@ export const AdminCMSView = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB: 🖼️ GRAFIKI, BANERY & BLOKI BOCZNE
+          ========================================================================= */}
+      {activeTab === 'graphics' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
+          {/* Header Banner */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <ImageIcon size={22} color="#ec4899" />
+                <span>Zarządzanie Grafikami, Banerami i Blokami</span>
+              </h2>
+              <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.82rem', color: '#9ca3af' }}>
+                Dostosuj nagłówki kategorii, banery edyktów oraz grafiki w lewym i prawym pasku bocznym Cytadeli.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  playRuneChime();
+                  const dataToExport = {
+                    blockGraphics,
+                    categoryBanners
+                  };
+                  navigator.clipboard.writeText(JSON.stringify(dataToExport, null, 2));
+                  showNotification('Skopiowano Konfigurację Grafik', 'Wklej skopiowany tekst (JSON) w rozmowie z asystentem, a zapisze on grafiki na stałe w kodzie projektu!', 'success');
+                }}
+                className="btn-durmstrang"
+                style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem', gap: '0.4rem', background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(197, 159, 78, 0.25) 100%)', border: '1px solid #38bdf8' }}
+                title="Kopiuje ustawione grafiki do schowka, aby asystent mógł je zapisać w plikach projektu"
+              >
+                <Copy size={13} />
+                <span>Kopiuj Konfigurację Grafik (do wklejenia)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (window.confirm('Czy na pewno chcesz przywrócić domyślne banery kategorii i grafiki bloków?')) {
+                    resetCategoryBanners();
+                    resetBlockGraphics();
+                  }
+                }}
+                className="btn-durmstrang-secondary"
+                style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem', gap: '0.4rem' }}
+              >
+                <RefreshCw size={13} />
+                <span>Przywróć Domyślne</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-tabs for Graphics Module */}
+          <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { playWandSwoosh(); setGraphicsSubTab('banners'); }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: graphicsSubTab === 'banners' ? '1px solid #ec4899' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: graphicsSubTab === 'banners' ? 'rgba(236, 72, 153, 0.15)' : 'rgba(0, 0, 0, 0.4)',
+                color: graphicsSubTab === 'banners' ? '#f472b6' : '#9ca3af',
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <Palette size={14} />
+              <span>Bannery Kategorii & Edyktów ({categoryBanners.length})</span>
+            </button>
+
+            <button
+              onClick={() => { playWandSwoosh(); setGraphicsSubTab('blocks'); }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: graphicsSubTab === 'blocks' ? '1px solid var(--gold-ancient)' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: graphicsSubTab === 'blocks' ? 'rgba(197, 159, 78, 0.15)' : 'rgba(0, 0, 0, 0.4)',
+                color: graphicsSubTab === 'blocks' ? 'var(--gold-glow)' : '#9ca3af',
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <LayoutGrid size={14} />
+              <span>Grafiki Bloków Bocznych ({blockGraphics.length})</span>
+            </button>
+
+            <button
+              onClick={() => { playWandSwoosh(); setGraphicsSubTab('guide'); }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: graphicsSubTab === 'guide' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: graphicsSubTab === 'guide' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.4)',
+                color: graphicsSubTab === 'guide' ? '#38bdf8' : '#9ca3af',
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <Info size={14} />
+              <span>Wymiary Zdjęć & Przewodnik</span>
+            </button>
+          </div>
+
+          {/* SUBTAB 1: BANNERY KATEGORII */}
+          {graphicsSubTab === 'banners' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+              {/* Category Selector List & Create Button */}
+              <div style={{ background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Kategorie Edyktów ({categoryBanners.length}):
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCatModal(!showCreateCatModal)}
+                  className="btn-durmstrang"
+                  style={{ width: '100%', padding: '0.45rem', fontSize: '0.78rem', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}
+                >
+                  <Plus size={13} />
+                  <span>+ Nowa Kategoria Edyktów</span>
+                </button>
+
+                {/* Inline Category Creator Box */}
+                {showCreateCatModal && (
+                  <div style={{ background: 'rgba(14, 18, 28, 0.98)', border: '1px solid #ec4899', borderRadius: '6px', padding: '0.85rem', marginBottom: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#f472b6', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🪄 Tworzenie Kategorii</span>
+                      <button onClick={() => setShowCreateCatModal(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Nazwa Dziedziny:</label>
+                      <input
+                        type="text"
+                        placeholder="np. Alchemia Bojowa"
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        className="gothic-input"
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Napis na Banerze:</label>
+                      <input
+                        type="text"
+                        placeholder="np. alchemia bojowa"
+                        value={newCatScript}
+                        onChange={(e) => setNewCatScript(e.target.value)}
+                        className="gothic-input"
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>URL Tła (Opcjonalnie):</label>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={newCatImage}
+                        onChange={(e) => setNewCatImage(e.target.value)}
+                        className="gothic-input"
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newCatName.trim()) {
+                          showNotification('Błąd', 'Wprowadź nazwę nowej kategorii.', 'error');
+                          return;
+                        }
+                        playRuneChime();
+                        const created = createCategoryBanner({
+                          categoryName: newCatName.trim(),
+                          defaultScript: newCatScript.trim() || newCatName.trim().toLowerCase(),
+                          themeColor: newCatColor,
+                          bgImage: newCatImage.trim(),
+                          description: newCatDesc.trim() || `Kategoria: ${newCatName.trim()}`
+                        });
+                        setSelectedCatId(created.id);
+                        setCustomBannerUrlInput(created.bgImage || '');
+                        setNewCatName('');
+                        setNewCatScript('');
+                        setNewCatImage('');
+                        setShowCreateCatModal(false);
+                      }}
+                      className="btn-durmstrang"
+                      style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', marginTop: '0.2rem' }}
+                    >
+                      Utwórz Kategorię
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '420px', overflowY: 'auto' }}>
+                  {categoryBanners.map(cat => {
+                    const isSelected = (selectedCatId || 'edykty') === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          playWandSwoosh();
+                          setSelectedCatId(cat.id);
+                          setCustomBannerUrlInput(cat.bgImage || cat.imageUrl || '');
+                        }}
+                        style={{
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '5px',
+                          border: isSelected ? '1px solid var(--gold-ancient)' : '1px solid rgba(255, 255, 255, 0.05)',
+                          background: isSelected ? 'rgba(197, 159, 78, 0.18)' : 'rgba(255, 255, 255, 0.02)',
+                          color: isSelected ? '#ffffff' : '#cbd5e1',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.themeColor || 'var(--gold-ancient)' }} />
+                          <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? 700 : 500 }}>{cat.categoryName}</span>
+                        </div>
+                        {cat.bgImage && (
+                          <span style={{ fontSize: '0.62rem', background: '#ec4899', color: '#fff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                            FOTO
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Category Editor */}
+              {(() => {
+                const currentCat = categoryBanners.find(c => c.id === (selectedCatId || 'edykty')) || categoryBanners[0];
+                return (
+                  <div style={{ background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '8px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>
+                          Edycja Baneru: <span style={{ color: 'var(--gold-glow)' }}>{currentCat.categoryName}</span>
+                        </h3>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                          ID: <code style={{ color: '#38bdf8' }}>{currentCat.id}</code> • Rekomendowany wymiar tła: <strong style={{ color: 'var(--gold-glow)' }}>1200 x 300 px (4:1)</strong>
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Czy na pewno chcesz usunąć kategorię „${currentCat.categoryName}”?`)) {
+                            deleteCategoryBanner(currentCat.id);
+                            setSelectedCatId(categoryBanners.find(c => c.id !== currentCat.id)?.id || 'edykty');
+                          }
+                        }}
+                        className="btn-durmstrang-secondary"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', color: '#f87171' }}
+                        title="Usuń tę kategorię edyktów"
+                      >
+                        <Trash2 size={13} />
+                        <span>Usuń Kategorię</span>
+                      </button>
+                    </div>
+
+                    {/* Real-time Banner Live Preview Box */}
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
+                        Podgląd Baneru na Żywo:
+                      </div>
+                      <div style={{ border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }}>
+                        <CategoryBanner category={currentCat.categoryName} customText={currentCat.defaultScript} height={85} />
+                      </div>
+                    </div>
+
+                    {/* Image URL Input Form */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600 }}>
+                        Adres URL Własnego Tła / Grafiki (JPG, PNG, WebP):
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
+                        <input
+                          type="url"
+                          placeholder="https://images.unsplash.com/... lub /grafiki/twoj-baner.jpg"
+                          value={customBannerUrlInput}
+                          onChange={(e) => setCustomBannerUrlInput(e.target.value)}
+                          className="gothic-input"
+                          style={{ flex: 1, padding: '0.55rem 0.8rem', fontSize: '0.85rem' }}
+                        />
+                        <button
+                          onClick={() => {
+                            playRuneChime();
+                            updateCategoryBanner(currentCat.id, { bgImage: customBannerUrlInput.trim() });
+                          }}
+                          className="btn-durmstrang"
+                          style={{ padding: '0.55rem 1.1rem', fontSize: '0.82rem', gap: '0.4rem' }}
+                        >
+                          <Check size={14} />
+                          <span>Zapisz Grafikę</span>
+                        </button>
+                        {currentCat.bgImage && (
+                          <button
+                            onClick={() => {
+                              playWandSwoosh();
+                              setCustomBannerUrlInput('');
+                              updateCategoryBanner(currentCat.id, { bgImage: '' });
+                            }}
+                            className="btn-durmstrang-secondary"
+                            style={{ padding: '0.55rem 0.9rem', fontSize: '0.82rem', color: '#f87171' }}
+                            title="Usuń własną grafikę i przywróć domyślny mroczny gradient"
+                          >
+                            <Trash2 size={14} />
+                            <span>Wyczyść</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Curated Presets Gallery */}
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Sparkles size={14} color="var(--gold-ancient)" />
+                        <span>Szybkie Gotowe Motywy Durmstrang (Kliknij, aby zastosować):</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                        {durmstrangPresets.map((preset, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              playRuneChime();
+                              setCustomBannerUrlInput(preset.url);
+                              updateCategoryBanner(currentCat.id, { bgImage: preset.url });
+                            }}
+                            style={{
+                              position: 'relative',
+                              height: '75px',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                              border: currentCat.bgImage === preset.url ? '2px solid var(--gold-glow)' : '1px solid rgba(255,255,255,0.1)',
+                              cursor: 'pointer',
+                              backgroundImage: `url("${preset.url}")`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 100%)', display: 'flex', alignItems: 'flex-end', padding: '0.4rem' }}>
+                              <span style={{ fontSize: '0.7rem', color: '#ffffff', fontWeight: 700, textShadow: '0 1px 3px black' }}>
+                                {preset.name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Banner Text Customizer */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.74rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
+                          Napis Kaligraficzny na Banerze:
+                        </label>
+                        <input
+                          type="text"
+                          value={currentCat.defaultScript || ''}
+                          onChange={(e) => updateCategoryBanner(currentCat.id, { defaultScript: e.target.value })}
+                          className="gothic-input"
+                          style={{ padding: '0.45rem 0.65rem', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.74rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
+                          Opis / Podtytuł Katedry:
+                        </label>
+                        <input
+                          type="text"
+                          value={currentCat.description || ''}
+                          onChange={(e) => updateCategoryBanner(currentCat.id, { description: e.target.value })}
+                          className="gothic-input"
+                          style={{ padding: '0.45rem 0.65rem', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* SUBTAB 2: GRAFIKI BLOKÓW BOCZNYCH */}
+          {graphicsSubTab === 'blocks' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+              {/* Sidebar Block Selector List & Add Block Button */}
+              <div style={{ background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Wszystkie Bloki ({blockGraphics.length}):
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBlockModal(!showCreateBlockModal)}
+                  className="btn-durmstrang"
+                  style={{ width: '100%', padding: '0.45rem', fontSize: '0.78rem', justifyContent: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}
+                >
+                  <Plus size={13} />
+                  <span>+ Dodaj Własny Blok</span>
+                </button>
+
+                {/* Inline Block Creator Box */}
+                {showCreateBlockModal && (
+                  <div style={{ background: 'rgba(14, 18, 28, 0.98)', border: '1px solid var(--gold-ancient)', borderRadius: '6px', padding: '0.85rem', marginBottom: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--gold-glow)', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🛡️ Nowy Blok Portalu</span>
+                      <button onClick={() => setShowCreateBlockModal(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Tytuł Bloku:</label>
+                      <input
+                        type="text"
+                        placeholder="np. Gildia Zielarzy"
+                        value={newBlockTitle}
+                        onChange={(e) => setNewBlockTitle(e.target.value)}
+                        className="gothic-input"
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '0.4rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Lokalizacja:</label>
+                        <input
+                          type="text"
+                          placeholder="np. Prawy Panel"
+                          value={newBlockLocation}
+                          onChange={(e) => setNewBlockLocation(e.target.value)}
+                          className="gothic-input"
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>Runa:</label>
+                        <input
+                          type="text"
+                          value={newBlockRune}
+                          onChange={(e) => setNewBlockRune(e.target.value)}
+                          className="gothic-input"
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.88rem', textAlign: 'center', fontFamily: 'serif' }}
+                          maxLength={2}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.68rem', color: '#9ca3af' }}>URL Zdjęcia Nagłówka:</label>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={newBlockImage}
+                        onChange={(e) => setNewBlockImage(e.target.value)}
+                        className="gothic-input"
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newBlockTitle.trim()) {
+                          showNotification('Błąd', 'Podaj tytuł nowego bloku.', 'error');
+                          return;
+                        }
+                        playRuneChime();
+                        const created = createBlockGraphic({
+                          title: newBlockTitle.trim(),
+                          location: newBlockLocation.trim(),
+                          rune: newBlockRune.trim() || 'ᛟ',
+                          bgImage: newBlockImage.trim(),
+                          description: newBlockDesc.trim() || `Blok ${newBlockTitle.trim()}`
+                        });
+                        setSelectedBlockId(created.id);
+                        setCustomBlockUrlInput(created.bgImage || '');
+                        setNewBlockTitle('');
+                        setNewBlockImage('');
+                        setShowCreateBlockModal(false);
+                      }}
+                      className="btn-durmstrang"
+                      style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', marginTop: '0.2rem' }}
+                    >
+                      Dodaj Blok
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '420px', overflowY: 'auto' }}>
+                  {blockGraphics.map(blk => {
+                    const isSelected = (selectedBlockId || 'identity') === blk.id;
+                    return (
+                      <button
+                        key={blk.id}
+                        onClick={() => {
+                          playWandSwoosh();
+                          setSelectedBlockId(blk.id);
+                          setCustomBlockUrlInput(blk.bgImage || '');
+                        }}
+                        style={{
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '5px',
+                          border: isSelected ? '1px solid var(--gold-ancient)' : '1px solid rgba(255, 255, 255, 0.05)',
+                          background: isSelected ? 'rgba(197, 159, 78, 0.18)' : 'rgba(255, 255, 255, 0.02)',
+                          color: isSelected ? '#ffffff' : '#cbd5e1',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: isSelected ? 700 : 500 }}>{blk.title}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{blk.location}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {blk.bgImage && <span style={{ fontSize: '0.55rem', background: '#ec4899', color: '#fff', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>IMG</span>}
+                          <span style={{ fontFamily: 'serif', fontSize: '1rem', color: 'var(--gold-ancient)' }}>
+                            {blk.rune}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Sidebar Block Editor */}
+              {(() => {
+                const currentBlock = blockGraphics.find(b => b.id === (selectedBlockId || 'identity')) || blockGraphics[0];
+                return (
+                  <div style={{ background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '8px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>
+                          Nagłówek Bloku: <span style={{ color: 'var(--gold-glow)' }}>{currentBlock.title}</span>
+                        </h3>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+                          Lokalizacja: <span style={{ color: 'var(--ice-crystal)' }}>{currentBlock.location}</span> • Rekomendowany wymiar: <strong style={{ color: 'var(--gold-glow)' }}>600 x 200 px (3:1, wys. 95px)</strong>
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Czy na pewno chcesz usunąć konfigurację bloku „${currentBlock.title}”?`)) {
+                            deleteBlockGraphic(currentBlock.id);
+                            setSelectedBlockId(blockGraphics.find(b => b.id !== currentBlock.id)?.id || 'identity');
+                          }
+                        }}
+                        className="btn-durmstrang-secondary"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', color: '#f87171' }}
+                        title="Usuń ten blok"
+                      >
+                        <Trash2 size={13} />
+                        <span>Usuń Blok</span>
+                      </button>
+                    </div>
+
+                    {/* Real-time Block Header Live Preview Box */}
+                    <div style={{ maxWidth: '320px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
+                        Podgląd Karty Bloku w Pasku Bocznym:
+                      </div>
+                      <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)', margin: 0 }}>
+                        <div
+                          className="menuBlockHeaderImage"
+                          style={currentBlock.bgImage ? {
+                            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${currentBlock.bgImage}")`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                          } : undefined}
+                        >
+                          <div className="frost-overlay" />
+                          <div className="runic-watermark">{currentBlock.rune || 'ᛟ'}</div>
+                          <Shield size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+                        </div>
+                        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+                          <span className="rune-bracket">ᛞ</span>
+                          <span>{currentBlock.title}</span>
+                          <span className="rune-bracket">ᛞ</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Block Image URL Input */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600 }}>
+                        Adres URL Zdjęcia Nagłówka Bloku:
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
+                        <input
+                          type="url"
+                          placeholder="https://images.unsplash.com/... lub /grafiki/blok.jpg"
+                          value={customBlockUrlInput}
+                          onChange={(e) => setCustomBlockUrlInput(e.target.value)}
+                          className="gothic-input"
+                          style={{ flex: 1, padding: '0.55rem 0.8rem', fontSize: '0.85rem' }}
+                        />
+                        <button
+                          onClick={() => {
+                            playRuneChime();
+                            updateBlockGraphic(currentBlock.id, { bgImage: customBlockUrlInput.trim() });
+                          }}
+                          className="btn-durmstrang"
+                          style={{ padding: '0.55rem 1.1rem', fontSize: '0.82rem', gap: '0.4rem' }}
+                        >
+                          <Check size={14} />
+                          <span>Zapisz Grafikę</span>
+                        </button>
+                        {currentBlock.bgImage && (
+                          <button
+                            onClick={() => {
+                              playWandSwoosh();
+                              setCustomBlockUrlInput('');
+                              updateBlockGraphic(currentBlock.id, { bgImage: '' });
+                            }}
+                            className="btn-durmstrang-secondary"
+                            style={{ padding: '0.55rem 0.9rem', fontSize: '0.82rem', color: '#f87171' }}
+                            title="Usuń własne zdjęcie i przywróć gradient"
+                          >
+                            <Trash2 size={14} />
+                            <span>Wyczyść</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Presets Gallery */}
+                    <div>
+                      <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Sparkles size={14} color="var(--gold-ancient)" />
+                        <span>Szybki Wybór Gotowego Motywu:</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                        {durmstrangPresets.map((preset, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              playRuneChime();
+                              setCustomBlockUrlInput(preset.url);
+                              updateBlockGraphic(currentBlock.id, { bgImage: preset.url });
+                            }}
+                            style={{
+                              position: 'relative',
+                              height: '75px',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                              border: currentBlock.bgImage === preset.url ? '2px solid var(--gold-glow)' : '1px solid rgba(255,255,255,0.1)',
+                              cursor: 'pointer',
+                              backgroundImage: `url("${preset.url}")`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 100%)', display: 'flex', alignItems: 'flex-end', padding: '0.4rem' }}>
+                              <span style={{ fontSize: '0.7rem', color: '#ffffff', fontWeight: 700, textShadow: '0 1px 3px black' }}>
+                                {preset.name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Watermark Rune Input */}
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', maxWidth: '280px' }}>
+                      <label style={{ fontSize: '0.74rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
+                        Symbol Runiczny w Tle (Znak Wodny):
+                      </label>
+                      <input
+                        type="text"
+                        value={currentBlock.rune || ''}
+                        onChange={(e) => updateBlockGraphic(currentBlock.id, { rune: e.target.value })}
+                        className="gothic-input"
+                        style={{ padding: '0.45rem 0.65rem', fontSize: '1rem', textAlign: 'center', fontFamily: 'serif' }}
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* SUBTAB 3: PRZEWODNIK WYMIARÓW & FORMATÓW */}
+          {graphicsSubTab === 'guide' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.15rem', color: '#38bdf8', margin: '0 0 0.5rem 0', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Info size={18} /> Dokładne Wymiary & Wytyczne Grafik w Portalu Durmstrang
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                  Aby zachować najwyższy mroczny kunszt wizualny, ostrość na ekranach Retina oraz szybkie ładowanie strony, przygotowuj grafiki zgodnie z poniższymi proporcjami. Rekomendujemy formaty <strong>WebP</strong> lub skompresowany <strong>JPG (80-85%)</strong>, a dla herbów i pieczęci <strong>PNG z przezroczystością</strong>.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                {imageDimensionsGuide.map((item, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: 'rgba(12, 16, 26, 0.92)',
+                      border: '1px solid rgba(197, 159, 78, 0.25)',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.6)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                        {item.target}
+                      </h4>
+                      <span style={{ fontSize: '0.7rem', background: 'rgba(197, 159, 78, 0.15)', color: 'var(--gold-glow)', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.3)', fontWeight: 700 }}>
+                        {item.aspectRatio}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'rgba(0,0,0,0.4)', padding: '0.75rem', borderRadius: '6px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: '#9ca3af', textTransform: 'uppercase' }}>Rekomendowany:</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--gold-ancient)', fontFamily: 'monospace' }}>
+                          {item.recommendedSize}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: '#9ca3af', textTransform: 'uppercase' }}>Minimalny:</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                          {item.minSize}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                      {item.description}
+                    </p>
+
+                    <div style={{ fontSize: '0.72rem', color: '#a4c8e1', display: 'flex', alignItems: 'center', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.5rem' }}>
+                      <span>Format pliku:</span>
+                      <strong style={{ color: '#ffffff' }}>{item.format}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

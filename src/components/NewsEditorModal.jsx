@@ -55,7 +55,9 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
     houses,
     addNewsArticle,
     updateNewsArticle,
-    showNotification
+    showNotification,
+    categoryBanners,
+    createCategoryBanner
   } = useSchool();
 
   const { playWandSwoosh, playRuneChime } = useSound();
@@ -75,6 +77,13 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState(['Edykt']);
+
+  // Quick inline new category state
+  const [showCatCreator, setShowCatCreator] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatScript, setNewCatScript] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#c59f4e');
+  const [newCatImage, setNewCatImage] = useState('');
 
   // Populate if editing
   useEffect(() => {
@@ -348,11 +357,104 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
 
                 {/* Category Grid Pills */}
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.4rem' }}>
-                    Kliknij, aby wybrać dziedzinę:
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)' }}>
+                      Wybierz dziedzinę lub stwórz nową:
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCatCreator(!showCatCreator)}
+                      style={{
+                        background: showCatCreator ? 'rgba(236, 72, 153, 0.2)' : 'rgba(197, 159, 78, 0.15)',
+                        border: showCatCreator ? '1px solid #ec4899' : '1px solid var(--gold-ancient)',
+                        borderRadius: '4px',
+                        color: showCatCreator ? '#f472b6' : 'var(--gold-glow)',
+                        padding: '0.2rem 0.5rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {showCatCreator ? '✕ Zamknij Kreator' : '+ Stwórz Nową Kategorię'}
+                    </button>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
-                    {CATEGORY_BANNERS.map((b) => {
+
+                  {/* Inline Category Creator Form */}
+                  {showCatCreator && (
+                    <div style={{ background: 'rgba(12, 16, 26, 0.95)', border: '1px solid #ec4899', borderRadius: '6px', padding: '0.85rem', marginBottom: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#f472b6', fontWeight: 700 }}>
+                        🪄 Nowa Kategoria Edyktu / Baneru:
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>Nazwa Dziedziny:</label>
+                          <input
+                            type="text"
+                            placeholder="np. Alchemia Bojowa"
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            className="gothic-input"
+                            style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>Napis na Banerze:</label>
+                          <input
+                            type="text"
+                            placeholder="np. alchemia bojowa"
+                            value={newCatScript}
+                            onChange={(e) => setNewCatScript(e.target.value)}
+                            className="gothic-input"
+                            style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>URL Tła (Opcjonalnie):</label>
+                          <input
+                            type="url"
+                            placeholder="https://..."
+                            value={newCatImage}
+                            onChange={(e) => setNewCatImage(e.target.value)}
+                            className="gothic-input"
+                            style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!newCatName.trim()) {
+                                showNotification('Błąd', 'Podaj nazwę nowej kategorii.', 'error');
+                                return;
+                              }
+                              playRuneChime();
+                              const created = createCategoryBanner({
+                                categoryName: newCatName.trim(),
+                                defaultScript: newCatScript.trim() || newCatName.trim().toLowerCase(),
+                                themeColor: newCatColor,
+                                bgImage: newCatImage.trim()
+                              });
+                              setCategory(created.id);
+                              setBannerCustomText(created.defaultScript);
+                              setNewCatName('');
+                              setNewCatScript('');
+                              setNewCatImage('');
+                              setShowCatCreator(false);
+                            }}
+                            className="btn-durmstrang"
+                            style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem' }}
+                          >
+                            Utwórz i Wybierz
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                    {(categoryBanners || CATEGORY_BANNERS).map((b) => {
                       const isSelected = category === b.id;
                       return (
                         <button
@@ -371,8 +473,9 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                             boxShadow: isSelected ? '0 0 10px rgba(197, 159, 78, 0.3)' : 'none'
                           }}
                         >
-                          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: isSelected ? 'var(--gold-glow)' : '#cfd7e4' }}>
-                            {b.categoryName}
+                          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: isSelected ? 'var(--gold-glow)' : '#cfd7e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>{b.categoryName}</span>
+                            {b.bgImage && <span style={{ fontSize: '0.55rem', background: '#ec4899', color: '#fff', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>IMG</span>}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: '#6b7280', fontStyle: 'italic', fontFamily: 'Caveat, cursive' }}>
                             „{b.defaultScript}”
@@ -390,7 +493,7 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder={`Domyślnie: „${currentBannerObj.defaultScript}”`}
+                    placeholder={`Domyślnie: „${currentBannerObj?.defaultScript || 'edykty'}”`}
                     value={bannerCustomText}
                     onChange={(e) => setBannerCustomText(e.target.value)}
                     className="gothic-input"

@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { SnowCanvas } from './components/SnowCanvas';
 import { AuroraCanvas } from './components/AuroraCanvas';
 import { TorchCursor } from './components/TorchCursor';
+import { WandSparks } from './components/WandSparks';
 import { Footer } from './components/Footer';
 import { PortalLeftSidebar } from './components/PortalLeftSidebar';
 import { PortalRightSidebar } from './components/PortalRightSidebar';
@@ -14,6 +15,8 @@ import { AuthModal } from './components/AuthModal';
 import { PasswordRecoveryModal } from './components/PasswordRecoveryModal';
 import { EmailInboxModal } from './components/EmailInboxModal';
 import { DiscordLessonSimulatorModal } from './components/DiscordLessonSimulatorModal';
+
+import { CommandPaletteModal } from './components/CommandPaletteModal';
 
 // Views
 import { HomeView } from './views/HomeView';
@@ -33,6 +36,8 @@ import { ProfessorJournalEditor } from './views/ProfessorJournalEditor';
 import { SubjectDetailView } from './views/SubjectDetailView';
 import { TimetableView } from './views/TimetableView';
 import { BankView } from './views/BankView';
+import { RulesGuideView } from './views/RulesGuideView';
+import { DocumentsCodexView } from './views/DocumentsCodexView';
 import { RestrictedAccessView } from './views/RestrictedAccessView';
 
 import { Sparkles, Info, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
@@ -71,8 +76,29 @@ export const App = () => {
   const { playRuneChime } = useSound();
 
   const [creationModalOpen, setCreationModalOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [auroraEnabled, setAuroraEnabled] = useState(true);
   const [torchEnabled, setTorchEnabled] = useState(true);
+
+  // Global Keyboard Shortcuts (Ctrl+K or / for Magiczny Kompas Cytadeli)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        playRuneChime();
+        setCommandPaletteOpen(prev => !prev);
+      }
+      // Pressing '/' when not in input/textarea/select/editable
+      if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !document.activeElement?.isContentEditable) {
+        e.preventDefault();
+        playRuneChime();
+        setCommandPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [playRuneChime]);
 
   // Sound on notification
   useEffect(() => {
@@ -105,6 +131,10 @@ export const App = () => {
     switch (activeView) {
       case 'home':
         return <HomeView />;
+      case 'rules-guide':
+        return <RulesGuideView />;
+      case 'documents':
+        return <DocumentsCodexView />;
       case 'timetable':
         return <TimetableView />;
       case 'journals':
@@ -153,6 +183,9 @@ export const App = () => {
       {/* Lumos Torchlight Cursor Trail */}
       <TorchCursor enabled={torchEnabled} size={300} />
 
+      {/* Nordic Wand Micro-Sparks Click Effect */}
+      <WandSparks enabled={true} />
+
       {/* Main 3-Column Portal Container */}
       <div id="portal-wrapper">
         {/* =========================================================================
@@ -167,11 +200,14 @@ export const App = () => {
             2. RUNIC NEWS TICKER / MARQUEE BAR
             ========================================================================= */}
         <div className="portal-ticker-bar">
-          <div className="ticker-label">
-            <span>ᛞ</span> EDYKT DYREKCJI:
+          <div className="ticker-label-badge">
+            <span className="ticker-rune">ᛞ</span>
+            <span className="ticker-title">EDYKT DYREKCJI:</span>
           </div>
-          <div className="ticker-content">
-            +++ XIX ROK SZKOLNY W TOKU • DZIENNIKI LEKCYJNE & ARCHIWUM DISCORD AKTYWNE • PUCHAR PÓŁNOCY: 🦌 REINHALL • 🐻 BJÖRNHALL • 🐦 RAVNHEIM • 🦦 OTERGARD • WARSZTAT RUNICZNY (GALDRASTOFA) & KOCIOŁ ALCHEMII OTWARTE +++
+          <div className="ticker-track-container">
+            <div className="ticker-content">
+              +++ XIX ROK SZKOLNY W TOKU • DZIENNIKI LEKCYJNE & ARCHIWUM DISCORD AKTYWNE • PUCHAR PÓŁNOCY: ᚦ REINHALL • ᛉ BJÖRNHALL • ᚱ RAVNHEIM • ᛞ OTERGARD • WARSZTAT RUNICZNY (GALDRASTOFA) & KOCIOŁ ALCHEMII OTWARTE +++
+            </div>
           </div>
         </div>
 
@@ -225,6 +261,53 @@ export const App = () => {
           isOpen={discordSimulatorOpen}
           onClose={() => setDiscordSimulatorOpen(false)}
         />
+
+        {/* Global Arcane Command Palette & Teleporter Modal (Ctrl+K) */}
+        <CommandPaletteModal
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
+
+        {/* Floating Quick Arcane Compass Trigger Button */}
+        <button
+          onClick={() => {
+            playRuneChime();
+            setCommandPaletteOpen(true);
+          }}
+          title="Magiczny Kompas Cytadeli (Naciśnij Ctrl + K lub /)"
+          style={{
+            position: 'fixed',
+            bottom: '25px',
+            left: '25px',
+            width: '46px',
+            height: '46px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(28, 35, 48, 0.95), rgba(10, 14, 22, 0.98))',
+            border: '2px solid var(--gold-ancient)',
+            color: 'var(--gold-ancient)',
+            fontSize: '1.4rem',
+            fontFamily: 'serif',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 99990,
+            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.85), 0 0 15px rgba(197, 159, 78, 0.4)',
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.12) rotate(15deg)';
+            e.currentTarget.style.borderColor = 'var(--gold-glow)';
+            e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.95), 0 0 25px rgba(243, 217, 149, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+            e.currentTarget.style.borderColor = 'var(--gold-ancient)';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.85), 0 0 15px rgba(197, 159, 78, 0.4)';
+          }}
+        >
+          ᛞ
+        </button>
 
         {/* Global Notification Toast */}
         {notification && (

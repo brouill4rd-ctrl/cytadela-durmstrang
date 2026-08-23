@@ -560,7 +560,7 @@ export const LessonDetailView = () => {
               </div>
 
               <div style={{ fontSize: '0.75rem', letterSpacing: '0.25em', color: 'var(--gold-ancient)', textTransform: 'uppercase', fontFamily: 'var(--font-heading)', fontWeight: 800 }}>
-                CYTADELA DURMSTRANG • KATEDRA DYDAKTYCZNA
+                TWIERDZA MAGII DURMSTRANG (TMD) • KATEDRA DYDAKTYCZNA
               </div>
               <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: '0.2rem' }}>
                 OFICJALNY PROTOKÓŁ LEKCYJNY • PAKT 1294
@@ -648,14 +648,14 @@ export const LessonDetailView = () => {
                   fontStyle: 'italic'
                 }}
               >
-                „{lesson.description || 'Przebieg zajęć zarejestrowany w protokole Katedry Cytadeli.'}”
+                „{lesson.description || 'Przebieg zajęć zarejestrowany w protokole Katedry Twierdzy Magii (TMD).'}”
               </p>
             </div>
 
             {/* House Points Summary Cards */}
             <div style={{ marginBottom: '2.5rem' }}>
               <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
-                🏆 Zasilenie Punktacji Zakonów (Puchar Cytadeli):
+                🏆 Zasilenie Punktacji Zakonów (Puchar Twierdzy):
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>

@@ -1,9 +1,19 @@
 import React from 'react';
 import { getCategoryBanner } from '../data/categoryBanners';
+import { useSchool } from '../context/SchoolContext';
 
 export const CategoryBanner = ({ category, customText, height = 76, style = {}, className = '' }) => {
-  const bannerConfig = getCategoryBanner(category);
-  const displayText = customText || bannerConfig.defaultScript;
+  const school = useSchool?.();
+  const dynamicBanners = school?.categoryBanners;
+
+  // Find in dynamic context banners first, else fallback
+  const query = (category || '').toLowerCase().trim();
+  const matchedDynamic = dynamicBanners?.find(b => b.id === query || b.categoryName?.toLowerCase() === query || b.defaultScript?.toLowerCase() === query) ||
+    dynamicBanners?.find(b => query.includes(b.id) || b.categoryName?.toLowerCase().includes(query) || query.includes((b.defaultScript || '').toLowerCase()));
+
+  const bannerConfig = matchedDynamic || getCategoryBanner(category);
+  const displayText = customText || bannerConfig?.defaultScript || category;
+  const customImg = bannerConfig?.bgImage || bannerConfig?.imageUrl;
 
   // Render atmospheric silhouette / background elements based on bgType
   const renderBackgroundArt = (type) => {
@@ -196,8 +206,21 @@ export const CategoryBanner = ({ category, customText, height = 76, style = {}, 
         ...style
       }}
     >
-      {/* Background Atmosphere Art */}
-      {renderBackgroundArt(bannerConfig.bgType)}
+      {/* Background Atmosphere Art or Custom Image */}
+      {customImg ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url("${customImg}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'brightness(0.6) contrast(1.15)'
+          }}
+        />
+      ) : (
+        renderBackgroundArt(bannerConfig?.bgType || 'potions')
+      )}
 
       {/* Cinematic Vignette Left & Right */}
       <div
