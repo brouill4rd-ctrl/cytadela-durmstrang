@@ -1,0 +1,18 @@
+{
+  "short_name": "Durmstrang",
+  "name": "Cytadela Durmstrang — Brama Północy",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0e17'/><circle cx='50' cy='50' r='42' stroke='%23c59f4e' stroke-width='3' fill='none'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='%23eecf82' font-family='serif'>ᛞ</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#06090e",
+  "theme_color": "#0a0e17",
+  "display": "standalone",
+  "orientation": "any",
+  "description": "Oficjalny portal Cytadeli Durmstrang — nordyckiej akademii magii, czterech prastarych Zakonów, dzienników lekcyjnych i rytuałów."
+}
