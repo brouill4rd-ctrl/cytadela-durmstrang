@@ -247,7 +247,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
             </div>
           ) : (
             /* ================= GUEST LOGIN FORM ================= */
-            <form onSubmit={handleMiniLogin}>
+            <form onSubmit={handleSidebarLogin}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 <div>
                   <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
