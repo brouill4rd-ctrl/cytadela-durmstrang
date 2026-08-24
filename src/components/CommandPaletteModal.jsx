@@ -32,7 +32,9 @@ import {
   MessageSquare,
   Map,
   ShieldAlert,
-  ClipboardCheck
+  ClipboardCheck,
+  Newspaper,
+  Feather
 } from 'lucide-react';
 
 export const CommandPaletteModal = ({ isOpen, onClose }) => {
@@ -104,11 +106,15 @@ export const CommandPaletteModal = ({ isOpen, onClose }) => {
     { id: 'v-lore', type: 'view', view: 'lore', title: 'Kroniki Północy & Bestiariusz', desc: 'Historia Twierdzy, Pakt 1294 i mityczne istoty', icon: Eye, color: '#c084fc', category: 'Wiedza' },
     { id: 'v-rules', type: 'view', view: 'rules-guide', title: 'Kodeks, Regulamin & Zasady', desc: 'Taryfikator punktów, system oceniania i FAQ', icon: Scroll, color: '#94a3b8', category: 'Wiedza' },
     { id: 'v-documents', type: 'view', view: 'documents', title: 'Księga Dekretów, Wizytacji & Statutu', desc: 'Oficjalne edykty Dyrekcji, regulamin Discorda, statut i opis zabaw', icon: Shield, color: 'var(--gold-ancient)', category: 'Dokumenty' },
+    { id: 'v-wladze', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/wladze'; }, title: 'Obowiązki Władz Twierdzy (Kto Za Co Odpowiada)', desc: 'Matryca kompetencji, zadania Dyrekcji, Opiekunów Zakonów i Prefektów', icon: Crown, color: '#f59e0b', category: 'Dokumenty' },
     { id: 'v-dekrety', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/dekrety'; }, title: 'Dekrety Władz & Rozporządzenia', desc: 'Nienaruszalne edykty i obostrzenia prawa szkolnego', icon: ShieldAlert, color: '#ef4444', category: 'Dokumenty' },
     { id: 'v-wizytacje', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/wizytacje'; }, title: 'Wizytacje Nauczycieli & Hospitacje', desc: 'Protokoły kontroli zajęć, oceny katedr i standardy wykładowców', icon: ClipboardCheck, color: '#38bdf8', category: 'Dokumenty' },
     { id: 'v-statut', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/statut'; }, title: 'Statut Twierdzy Durmstrang', desc: 'Naczelny akt ustrojowy i prawa adeptów', icon: Scale, color: '#eab308', category: 'Dokumenty' },
     { id: 'v-regulamin-dc', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/regulamin-dc'; }, title: 'Regulamin Serwera Discord (DC)', desc: 'Zasady komunikacji, ról i kanałów lekcyjnych', icon: MessageSquare, color: '#5865F2', category: 'Dokumenty' },
     { id: 'v-zabawy', type: 'action', action: () => { setActiveView('documents'); window.location.hash = '#/zabawy'; }, title: 'Opis Zabaw, Turniejów & Gier RPG', desc: 'Hnefatafl, Pojedynki, Wyprawy i Alchemia', icon: Gamepad2, color: '#2ec4b6', category: 'Dokumenty' },
+    { id: 'v-gazette', type: 'view', view: 'gazette', title: 'Żelazne Pióro (Gazeta Twierdzy TMD)', desc: 'Interaktywny magazyn, wywiady, krzyżówki, quizy i kroniki', icon: Newspaper, color: 'var(--gold-ancient)', category: 'Społeczność' },
+    { id: 'v-gazette-archive', type: 'view', view: 'gazette-archive', title: 'Archiwum Wydań Żelaznego Pióra', desc: 'Kolekcja wydań historycznych i wyszukiwarka artykułów', icon: Newspaper, color: '#38bdf8', category: 'Społeczność' },
+    { id: 'v-gazette-panel', type: 'view', view: 'gazette-panel', title: 'Panel Redakcji Żelaznego Pióra', desc: 'Skład numerów, recenzje zgłoszeń, zarządzanie autorami', icon: Feather, color: '#f59e0b', category: 'Dyrekcja' },
     { id: 'v-raven', type: 'view', view: 'raven-post', title: 'Krucza Poczta (Hrafnapóstur)', desc: 'Prywatna korespondencja z krukami posłańczymi', icon: Mail, color: '#818cf8', category: 'Społeczność' },
     { id: 'v-profile', type: 'view', view: 'profile', title: 'Karta Postaci & Ekwipunek Adepta', desc: 'Paszport, odznaki, różdżka, aury i artefakty', icon: User, color: 'var(--gold-glow)', category: 'Profil' },
     { id: 'v-admin', type: 'view', view: 'admin', title: 'Rada Dyrekcji (Panel CMS)', desc: 'Zarządzanie punktami, weryfikacja kadetów i system', icon: Crown, color: '#f59e0b', category: 'Dyrekcja' },

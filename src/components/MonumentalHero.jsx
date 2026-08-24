@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
+import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
 import {
   Flame,
   UserPlus,
@@ -13,7 +14,8 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
     addHousePoints,
     setActiveView,
     setActiveHouseTab,
-    currentUser
+    currentUser,
+    openAuthModal
   } = useSchool();
 
   const { playWandSwoosh, playCoinClink } = useSound();
@@ -35,24 +37,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
       sandColor: '#c59f4e',
       gemColor: '#7a1818',
       head: 'Prof. Sigrid Hällström',
-      prefect: 'Magnus Blom',
-      // Stag Antlers & Ears Sitting on top of the card
-      mascotSvg: (
-        <svg viewBox="0 0 120 70" className="perched-mascot-svg" fill="none">
-          <path
-            d="M 60,65 C 56,52 50,42 42,32 M 42,32 C 32,22 18,16 8,14 M 32,26 C 22,20 12,22 4,28 M 38,34 C 26,35 16,42 10,48 M 60,65 C 64,52 70,42 78,32 M 78,32 C 88,22 102,16 112,14 M 88,26 C 98,20 108,22 116,28 M 82,34 C 94,35 104,42 110,48"
-            stroke="#c59f4e"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(197, 159, 78, 0.5))' }}
-          />
-          <path d="M 52,48 C 42,48 38,52 36,58 C 44,60 50,56 54,54" fill="#1c1618" stroke="#c59f4e" strokeWidth="1.5" />
-          <path d="M 68,48 C 78,48 82,52 84,58 C 76,60 70,56 66,54" fill="#1c1618" stroke="#c59f4e" strokeWidth="1.5" />
-          <path d="M 60,44 C 54,50 50,58 52,68 L 68,68 C 70,58 66,50 60,44 Z" fill="#1a1416" stroke="#c59f4e" strokeWidth="2" />
-          <circle cx="56" cy="58" r="1.5" fill="#ef4444" />
-          <circle cx="64" cy="58" r="1.5" fill="#ef4444" />
-        </svg>
-      )
+      prefect: 'Magnus Blom'
     },
     {
       id: 'bjornhall',
@@ -64,25 +49,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
       sandColor: '#c02b2b',
       gemColor: '#dc2626',
       head: 'Prof. Gunnar Vargson',
-      prefect: 'Astrid Vargadottir',
-      // Bear Head & Paws Sitting on top of the card
-      mascotSvg: (
-        <svg viewBox="0 0 120 70" className="perched-mascot-svg" fill="none">
-          <circle cx="38" cy="28" r="11" fill="#181210" stroke="#c02b2b" strokeWidth="2.5" />
-          <circle cx="82" cy="28" r="11" fill="#181210" stroke="#c02b2b" strokeWidth="2.5" />
-          <path
-            d="M 60,20 C 44,20 32,32 30,50 C 28,62 34,68 60,68 C 86,68 92,62 90,50 C 88,32 76,20 60,20 Z"
-            fill="#181210"
-            stroke="#c02b2b"
-            strokeWidth="2.5"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(192, 43, 43, 0.4))' }}
-          />
-          <ellipse cx="60" cy="52" rx="14" ry="10" fill="#0d0908" stroke="#c02b2b" strokeWidth="1.5" />
-          <path d="M 54,48 C 54,44 66,44 66,48 C 66,54 60,56 60,56 C 60,56 54,54 54,48 Z" fill="#c02b2b" />
-          <circle cx="48" cy="40" r="2.5" fill="#fca5a5" />
-          <circle cx="72" cy="40" r="2.5" fill="#fca5a5" />
-        </svg>
-      )
+      prefect: 'Astrid Vargadottir'
     },
     {
       id: 'ravnheim',
@@ -94,22 +61,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
       sandColor: '#a77de0',
       gemColor: '#9333ea',
       head: 'Prof. Morana Vane',
-      prefect: 'Valdemar Krag-Hansen',
-      // Raven Outstretched Wings Sitting on top of the card
-      mascotSvg: (
-        <svg viewBox="0 0 160 70" className="perched-mascot-svg raven-wide" fill="none">
-          <path
-            d="M 80,45 C 65,25 40,12 8,15 C 20,28 32,44 22,58 C 40,56 55,62 65,68 C 80,68 80,68 80,68 C 80,68 80,68 95,68 C 105,62 120,56 138,58 C 128,44 140,28 152,15 C 120,12 95,25 80,45 Z"
-            fill="#0f1626"
-            stroke="#a77de0"
-            strokeWidth="2"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(167, 125, 224, 0.4))' }}
-          />
-          <path d="M 74,38 C 74,28 86,28 86,38 L 84,56 L 80,62 L 76,56 Z" fill="#151e33" stroke="#a77de0" strokeWidth="1.5" />
-          <polygon points="80,18 76,32 84,32" fill="#a77de0" />
-          <circle cx="80" cy="36" r="2" fill="#ffffff" />
-        </svg>
-      )
+      prefect: 'Valdemar Krag-Hansen'
     },
     {
       id: 'otergard',
@@ -121,25 +73,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
       sandColor: '#2ec4b6',
       gemColor: '#0d9488',
       head: 'Prof. Klaus Lindqvist',
-      prefect: 'Sigrun Lindqvist',
-      // Otter Head & Whiskers Sitting on top of the card
-      mascotSvg: (
-        <svg viewBox="0 0 120 70" className="perched-mascot-svg" fill="none">
-          <ellipse cx="80" cy="26" rx="6" ry="5" fill="#0d1f1c" stroke="#2ec4b6" strokeWidth="1.5" />
-          <path
-            d="M 35,68 C 40,48 55,30 75,26 C 92,24 105,34 104,48 C 103,58 92,66 78,68 Z"
-            fill="#0f221f"
-            stroke="#2ec4b6"
-            strokeWidth="2"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(46, 196, 182, 0.4))' }}
-          />
-          <path d="M 98,46 C 102,46 104,49 102,52 C 99,53 96,50 98,46 Z" fill="#2ec4b6" />
-          <line x1="99" y1="49" x2="114" y2="44" stroke="#2ec4b6" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="99" y1="51" x2="116" y2="52" stroke="#2ec4b6" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="98" y1="53" x2="112" y2="60" stroke="#2ec4b6" strokeWidth="1.2" strokeLinecap="round" />
-          <circle cx="88" cy="38" r="2.5" fill="#b2f5ea" />
-        </svg>
-      )
+      prefect: 'Sigrun Lindqvist'
     }
   ];
 
@@ -225,7 +159,11 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
 
           {!currentUser && (
             <button
-              onClick={onOpenCreationModal}
+              onClick={() => {
+                playWandSwoosh();
+                if (openAuthModal) openAuthModal('register');
+                else if (onOpenCreationModal) onOpenCreationModal();
+              }}
               className="btn-durmstrang"
               style={{ padding: '0.65rem 1.4rem', fontSize: '0.88rem' }}
             >
@@ -278,9 +216,9 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
                 '--theme-color': item.color
               }}
             >
-              {/* Mascot Sitting on Top of the Card */}
+              {/* Mascot Emblem Sitting on Top of the Card */}
               <div className="card-top-mascot-anchor">
-                {item.mascotSvg}
+                <OrderCrest houseKey={item.id} size={52} showFrame={true} />
               </div>
 
               {/* Glass Hourglass on Left */}

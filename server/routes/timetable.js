@@ -126,8 +126,8 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/timetable - Dodaj nowe zajęcia do planu (Profesor / Admin)
-router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+// POST /api/timetable - Dodaj nowe zajęcia do planu (Tylko Dyrekcja / Admin)
+router.post('/', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const {
       subjectId = '',
@@ -184,8 +184,8 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   }
 });
 
-// PUT /api/timetable/:id - Pełna edycja zajęć (Profesor / Admin)
-router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+// PUT /api/timetable/:id - Pełna edycja zajęć (Tylko Dyrekcja / Admin)
+router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM timetable_entries WHERE id = ?').get(req.params.id);
     if (!existing) {
@@ -249,8 +249,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
   }
 });
 
-// PATCH /api/timetable/:id/substitute - Ustaw zastępstwo (Profesor / Admin)
-router.patch('/:id/substitute', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+// PATCH /api/timetable/:id/substitute - Ustaw zastępstwo (Tylko Dyrekcja / Admin)
+router.patch('/:id/substitute', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM timetable_entries WHERE id = ?').get(req.params.id);
     if (!existing) {
@@ -293,12 +293,27 @@ router.patch('/:id/substitute', requireAuth, requireRole('admin', 'professor'), 
   }
 });
 
-// PATCH /api/timetable/:id/cancel - Odwołaj zajęcia (Profesor / Admin)
+// PATCH /api/timetable/:id/cancel - Odwołaj zajęcia (Dyrekcja lub Profesor prowadzący)
 router.patch('/:id/cancel', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM timetable_entries WHERE id = ?').get(req.params.id);
     if (!existing) {
       return res.status(404).json({ error: 'Nie znaleziono wpisu planu.' });
+    }
+
+    const isDirector = req.user.role === 'admin';
+    const isOwnerProfessor = req.user.role === 'professor' && (
+      (existing.professor_id && existing.professor_id === req.user.id) ||
+      (existing.professor_name && (
+        (req.user.fullName && existing.professor_name.toLowerCase().includes(req.user.fullName.toLowerCase())) ||
+        (req.user.username && existing.professor_name.toLowerCase().includes(req.user.username.toLowerCase()))
+      ))
+    );
+
+    if (!isDirector && !isOwnerProfessor) {
+      return res.status(403).json({
+        error: 'Brak uprawnień. Tylko Dyrekcja lub profesor prowadzący dane zajęcia może je odwołać.'
+      });
     }
 
     const { cancellationReason = 'Zajęcia odwołane decyzją Dyrekcji Cytadeli.' } = req.body;
@@ -323,12 +338,27 @@ router.patch('/:id/cancel', requireAuth, requireRole('admin', 'professor'), (req
   }
 });
 
-// PATCH /api/timetable/:id/restore - Przywróć zajęcia do planu (Profesor / Admin)
+// PATCH /api/timetable/:id/restore - Przywróć zajęcia do planu (Dyrekcja lub Profesor prowadzący)
 router.patch('/:id/restore', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM timetable_entries WHERE id = ?').get(req.params.id);
     if (!existing) {
       return res.status(404).json({ error: 'Nie znaleziono wpisu planu.' });
+    }
+
+    const isDirector = req.user.role === 'admin';
+    const isOwnerProfessor = req.user.role === 'professor' && (
+      (existing.professor_id && existing.professor_id === req.user.id) ||
+      (existing.professor_name && (
+        (req.user.fullName && existing.professor_name.toLowerCase().includes(req.user.fullName.toLowerCase())) ||
+        (req.user.username && existing.professor_name.toLowerCase().includes(req.user.username.toLowerCase()))
+      ))
+    );
+
+    if (!isDirector && !isOwnerProfessor) {
+      return res.status(403).json({
+        error: 'Brak uprawnień. Tylko Dyrekcja lub profesor prowadzący dane zajęcia może je przywrócić.'
+      });
     }
 
     const update = db.prepare(`

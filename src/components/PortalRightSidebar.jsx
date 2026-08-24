@@ -41,6 +41,7 @@ export const PortalRightSidebar = ({
     setActiveView,
     houses,
     students,
+    staffRanking,
     events,
     blockGraphics,
     setActiveHouseTab,
@@ -52,6 +53,7 @@ export const PortalRightSidebar = ({
   } = useSchool();
 
   const [duelModalOpen, setDuelModalOpen] = useState(false);
+  const [rankingTab, setRankingTab] = useState('students'); // 'students' | 'staff'
 
   const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
@@ -408,7 +410,7 @@ export const PortalRightSidebar = ({
       </div>
 
       {/* =========================================================================
-          4. BLOK: RANKING ADEPTÓW
+          4. BLOK: TABLICA SŁAWY & RANKING (ADEPTOWIE ORAZ NAUCZYCIELE & DYREKCJA)
           ========================================================================= */}
       <div className="menuBlock">
         <div
@@ -426,53 +428,210 @@ export const PortalRightSidebar = ({
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚠ</span>
-          <span>Ranking Adeptów</span>
+          <span>{rankingTab === 'staff' ? 'Kadra & Dyrekcja' : 'Ranking Adeptów'}</span>
           <span className="rune-bracket">ᚠ</span>
         </div>
 
         <div className="menuBlockContent">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-            {(students || []).slice(0, 5).map((stud, idx) => {
-              const h = houses[stud.house];
-              const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
+          {/* Sub-tabs: Adeptowie vs Nauczyciele & Dyrekcja */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem', marginBottom: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                playWandSwoosh();
+                setRankingTab('students');
+              }}
+              style={{
+                padding: '0.35rem 0.25rem',
+                borderRadius: '4px',
+                border: rankingTab === 'students' ? '1px solid var(--gold-ancient)' : '1px solid rgba(255,255,255,0.08)',
+                background: rankingTab === 'students' ? 'linear-gradient(135deg, rgba(197, 159, 78, 0.3) 0%, rgba(138, 107, 43, 0.2) 100%)' : 'rgba(8, 12, 18, 0.6)',
+                color: rankingTab === 'students' ? '#ffe599' : '#9ca3af',
+                fontSize: '0.71rem',
+                fontWeight: rankingTab === 'students' ? 700 : 500,
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem'
+              }}
+            >
+              <span>🧙‍♂️</span>
+              <span>Adeptowie</span>
+            </button>
 
-              return (
-                <div
-                  key={stud.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.4rem 0.6rem',
-                    background: idx === 0 ? 'rgba(164, 200, 225, 0.12)' : 'rgba(8, 12, 18, 0.6)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: idx === 0 ? '1px solid rgba(164, 200, 225, 0.35)' : '1px solid rgba(255,255,255,0.05)',
-                    fontSize: '0.82rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, width: '20px', color: idx === 0 ? 'var(--gold-ancient)' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#d97706' : '#6b7280', fontFamily: 'var(--font-heading)' }}>
-                      {rankLabels[idx] || `${idx + 1}.`}
-                    </span>
-                    <strong style={{ color: h ? h.colors?.secondary : '#ffffff' }}>
-                      {stud.name.split(' ')[0]} {stud.name.split(' ')[1]?.[0]}.
-                    </strong>
-                  </div>
-                  <span style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.8rem' }}>
-                    {stud.points} pkt
-                  </span>
-                </div>
-              );
-            })}
+            <button
+              type="button"
+              onClick={() => {
+                playWandSwoosh();
+                setRankingTab('staff');
+              }}
+              style={{
+                padding: '0.35rem 0.25rem',
+                borderRadius: '4px',
+                border: rankingTab === 'staff' ? '1px solid var(--gold-ancient)' : '1px solid rgba(255,255,255,0.08)',
+                background: rankingTab === 'staff' ? 'linear-gradient(135deg, rgba(197, 159, 78, 0.3) 0%, rgba(138, 107, 43, 0.2) 100%)' : 'rgba(8, 12, 18, 0.6)',
+                color: rankingTab === 'staff' ? '#ffe599' : '#9ca3af',
+                fontSize: '0.71rem',
+                fontWeight: rankingTab === 'staff' ? 700 : 500,
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem'
+              }}
+            >
+              <span>👑</span>
+              <span>Kadra & Dyrekcja</span>
+            </button>
           </div>
-          <hr />
-          <button
-            onClick={() => handleNav('houses')}
-            className="btn-durmstrang-secondary"
-            style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            Pełny Puchar Zakonów &gt;&gt;
-          </button>
+
+          {/* Tab 1: Adeptowie (Uczniowie) */}
+          {rankingTab === 'students' && (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {(students || []).slice(0, 5).map((stud, idx) => {
+                  const h = houses[stud.house] || Object.values(houses).find(x => x.id === stud.house);
+                  const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
+                  const fullName = stud.fullName || `${stud.name} ${stud.surname || ''}`.trim() || stud.name;
+
+                  return (
+                    <div
+                      key={stud.id || idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.4rem 0.55rem',
+                        background: idx === 0 ? 'rgba(164, 200, 225, 0.12)' : 'rgba(8, 12, 18, 0.6)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: idx === 0 ? '1px solid rgba(164, 200, 225, 0.35)' : '1px solid rgba(255,255,255,0.05)',
+                        fontSize: '0.82rem',
+                        gap: '0.45rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, width: '18px', flexShrink: 0, color: idx === 0 ? 'var(--gold-ancient)' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#d97706' : '#6b7280', fontFamily: 'var(--font-heading)' }}>
+                          {rankLabels[idx] || `${idx + 1}.`}
+                        </span>
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <div
+                            title={fullName}
+                            style={{
+                              color: h ? h.colors?.secondary : '#ffffff',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              fontSize: '0.82rem'
+                            }}
+                          >
+                            {fullName}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: '#8c95a6', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {h ? h.name : 'Zakon'} • {stud.year ? `Rok ${stud.year}` : 'Adept'}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0, textAlign: 'right' }}>
+                        {stud.points} pkt
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <hr />
+              <button
+                onClick={() => handleNav('houses')}
+                className="btn-durmstrang-secondary"
+                style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center' }}
+              >
+                Pełny Puchar Zakonów &gt;&gt;
+              </button>
+            </>
+          )}
+
+          {/* Tab 2: Nauczyciele & Dyrekcja */}
+          {rankingTab === 'staff' && (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {(staffRanking || []).slice(0, 5).map((staff, idx) => {
+                  const isDirector = staff.role === 'admin' || staff.role === 'headmaster';
+                  const h = staff.house ? (houses[staff.house] || Object.values(houses).find(x => x.id === staff.house)) : null;
+                  const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
+                  const fullName = staff.fullName || `${staff.name} ${staff.surname || ''}`.trim() || staff.name;
+
+                  return (
+                    <div
+                      key={staff.id || idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.4rem 0.55rem',
+                        background: isDirector
+                          ? 'linear-gradient(135deg, rgba(197, 159, 78, 0.18) 0%, rgba(15, 20, 30, 0.7) 100%)'
+                          : idx === 0
+                          ? 'rgba(164, 200, 225, 0.12)'
+                          : 'rgba(8, 12, 18, 0.6)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: isDirector
+                          ? '1px solid rgba(197, 159, 78, 0.4)'
+                          : idx === 0
+                          ? '1px solid rgba(164, 200, 225, 0.35)'
+                          : '1px solid rgba(255,255,255,0.05)',
+                        fontSize: '0.82rem',
+                        gap: '0.45rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, width: '18px', flexShrink: 0, color: isDirector ? 'var(--gold-glow)' : idx === 0 ? 'var(--gold-ancient)' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#d97706' : '#6b7280', fontFamily: 'var(--font-heading)' }}>
+                          {rankLabels[idx] || `${idx + 1}.`}
+                        </span>
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <div
+                            title={fullName}
+                            style={{
+                              color: isDirector ? 'var(--gold-glow)' : h ? h.colors?.secondary : '#ffffff',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              fontSize: '0.82rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            {isDirector && <Crown size={12} color="var(--gold-ancient)" style={{ flexShrink: 0 }} />}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName}</span>
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: isDirector ? '#e2c56a' : '#8c95a6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {isDirector ? 'Rada Dyrekcji Cytadeli' : staff.roleLabel || staff.department || (h ? `Opiekun ${h.name}` : 'Katedra')}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0, textAlign: 'right' }}>
+                        {staff.points || 0} pkt
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <hr />
+              <button
+                onClick={() => handleNav('academic')}
+                className="btn-durmstrang-secondary"
+                style={{ width: '100%', padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center' }}
+              >
+                Katedry & Grono Pedagogiczne &gt;&gt;
+              </button>
+            </>
+          )}
         </div>
       </div>
 

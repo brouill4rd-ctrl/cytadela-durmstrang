@@ -3,8 +3,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import db, { dbLessonToFrontend, dbMessageToFrontend, dbParticipantToFrontend } from '../db.js';
+import db, { dbLessonToFrontend, dbMessageToFrontend, dbParticipantToFrontend, dbRoleMappingToFrontend, dbVerificationToFrontend, dbUserToFrontend } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { discordBot, sendWelcomeToGuild } from '../discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'lessons');
@@ -43,7 +44,9 @@ router.get('/status', (req, res) => {
       id: 'bot-default',
       is_active: 1,
       guild_id: '112233445566778899',
-      lessons_channel_id: '998877665544332211'
+      lessons_channel_id: '998877665544332211',
+      welcome_channel_id: '',
+      welcome_enabled: 1
     };
 
     const activeList = Array.from(activeSessions.values());
@@ -52,6 +55,8 @@ router.get('/status', (req, res) => {
       botActive: !!botConfig.is_active,
       guildId: botConfig.guild_id,
       lessonsChannelId: botConfig.lessons_channel_id,
+      welcomeChannelId: botConfig.welcome_channel_id || '',
+      welcomeEnabled: botConfig.welcome_enabled !== 0,
       activeSessionsCount: activeList.length,
       activeSessions: activeList
     });
@@ -64,21 +69,60 @@ router.get('/status', (req, res) => {
 // POST /api/discord/config - Zaktualizuj konfigurację bota (Admin)
 router.post('/config', requireAuth, requireRole('admin'), (req, res) => {
   try {
-    const { botToken, guildId, lessonsChannelId, isActive } = req.body;
+    const { botToken, guildId, lessonsChannelId, welcomeChannelId, welcomeEnabled, isActive } = req.body;
     db.prepare(`
       UPDATE discord_bot_config 
       SET bot_token = COALESCE(?, bot_token),
           guild_id = COALESCE(?, guild_id),
           lessons_channel_id = COALESCE(?, lessons_channel_id),
+          welcome_channel_id = COALESCE(?, welcome_channel_id),
+          welcome_enabled = COALESCE(?, welcome_enabled),
           is_active = COALESCE(?, is_active),
           updated_at = datetime('now')
       WHERE id = 'bot-default'
-    `).run(botToken || null, guildId || null, lessonsChannelId || null, isActive !== undefined ? (isActive ? 1 : 0) : null);
+    `).run(
+      botToken || null,
+      guildId || null,
+      lessonsChannelId || null,
+      welcomeChannelId !== undefined ? welcomeChannelId : null,
+      welcomeEnabled !== undefined ? (welcomeEnabled ? 1 : 0) : null,
+      isActive !== undefined ? (isActive ? 1 : 0) : null
+    );
 
     res.json({ success: true, message: 'Zaktualizowano konfigurację bota Discord.' });
   } catch (err) {
     console.error('[API /discord/config] Błąd:', err);
     res.status(500).json({ error: 'Nie udało się zapisać konfiguracji bota.' });
+  }
+});
+
+// POST /api/discord/test-welcome - Wyślij testowe powitanie na Discord (Admin)
+router.post('/test-welcome', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    if (!discordBot?.client || !discordBot.isReady) {
+      return res.status(503).json({ error: 'Bot Discord nie jest aktualnie połączony z serwerem.' });
+    }
+
+    const { channelId } = req.body;
+    const guild = discordBot.client.guilds.cache.first();
+    if (!guild) {
+      return res.status(404).json({ error: 'Bot nie znajduje się na żadnym serwerze Discord.' });
+    }
+
+    let targetChannel = null;
+    if (channelId) {
+      targetChannel = guild.channels.cache.get(channelId);
+    }
+
+    const sent = await sendWelcomeToGuild(guild, null, targetChannel);
+    if (!sent) {
+      return res.status(500).json({ error: 'Nie udało się wysłać powitania (sprawdź uprawnienia bota).' });
+    }
+
+    res.json({ success: true, message: `Wysłano oficjalne powitanie na kanał #${sent.channel?.name || 'Discord'}` });
+  } catch (err) {
+    console.error('[API /discord/test-welcome] Błąd:', err);
+    res.status(500).json({ error: err.message || 'Błąd wysyłania powitania.' });
   }
 });
 
@@ -461,4 +505,352 @@ router.post('/end-lesson', (req, res) => {
   }
 });
 
+// ==================== DISCORD VERIFICATION & ROLE MANAGEMENT ====================
+
+// Helper function to generate unique code (e.g. DURM-7K8P9)
+function generateVerificationCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `DURM-${randomPart}`;
+}
+
+// Helper function to resolve target roles for a given user
+export function resolveRolesForUser(user) {
+  const mappings = db.prepare('SELECT * FROM discord_role_mappings WHERE auto_assign = 1').all();
+  const matched = [];
+
+  // 1. General verified role
+  const verifiedMap = mappings.find(m => m.internal_key === 'verified');
+  if (verifiedMap) matched.push(verifiedMap);
+
+  // 2. House role
+  if (user.house) {
+    const houseKey = user.house.toLowerCase();
+    const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === houseKey);
+    if (houseMap) matched.push(houseMap);
+  }
+
+  // 3. User rank / role
+  if (user.role) {
+    const roleKey = user.role.toLowerCase();
+    const roleMap = mappings.find(m => m.category === 'role' && m.internal_key === roleKey);
+    if (roleMap) matched.push(roleMap);
+  }
+
+  // 4. Class Year
+  if (user.class_year || user.classYear) {
+    const cy = (user.class_year || user.classYear).toLowerCase();
+    let classKey = '';
+    if (cy.includes('1') || cy.includes('i') && !cy.includes('ii') && !cy.includes('iii') && !cy.includes('iv')) classKey = 'klasa_1';
+    else if (cy.includes('2') || cy.includes('ii') && !cy.includes('iii')) classKey = 'klasa_2';
+    else if (cy.includes('3') || cy.includes('iii')) classKey = 'klasa_3';
+    else if (cy.includes('4') || cy.includes('iv')) classKey = 'klasa_4';
+
+    if (classKey) {
+      const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
+      if (classMap) matched.push(classMap);
+    }
+  }
+
+  return matched;
+}
+
+// POST /api/discord/verification/generate - Wygeneruj kod dla zalogowanego adepta
+router.post('/verification/generate', requireAuth, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Użytkownik nie istnieje w bazie Cytadeli.' });
+    }
+
+    // Sprawdź czy jest już aktywny niewygasły kod
+    const nowIso = new Date().toISOString();
+    const existing = db.prepare(`
+      SELECT * FROM discord_verifications 
+      WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now') 
+      ORDER BY created_at DESC LIMIT 1
+    `).get(userId);
+
+    if (existing) {
+      return res.json({
+        success: true,
+        code: existing.code,
+        expiresAt: existing.expires_at,
+        message: 'Aktywny kod weryfikacyjny został pobrany.',
+        verification: dbVerificationToFrontend(existing)
+      });
+    }
+
+    // Unieważnij poprzednie oczekujące kody
+    db.prepare("UPDATE discord_verifications SET status = 'cancelled' WHERE user_id = ? AND status = 'pending'").run(userId);
+
+    // Wygeneruj nowy kod ważny 20 minut
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000).toISOString();
+    const id = `verif-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+    db.prepare(`
+      INSERT INTO discord_verifications (id, code, user_id, username, full_name, role, house, class_year, status, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    `).run(
+      id,
+      code,
+      user.id,
+      user.username,
+      user.full_name,
+      user.role,
+      user.house || '',
+      user.class_year || '',
+      expiresAt
+    );
+
+    const newVerif = db.prepare('SELECT * FROM discord_verifications WHERE id = ?').get(id);
+
+    res.json({
+      success: true,
+      code,
+      expiresAt,
+      message: 'Wygenerowano nowy runiczny kod weryfikacyjny.',
+      verification: dbVerificationToFrontend(newVerif)
+    });
+  } catch (err) {
+    console.error('[API /discord/verification/generate] Błąd:', err);
+    res.status(500).json({ error: 'Nie udało się wygenerować kodu weryfikacyjnego.' });
+  }
+});
+
+// GET /api/discord/verification/status - Status połączenia i aktywny kod
+router.get('/verification/status', requireAuth, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(404).json({ error: 'Nie znaleziono użytkownika.' });
+
+    const activeVerification = db.prepare(`
+      SELECT * FROM discord_verifications 
+      WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now')
+      ORDER BY created_at DESC LIMIT 1
+    `).get(userId);
+
+    const lastCompleted = db.prepare(`
+      SELECT * FROM discord_verifications 
+      WHERE user_id = ? AND status = 'verified'
+      ORDER BY verified_at DESC LIMIT 1
+    `).get(userId);
+
+    const isConnected = Boolean(user.discord_id);
+    const assignedRoles = JSON.parse(user.discord_roles || '[]');
+    const expectedRoles = resolveRolesForUser(user).map(r => r.role_label || r.discord_role_name);
+
+    res.json({
+      isConnected,
+      discordId: user.discord_id || '',
+      discordUsername: user.discord_username || '',
+      discordAvatar: user.discord_avatar || '',
+      discordVerifiedAt: user.discord_verified_at || '',
+      assignedRoles,
+      expectedRoles,
+      activeCode: activeVerification ? activeVerification.code : null,
+      activeCodeExpiresAt: activeVerification ? activeVerification.expires_at : null,
+      verification: activeVerification ? dbVerificationToFrontend(activeVerification) : (lastCompleted ? dbVerificationToFrontend(lastCompleted) : null)
+    });
+  } catch (err) {
+    console.error('[API /discord/verification/status] Błąd:', err);
+    res.status(500).json({ error: 'Błąd pobierania statusu weryfikacji.' });
+  }
+});
+
+// POST /api/discord/verification/verify-manual - Ręczna / symulowana weryfikacja (działa dla bota i testów w UI)
+router.post('/verification/verify-manual', (req, res) => {
+  try {
+    const { code, discordUserId = '112233445566778899', discordUsername = 'Adept#1294', discordAvatar = '' } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Wymagany jest kod weryfikacyjny (np. DURM-XXXX).' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const verif = db.prepare(`
+      SELECT * FROM discord_verifications 
+      WHERE code = ? AND status = 'pending' AND expires_at > datetime('now')
+    `).get(cleanCode);
+
+    if (!verif) {
+      return res.status(404).json({ error: 'Nieprawidłowy, wykorzystany lub przedawniony kod weryfikacyjny.' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(verif.user_id);
+    if (!user) {
+      return res.status(404).json({ error: 'Nie znaleziono adepta powiązanego z tym kodem.' });
+    }
+
+    const rolesToAssign = resolveRolesForUser(user);
+    const assignedRoleNames = rolesToAssign.map(r => r.discord_role_name || r.role_label);
+
+    const now = new Date().toISOString();
+
+    // 1. Zaktualizuj użytkownika
+    db.prepare(`
+      UPDATE users 
+      SET discord_id = ?, discord_username = ?, discord_avatar = ?, discord_roles = ?, discord_verified_at = ?
+      WHERE id = ?
+    `).run(
+      discordUserId,
+      discordUsername,
+      discordAvatar || user.avatar || '',
+      JSON.stringify(assignedRoleNames),
+      now,
+      user.id
+    );
+
+    // 2. Zaktualizuj rekord weryfikacji
+    db.prepare(`
+      UPDATE discord_verifications 
+      SET status = 'verified', discord_user_id = ?, discord_username = ?, assigned_roles = ?, verified_at = ?
+      WHERE id = ?
+    `).run(
+      discordUserId,
+      discordUsername,
+      JSON.stringify(assignedRoleNames),
+      now,
+      verif.id
+    );
+
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+
+    res.json({
+      success: true,
+      message: `Konto ${user.full_name} zostało pomyślnie powiązane z kontem Discord ${discordUsername}!`,
+      user: dbUserToFrontend(updatedUser),
+      assignedRoles: assignedRoleNames,
+      rolesResolved: rolesToAssign.map(dbRoleMappingToFrontend)
+    });
+  } catch (err) {
+    console.error('[API /discord/verification/verify-manual] Błąd:', err);
+    res.status(500).json({ error: 'Wystąpił błąd podczas weryfikacji tożsamości.' });
+  }
+});
+
+// POST /api/discord/verification/unlink - Odłączenie konta Discord
+router.post('/verification/unlink', requireAuth, (req, res) => {
+  try {
+    const userId = req.user.id;
+    db.prepare(`
+      UPDATE users 
+      SET discord_id = '', discord_username = '', discord_avatar = '', discord_roles = '[]', discord_verified_at = ''
+      WHERE id = ?
+    `).run(userId);
+
+    db.prepare("UPDATE discord_verifications SET status = 'cancelled' WHERE user_id = ?").run(userId);
+
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+
+    res.json({
+      success: true,
+      message: 'Konto Discord zostało pomyślnie odłączone.',
+      user: dbUserToFrontend(updatedUser)
+    });
+  } catch (err) {
+    console.error('[API /discord/verification/unlink] Błąd:', err);
+    res.status(500).json({ error: 'Nie udało się odłączyć konta Discord.' });
+  }
+});
+
+// POST /api/discord/verification/resync - Ponowna synchronizacja ról
+router.post('/verification/resync', requireAuth, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
+
+    if (!user.discord_id) {
+      return res.status(400).json({ error: 'Użytkownik nie ma powiązanego konta Discord.' });
+    }
+
+    const rolesToAssign = resolveRolesForUser(user);
+    const assignedRoleNames = rolesToAssign.map(r => r.discord_role_name || r.role_label);
+
+    db.prepare('UPDATE users SET discord_roles = ? WHERE id = ?').run(
+      JSON.stringify(assignedRoleNames),
+      user.id
+    );
+
+    const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+
+    res.json({
+      success: true,
+      message: 'Role zostały pomyślnie zsynchronizowane z profilem Cytadeli.',
+      user: dbUserToFrontend(updatedUser),
+      assignedRoles: assignedRoleNames
+    });
+  } catch (err) {
+    console.error('[API /discord/verification/resync] Błąd:', err);
+    res.status(500).json({ error: 'Błąd synchronizacji ról Discord.' });
+  }
+});
+
+// GET /api/discord/role-mappings - Pobierz mapowania ról
+router.get('/role-mappings', (req, res) => {
+  try {
+    const mappings = db.prepare('SELECT * FROM discord_role_mappings ORDER BY category, internal_key').all();
+    res.json(mappings.map(dbRoleMappingToFrontend));
+  } catch (err) {
+    console.error('[API /discord/role-mappings] Błąd:', err);
+    res.status(500).json({ error: 'Nie udało się pobrać mapowania ról Discord.' });
+  }
+});
+
+// POST /api/discord/role-mappings - Zaktualizuj mapowania ról (Admin)
+router.post('/role-mappings', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const { mappings } = req.body;
+    if (!Array.isArray(mappings)) {
+      return res.status(400).json({ error: 'Wymagana jest tablica mapowań ról.' });
+    }
+
+    const updateStmt = db.prepare(`
+      UPDATE discord_role_mappings 
+      SET discord_role_id = ?, discord_role_name = ?, color = ?, auto_assign = ?
+      WHERE id = ? OR internal_key = ?
+    `);
+
+    const updateTx = db.transaction((list) => {
+      for (const m of list) {
+        updateStmt.run(
+          m.discordRoleId || '',
+          m.discordRoleName || '',
+          m.color || '#c59f4e',
+          m.autoAssign ? 1 : 0,
+          m.id || '',
+          m.internalKey || ''
+        );
+      }
+    });
+
+    updateTx(mappings);
+
+    const fresh = db.prepare('SELECT * FROM discord_role_mappings ORDER BY category, internal_key').all();
+    res.json({ success: true, message: 'Zaktualizowano mapowania ról Discord.', mappings: fresh.map(dbRoleMappingToFrontend) });
+  } catch (err) {
+    console.error('[API POST /discord/role-mappings] Błąd:', err);
+    res.status(500).json({ error: 'Nie udało się zapisać mapowań ról.' });
+  }
+});
+
+// GET /api/discord/verifications - Lista weryfikacji (Admin)
+router.get('/verifications', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const list = db.prepare('SELECT * FROM discord_verifications ORDER BY created_at DESC LIMIT 100').all();
+    res.json(list.map(dbVerificationToFrontend));
+  } catch (err) {
+    console.error('[API /discord/verifications] Błąd:', err);
+    res.status(500).json({ error: 'Błąd pobierania historii weryfikacji.' });
+  }
+});
+
 export default router;
+

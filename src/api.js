@@ -89,12 +89,20 @@ export const api = {
   awardPoints: (data) => apiFetch('/lessons/points/award', { method: 'POST', body: JSON.stringify(data) }),
   getLessonStats: () => apiFetch('/lessons/stats/overview'),
 
-  // Discord Bot & Thread Simulator
+  // Discord Bot & Verification
   getDiscordStatus: () => apiFetch('/discord/status'),
   updateDiscordConfig: (config) => apiFetch('/discord/config', { method: 'POST', body: JSON.stringify(config) }),
   startDiscordLesson: (data) => apiFetch('/discord/start-lesson', { method: 'POST', body: JSON.stringify(data) }),
   postDiscordMessage: (data) => apiFetch('/discord/post-message', { method: 'POST', body: JSON.stringify(data) }),
   endDiscordLesson: (data) => apiFetch('/discord/end-lesson', { method: 'POST', body: JSON.stringify(data) }),
+  generateDiscordVerificationCode: () => apiFetch('/discord/verification/generate', { method: 'POST' }),
+  getDiscordVerificationStatus: () => apiFetch('/discord/verification/status'),
+  verifyDiscordManual: (data) => apiFetch('/discord/verification/verify-manual', { method: 'POST', body: JSON.stringify(data) }),
+  unlinkDiscordAccount: () => apiFetch('/discord/verification/unlink', { method: 'POST' }),
+  resyncDiscordRoles: () => apiFetch('/discord/verification/resync', { method: 'POST' }),
+  getDiscordRoleMappings: () => apiFetch('/discord/role-mappings'),
+  updateDiscordRoleMappings: (mappings) => apiFetch('/discord/role-mappings', { method: 'POST', body: JSON.stringify({ mappings }) }),
+  getDiscordVerificationsHistory: () => apiFetch('/discord/verifications'),
 
   // ==================== MODUŁ PRZEDMIOTÓW (KATEDRY) ====================
   getSubjects: () => apiFetch('/subjects'),
@@ -165,6 +173,9 @@ export const api = {
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiFetch(`/market/items${query}`);
   },
+  createStoreItem: (data) => apiFetch('/market/items', { method: 'POST', body: JSON.stringify(data) }),
+  updateStoreItem: (id, data) => apiFetch(`/market/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteStoreItem: (id) => apiFetch(`/market/items/${id}`, { method: 'DELETE' }),
   buyStoreItem: (data) => apiFetch('/market/buy', { method: 'POST', body: JSON.stringify(data) }),
   getShoppingLists: (userId) => {
     const query = userId ? `?userId=${userId}` : '';
@@ -181,14 +192,155 @@ export const api = {
   drawLottery: (data = {}) => apiFetch('/lottery/draw', { method: 'POST', body: JSON.stringify(data) }),
   getLotteryHistory: () => apiFetch('/lottery/history'),
 
+  // ==================== DOKUMENTY, DEKRETY & STATUT ====================
+  getDocuments: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.category && filters.category !== 'all') params.append('category', filters.category);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.officialOnly) params.append('officialOnly', 'true');
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/documents${query}`);
+  },
+  getDocument: (slugOrId) => apiFetch(`/documents/${slugOrId}`),
+  createDocument: (docData) => apiFetch('/documents', { method: 'POST', body: JSON.stringify(docData) }),
+  updateDocument: (id, docData) => apiFetch(`/documents/${id}`, { method: 'PUT', body: JSON.stringify(docData) }),
+  deleteDocument: (id) => apiFetch(`/documents/${id}`, { method: 'DELETE' }),
+
+  // ==================== CMS BANERY I GRAFIKI BLOKÓW ====================
+  getCmsBanners: () => apiFetch('/cms/banners'),
+  createCmsBanner: (data) => apiFetch('/cms/banners', { method: 'POST', body: JSON.stringify(data) }),
+  updateCmsBanner: (id, data) => apiFetch(`/cms/banners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCmsBanner: (id) => apiFetch(`/cms/banners/${id}`, { method: 'DELETE' }),
+
+  getCmsBlocks: () => apiFetch('/cms/blocks'),
+  createCmsBlock: (data) => apiFetch('/cms/blocks', { method: 'POST', body: JSON.stringify(data) }),
+  updateCmsBlock: (id, data) => apiFetch(`/cms/blocks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCmsBlock: (id) => apiFetch(`/cms/blocks/${id}`, { method: 'DELETE' }),
+
+  // ==================== KALENDARZ WYDARZEŃ ====================
+  getEvents: () => apiFetch('/events'),
+  createEvent: (data) => apiFetch('/events', { method: 'POST', body: JSON.stringify(data) }),
+  updateEvent: (id, data) => apiFetch(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteEvent: (id) => apiFetch(`/events/${id}`, { method: 'DELETE' }),
+
+  // ==================== SIDE QUESTY Z MAPY & TAJEMNICE ====================
+  getCompletedQuests: (userId) => {
+    const query = userId ? `?userId=${userId}` : '';
+    return apiFetch(`/quests/completed${query}`);
+  },
+  completeQuest: (data) => apiFetch('/quests/complete', { method: 'POST', body: JSON.stringify(data) }),
+
+  getDiscoveredSecrets: (userId) => {
+    const query = userId ? `?userId=${userId}` : '';
+    return apiFetch(`/secrets${query}`);
+  },
+  discoverSecret: (data) => apiFetch('/secrets/discover', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ==================== WARSZTAT RUNICZNY I ALCHEMIA ====================
+  getCraftedFormulas: (userId) => {
+    const query = userId ? `?userId=${userId}` : '';
+    return apiFetch(`/workshop/formulas${query}`);
+  },
+  craftFormula: (data) => apiFetch('/workshop/craft', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ==================== ZADANIA DOMOWE I WYPRACOWANIA ====================
+  getHomework: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.studentId) params.append('studentId', filters.studentId);
+    if (filters.subjectId) params.append('subjectId', filters.subjectId);
+    if (filters.status) params.append('status', filters.status);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/homework${query}`);
+  },
+  submitHomework: (data) => apiFetch('/homework', { method: 'POST', body: JSON.stringify(data) }),
+  gradeHomework: (id, data) => apiFetch(`/homework/${id}/grade`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteHomework: (id) => apiFetch(`/homework/${id}`, { method: 'DELETE' }),
+
+  // ==================== KRUCZA POCZTA & WIADOMOŚCI ====================
+  getRavenMessages: () => apiFetch('/raven'),
+  sendRavenMessage: (data) => apiFetch('/raven', { method: 'POST', body: JSON.stringify(data) }),
+  markRavenRead: (id) => apiFetch(`/raven/${id}/read`, { method: 'PATCH' }),
+  toggleRavenStar: (id) => apiFetch(`/raven/${id}/star`, { method: 'PATCH' }),
+  deleteRavenMessage: (id) => apiFetch(`/raven/${id}`, { method: 'DELETE' }),
+
+  // ==================== ŻELAZNE PIÓRO — GAZETKA SZKOLNA ====================
+  getGazetteSections: () => apiFetch('/gazette/sections'),
+  createGazetteSection: (data) => apiFetch('/gazette/sections', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazetteSection: (id, data) => apiFetch(`/gazette/sections/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteGazetteSection: (id) => apiFetch(`/gazette/sections/${id}`, { method: 'DELETE' }),
+
+  getGazetteIssues: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.year) params.append('year', filters.year);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/gazette/issues${query}`);
+  },
+  getGazetteIssuesAll: () => apiFetch('/gazette/issues/all'),
+  getGazetteIssueLatest: () => apiFetch('/gazette/issues/latest'),
+  getGazetteIssue: (id) => apiFetch(`/gazette/issues/${id}`),
+  createGazetteIssue: (data) => apiFetch('/gazette/issues', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazetteIssue: (id, data) => apiFetch(`/gazette/issues/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  publishGazetteIssue: (id) => apiFetch(`/gazette/issues/${id}/publish`, { method: 'POST' }),
+
+  getGazetteArticles: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.issueId) params.append('issueId', filters.issueId);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.authorId) params.append('authorId', filters.authorId);
+    if (filters.sectionId) params.append('sectionId', filters.sectionId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/gazette/articles${query}`);
+  },
+  createGazetteArticle: (data) => apiFetch('/gazette/articles', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazetteArticle: (id, data) => apiFetch(`/gazette/articles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateGazetteArticleStatus: (id, data) => apiFetch(`/gazette/articles/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteGazetteArticle: (id) => apiFetch(`/gazette/articles/${id}`, { method: 'DELETE' }),
+  getGazetteArticleComments: (id) => apiFetch(`/gazette/articles/${id}/comments`),
+  addGazetteArticleComment: (id, data) => apiFetch(`/gazette/articles/${id}/comments`, { method: 'POST', body: JSON.stringify(data) }),
+
+  getGazettePages: (issueId) => apiFetch(`/gazette/pages/${issueId}`),
+  createGazettePage: (data) => apiFetch('/gazette/pages', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazettePage: (id, data) => apiFetch(`/gazette/pages/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteGazettePage: (id) => apiFetch(`/gazette/pages/${id}`, { method: 'DELETE' }),
+  reorderGazettePages: (pages) => apiFetch('/gazette/pages/reorder', { method: 'PATCH', body: JSON.stringify({ pages }) }),
+
+  getGazetteStaff: () => apiFetch('/gazette/staff'),
+  addGazetteStaff: (data) => apiFetch('/gazette/staff', { method: 'POST', body: JSON.stringify(data) }),
+  removeGazetteStaff: (id) => apiFetch(`/gazette/staff/${id}`, { method: 'DELETE' }),
+
+  createGazetteQuiz: (data) => apiFetch('/gazette/quizzes', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazetteQuiz: (id, data) => apiFetch(`/gazette/quizzes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createGazetteCrossword: (data) => apiFetch('/gazette/crosswords', { method: 'POST', body: JSON.stringify(data) }),
+  updateGazetteCrossword: (id, data) => apiFetch(`/gazette/crosswords/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  submitToGazette: (data) => apiFetch('/gazette/submissions', { method: 'POST', body: JSON.stringify(data) }),
+  getGazetteSubmissions: () => apiFetch('/gazette/submissions'),
+  reviewGazetteSubmission: (id, data) => apiFetch(`/gazette/submissions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  createGazetteSecret: (data) => apiFetch('/gazette/secrets', { method: 'POST', body: JSON.stringify(data) }),
+
+  logGazetteAnalytics: (data) => apiFetch('/gazette/analytics', { method: 'POST', body: JSON.stringify(data) }),
+  getGazetteAnalytics: (issueId) => apiFetch(`/gazette/analytics/${issueId}`),
+
+  getGazetteArchive: () => apiFetch('/gazette/archive'),
+  searchGazette: (q, issueId) => {
+    const params = new URLSearchParams();
+    params.append('q', q);
+    if (issueId) params.append('issueId', issueId);
+    return apiFetch(`/gazette/search?${params.toString()}`);
+  },
+
   // Admin & System Diagnostics
   createAdminAccount: (adminData) => apiFetch('/admin/create-account', { method: 'POST', body: JSON.stringify(adminData) }),
   getAuditLogs: () => apiFetch('/admin/audit-logs'),
   getSystemStats: () => apiFetch('/admin/system-stats'),
   getDatabaseBackup: () => apiFetch('/admin/backup-export'),
+  importDatabaseBackup: (backup) => apiFetch('/admin/backup-import', { method: 'POST', body: JSON.stringify({ backup }) }),
   optimizeDatabase: () => apiFetch('/admin/optimize-db', { method: 'POST' }),
 
   // Health
   health: () => apiFetch('/health')
 };
+
 

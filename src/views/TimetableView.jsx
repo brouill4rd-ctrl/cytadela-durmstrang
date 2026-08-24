@@ -260,32 +260,34 @@ export const TimetableView = () => {
             </p>
           </div>
 
-          {/* Quick Actions & Add Button */}
+          {/* Quick Actions & Add Button (Tylko Dyrekcja / Admin) */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.8rem' }}>
-            <button
-              onClick={handleOpenAddModal}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                padding: '0.75rem 1.4rem',
-                background: 'linear-gradient(135deg, #c59f4e 0%, #8a6c2f 100%)',
-                color: '#05070a',
-                border: '1px solid #f7dca0',
-                borderRadius: '8px',
-                fontFamily: 'var(--font-heading)',
-                fontSize: '0.98rem',
-                fontWeight: 800,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(197, 159, 78, 0.35)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Plus size={18} strokeWidth={3} />
-              <span>+ Dodaj Zajęcia do Planu</span>
-            </button>
+            {currentRole === 'admin' && (
+              <button
+                onClick={handleOpenAddModal}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  padding: '0.75rem 1.4rem',
+                  background: 'linear-gradient(135deg, #c59f4e 0%, #8a6c2f 100%)',
+                  color: '#05070a',
+                  border: '1px solid #f7dca0',
+                  borderRadius: '8px',
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: '0.98rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(197, 159, 78, 0.35)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Plus size={18} strokeWidth={3} />
+                <span>+ Dodaj Zajęcia do Planu</span>
+              </button>
+            )}
 
             <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Clock size={13} color="var(--gold-ancient)" />
@@ -790,13 +792,14 @@ export const TimetableView = () => {
                           <TimetableCard
                             key={entry.id}
                             entry={entry}
+                            currentRole={currentRole}
+                            currentUser={currentUser}
                             onJumpToSubject={() => handleJumpToSubject(entry.subjectId)}
                             onEdit={() => handleOpenEditModal(entry)}
                             onSubstitute={() => handleOpenSubModal(entry)}
                             onCancel={() => handleOpenCancelModal(entry)}
                             onRestore={() => handleRestore(entry)}
                             onDelete={() => handleDelete(entry)}
-                            isStaffOrAdmin={isStaffOrAdmin}
                           />
                         ))
                       )}
@@ -886,13 +889,14 @@ export const TimetableView = () => {
                         <TimetableCard
                           key={entry.id}
                           entry={entry}
+                          currentRole={currentRole}
+                          currentUser={currentUser}
                           onJumpToSubject={() => handleJumpToSubject(entry.subjectId)}
                           onEdit={() => handleOpenEditModal(entry)}
                           onSubstitute={() => handleOpenSubModal(entry)}
                           onCancel={() => handleOpenCancelModal(entry)}
                           onRestore={() => handleRestore(entry)}
                           onDelete={() => handleDelete(entry)}
-                          isStaffOrAdmin={isStaffOrAdmin}
                         />
                       ))
                     )}
@@ -956,13 +960,14 @@ export const TimetableView = () => {
                         <TimetableCard
                           key={entry.id}
                           entry={entry}
+                          currentRole={currentRole}
+                          currentUser={currentUser}
                           onJumpToSubject={() => handleJumpToSubject(entry.subjectId)}
                           onEdit={() => handleOpenEditModal(entry)}
                           onSubstitute={() => handleOpenSubModal(entry)}
                           onCancel={() => handleOpenCancelModal(entry)}
                           onRestore={() => handleRestore(entry)}
                           onDelete={() => handleDelete(entry)}
-                          isStaffOrAdmin={isStaffOrAdmin}
                         />
                       ))
                     )}
@@ -1035,18 +1040,43 @@ export const TimetableView = () => {
 // =========================================================================
 const TimetableCard = ({
   entry,
+  currentRole,
+  currentUser,
   onJumpToSubject,
   onEdit,
   onSubstitute,
   onCancel,
   onRestore,
-  onDelete,
-  isStaffOrAdmin
+  onDelete
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isSub = entry.status === 'substitution';
   const isCancelled = entry.status === 'cancelled';
+
+  // Permission checks:
+  // 1. Dyrekcja (admin): pełne zarządzanie (edycja, usunięcie, zastępstwo, odwołanie/przywrócenie)
+  // 2. Profesor: może odwołać / przywrócić TYLKO swoją godzinę
+  // 3. Adept / Uczeń / Gość: tylko podgląd + przejście do katedry
+  const isAdmin = currentRole === 'admin';
+  const isProfessor = currentRole === 'professor';
+  const isOwnLesson = Boolean(
+    currentUser && isProfessor && (
+      (entry.professorId && entry.professorId === currentUser.id) ||
+      (entry.professorName && (
+        (currentUser.fullName && entry.professorName.toLowerCase().includes(currentUser.fullName.toLowerCase())) ||
+        (currentUser.name && entry.professorName.toLowerCase().includes(currentUser.name.toLowerCase())) ||
+        (currentUser.surname && entry.professorName.toLowerCase().includes(currentUser.surname.toLowerCase()))
+      ))
+    )
+  );
+
+  const canCancelOrRestore = isAdmin || isOwnLesson;
+  const canSubstitute = isAdmin;
+  const canEditOrDelete = isAdmin;
+  const canJumpSubject = Boolean(entry.subjectId);
+
+  const hasAnyAction = canJumpSubject || canCancelOrRestore || canSubstitute || canEditOrDelete;
 
   // Border & Glow styling based on status
   const cardBorder = isCancelled
@@ -1158,186 +1188,200 @@ const TimetableCard = ({
           )}
 
           {/* Settings / Action Button */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              title="Zarządzaj zajęciami"
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '4px',
-                color: '#cbd5e1',
-                padding: '0.2rem 0.4rem',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              •••
-            </button>
-
-            {menuOpen && (
-              <div
+          {hasAnyAction && (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                title="Opcje zajęć"
                 style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: '100%',
-                  marginTop: '0.3rem',
-                  width: '210px',
-                  background: 'rgba(12, 16, 24, 0.98)',
-                  border: '1px solid var(--gold-ancient)',
-                  borderRadius: '6px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.9)',
-                  zIndex: 20,
-                  padding: '0.4rem 0',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '4px',
+                  color: '#cbd5e1',
+                  padding: '0.2rem 0.4rem',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
                   display: 'flex',
-                  flexDirection: 'column'
+                  alignItems: 'center'
                 }}
               >
-                {entry.subjectId && (
-                  <button
-                    onClick={() => { setMenuOpen(false); onJumpToSubject(); }}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#cbd5e1',
-                      fontSize: '0.78rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <BookOpen size={13} color="var(--gold-ancient)" />
-                    <span>Otwórz Katedrę</span>
-                  </button>
-                )}
+                •••
+              </button>
 
-                <button
-                  onClick={() => { setMenuOpen(false); onSubstitute(); }}
+              {menuOpen && (
+                <div
                   style={{
-                    padding: '0.45rem 0.85rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#d8b4fe',
-                    fontSize: '0.78rem',
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    marginTop: '0.3rem',
+                    width: '210px',
+                    background: 'rgba(12, 16, 24, 0.98)',
+                    border: '1px solid var(--gold-ancient)',
+                    borderRadius: '6px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.9)',
+                    zIndex: 20,
+                    padding: '0.4rem 0',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer',
-                    textAlign: 'left'
+                    flexDirection: 'column'
                   }}
                 >
-                  <RefreshCw size={13} color="#c084fc" />
-                  <span>Ustaw Zastępstwo</span>
-                </button>
+                  {canJumpSubject && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onJumpToSubject(); }}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#cbd5e1',
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <BookOpen size={13} color="var(--gold-ancient)" />
+                      <span>Otwórz Katedrę</span>
+                    </button>
+                  )}
 
-                {!isCancelled ? (
-                  <button
-                    onClick={() => { setMenuOpen(false); onCancel(); }}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#fca5a5',
-                      fontSize: '0.78rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <XCircle size={13} color="#ef4444" />
-                    <span>Odwołaj Zajęcia</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { setMenuOpen(false); onRestore(); }}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#86efac',
-                      fontSize: '0.78rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <CheckCircle2 size={13} color="#22c55e" />
-                    <span>Przywróć do Planu</span>
-                  </button>
-                )}
+                  {/* Dyrekcja: Ustaw Zastępstwo */}
+                  {canSubstitute && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onSubstitute(); }}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#d8b4fe',
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <RefreshCw size={13} color="#c084fc" />
+                      <span>Ustaw Zastępstwo</span>
+                    </button>
+                  )}
 
-                {isSub && (
-                  <button
-                    onClick={() => { setMenuOpen(false); onRestore(); }}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#86efac',
-                      fontSize: '0.78rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <CheckCircle2 size={13} color="#22c55e" />
-                    <span>Cofnij Zastępstwo</span>
-                  </button>
-                )}
+                  {/* Dyrekcja lub Profesor prowadzący: Odwołaj / Przywróć */}
+                  {canCancelOrRestore && (
+                    !isCancelled ? (
+                      <button
+                        onClick={() => { setMenuOpen(false); onCancel(); }}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fca5a5',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <XCircle size={13} color="#ef4444" />
+                        <span>Odwołaj Zajęcia</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setMenuOpen(false); onRestore(); }}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#86efac',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <CheckCircle2 size={13} color="#22c55e" />
+                        <span>Przywróć do Planu</span>
+                      </button>
+                    )
+                  )}
 
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0.3rem 0' }} />
+                  {/* Dyrekcja: Cofnij Zastępstwo */}
+                  {canSubstitute && isSub && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onRestore(); }}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#86efac',
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <CheckCircle2 size={13} color="#22c55e" />
+                      <span>Cofnij Zastępstwo</span>
+                    </button>
+                  )}
 
-                <button
-                  onClick={() => { setMenuOpen(false); onEdit(); }}
-                  style={{
-                    padding: '0.45rem 0.85rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#e2e8f0',
-                    fontSize: '0.78rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <Edit3 size={13} color="#94a3b8" />
-                  <span>Edytuj Szczegóły</span>
-                </button>
+                  {/* Dyrekcja: Pełna edycja i usunięcie */}
+                  {canEditOrDelete && (
+                    <>
+                      <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0.3rem 0' }} />
 
-                <button
-                  onClick={() => { setMenuOpen(false); onDelete(); }}
-                  style={{
-                    padding: '0.45rem 0.85rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ef4444',
-                    fontSize: '0.78rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <Trash2 size={13} color="#ef4444" />
-                  <span>Usuń z Grafiku</span>
-                </button>
-              </div>
-            )}
-          </div>
+                      <button
+                        onClick={() => { setMenuOpen(false); onEdit(); }}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#e2e8f0',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <Edit3 size={13} color="#94a3b8" />
+                        <span>Edytuj Szczegóły</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setMenuOpen(false); onDelete(); }}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <Trash2 size={13} color="#ef4444" />
+                        <span>Usuń z Grafiku</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1839,10 +1883,10 @@ const AddEditLessonModal = ({
                 }}
               >
                 <option value="all">Wszystkie Zakony (Wspólne)</option>
-                <option value="ravnheim">🐦 Zakon Ravnheim</option>
-                <option value="bjornhall">🐻 Zakon Björnhall</option>
-                <option value="reinhall">🦌 Zakon Reinhall</option>
-                <option value="otergard">🦦 Zakon Otergard</option>
+                <option value="ravnheim">ᚱ Zakon Ravnheim</option>
+                <option value="bjornhall">ᛉ Zakon Björnhall</option>
+                <option value="reinhall">ᚦ Zakon Reinhall</option>
+                <option value="otergard">ᛞ Zakon Otergard</option>
               </select>
             </div>
           </div>

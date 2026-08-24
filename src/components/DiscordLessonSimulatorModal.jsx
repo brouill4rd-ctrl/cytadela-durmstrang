@@ -50,7 +50,7 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
   const [createdLessonId, setCreatedLessonId] = useState(null);
   const [summaryData, setSummaryData] = useState(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || (currentUser?.role !== 'admin' && currentUser?.role !== 'professor')) return null;
 
   // 1. Start lesson (/lekcja rozpocznij)
   const handleStartLesson = async () => {

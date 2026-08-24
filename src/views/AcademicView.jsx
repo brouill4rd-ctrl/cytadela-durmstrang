@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
+import { SubjectIcon } from '../components/SubjectIcon';
 import {
   BookOpen,
   GraduationCap,
@@ -34,7 +35,10 @@ import {
   Eye,
   SlidersHorizontal,
   ChevronDown,
-  Activity
+  Activity,
+  Landmark,
+  Snowflake,
+  Swords
 } from 'lucide-react';
 
 export const AcademicView = () => {
@@ -313,6 +317,21 @@ export const AcademicView = () => {
           animation: aurora-wave-shift 28s ease-in-out infinite alternate;
           z-index: 1;
         }
+
+        .hero-metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1.1rem;
+          width: 100%;
+          max-width: 860px;
+          margin: 0 auto;
+        }
+
+        @media (max-width: 620px) {
+          .hero-metrics-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
 
       {/* =========================================================================
@@ -323,7 +342,7 @@ export const AcademicView = () => {
         background: 'linear-gradient(135deg, rgba(16, 22, 34, 0.96) 0%, rgba(8, 12, 18, 0.98) 60%, rgba(4, 6, 10, 1) 100%)',
         border: '1px solid var(--gold-border)',
         borderRadius: '16px',
-        padding: '2.5rem 2.2rem',
+        padding: '2.4rem 2rem',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.75), 0 0 1px 1px rgba(197, 159, 78, 0.25)',
         overflow: 'hidden'
       }}>
@@ -350,116 +369,115 @@ export const AcademicView = () => {
 
         <div style={{ position: 'relative', zIndex: 2 }}>
           
-          {/* Top Tag & Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.8rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <span style={{
+          {/* Top Tag & Actions - Centered & Balanced */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '1.2rem' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'rgba(197, 159, 78, 0.15)',
+              border: '1px solid var(--gold-ancient)',
+              color: '#ffe8aa',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              padding: '0.3rem 0.85rem',
+              borderRadius: '6px',
+              fontFamily: 'var(--font-ui)',
+              boxShadow: '0 0 12px rgba(197, 159, 78, 0.15)'
+            }}>
+              <Sparkles size={13} color="var(--gold-ancient)" />
+              Curriculum Academicum • Dwuletni Cykl Kształcenia
+            </span>
+
+            {/* Aurora Toggle Button */}
+            <button
+              onClick={() => { playRuneChime(); setAuroraEnabled(!auroraEnabled); }}
+              style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                background: 'rgba(197, 159, 78, 0.15)',
-                border: '1px solid var(--gold-ancient)',
-                color: '#ffe8aa',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                padding: '0.25rem 0.75rem',
+                gap: '0.45rem',
+                padding: '0.3rem 0.85rem',
+                background: auroraEnabled ? 'rgba(45, 212, 191, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                border: auroraEnabled ? '1px solid #2dd4bf' : '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '6px',
-                fontFamily: 'var(--font-ui)',
-                boxShadow: '0 0 12px rgba(197, 159, 78, 0.15)'
-              }}>
-                <Sparkles size={13} color="var(--gold-ancient)" />
-                Curriculum Academicum • Dwuletni Cykl Kształcenia
-              </span>
-
-              {/* Aurora Toggle Button */}
-              <button
-                onClick={() => { playRuneChime(); setAuroraEnabled(!auroraEnabled); }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  padding: '0.25rem 0.75rem',
-                  background: auroraEnabled ? 'rgba(45, 212, 191, 0.18)' : 'rgba(255, 255, 255, 0.05)',
-                  border: auroraEnabled ? '1px solid #2dd4bf' : '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '6px',
-                  color: auroraEnabled ? '#5eead4' : '#94a3b8',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                title="Włącz lub wyłącz subtelną zorzę polarną na kafelkach"
-              >
-                <span>🌌 Zorza Polarna:</span>
-                <span style={{ fontWeight: 800 }}>{auroraEnabled ? 'Aktywna' : 'Wyciszona'}</span>
-              </button>
-            </div>
+                color: auroraEnabled ? '#5eead4' : '#94a3b8',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title="Włącz lub wyłącz subtelną zorzę polarną na kafelkach"
+            >
+              <Sparkles size={13} color={auroraEnabled ? '#2dd4bf' : '#94a3b8'} />
+              <span>Zorza Polarna:</span>
+              <span style={{ fontWeight: 800 }}>{auroraEnabled ? 'Aktywna' : 'Wyciszona'}</span>
+            </button>
 
             {/* Timetable Quick Jump */}
             <button
               onClick={() => { playWandSwoosh(); setActiveView('timetable'); }}
               style={{
-                padding: '0.5rem 1.1rem',
+                padding: '0.3rem 0.85rem',
                 background: 'linear-gradient(135deg, rgba(197, 159, 78, 0.25) 0%, rgba(15, 20, 30, 0.9) 100%)',
                 border: '1px solid var(--gold-ancient)',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 color: '#ffe8aa',
                 fontFamily: 'var(--font-ui)',
-                fontSize: '0.84rem',
+                fontSize: '0.74rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.45rem',
                 boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
               onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
             >
-              <Calendar size={15} color="var(--gold-ancient)" />
-              <span>Harmonogram & Plan Lekcji</span>
-              <ArrowRight size={14} />
+              <Calendar size={13} color="var(--gold-ancient)" />
+              <span>Plan Lekcji</span>
+              <ArrowRight size={13} />
             </button>
           </div>
 
-          {/* Heading */}
+          {/* Heading: Centered & Fit in 1 Clean Line */}
           <h1 style={{
-            fontSize: '2.5rem',
+            fontSize: 'clamp(1.35rem, 2.2vw, 2.15rem)',
             color: '#ffffff',
-            margin: '0 0 0.8rem',
+            margin: '0 auto 0.9rem',
             fontFamily: 'var(--font-heading)',
             textShadow: '0 4px 20px rgba(0,0,0,0.8), 0 0 30px rgba(197, 159, 78, 0.25)',
-            lineHeight: 1.15,
-            letterSpacing: '0.02em'
+            lineHeight: 1.2,
+            letterSpacing: '0.015em',
+            textAlign: 'center',
+            maxWidth: '100%'
           }}>
             Katedry i Dydaktyka Twierdzy Magii Durmstrang (TMD)
           </h1>
 
+          {/* Centered Aesthetic Quote */}
           <p style={{
             color: '#cbd5e1',
-            fontSize: '0.98rem',
-            lineHeight: 1.7,
-            margin: '0 0 1.8rem',
-            maxWidth: '920px',
+            fontSize: '0.94rem',
+            lineHeight: 1.65,
+            margin: '0 auto 1.8rem',
+            maxWidth: '860px',
             fontStyle: 'italic',
-            borderLeft: '3px solid var(--gold-ancient)',
-            paddingLeft: '1.2rem',
+            textAlign: 'center',
+            borderTop: '1px solid rgba(197, 159, 78, 0.25)',
+            borderBottom: '1px solid rgba(197, 159, 78, 0.25)',
             background: 'rgba(255, 255, 255, 0.02)',
-            padding: '0.6rem 1.2rem',
-            borderRadius: '0 8px 8px 0'
+            padding: '0.75rem 1.4rem',
+            borderRadius: '8px'
           }}>
             „W Durmstrangu magia nie jest suchą teorią spisaną na południowych pergaminach. Tutaj okiełznujemy arktyczne żywioły, zgłębiamy starożytne runy, pętamy cienie i badamy granice tego, co czarodziejski świat uznaje za zakazane.”
           </p>
 
-          {/* Metrics Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem'
-          }}>
+          {/* Metrics Grid - 2 Per Row Centered Layout */}
+          <div className="hero-metrics-grid">
             <div
               onClick={() => { playRuneChime(); setSelectedYearTab('all'); }}
               style={{
@@ -475,23 +493,24 @@ export const AcademicView = () => {
               }}
             >
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '8px',
-                background: 'rgba(197, 159, 78, 0.2)',
+                background: 'rgba(197, 159, 78, 0.18)',
+                border: '1px solid rgba(197, 159, 78, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--gold-ancient)',
-                fontSize: '1.2rem'
+                flexShrink: 0
               }}>
-                🏛️
+                <Landmark size={22} />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ color: 'var(--gold-glow)', fontWeight: 800, fontSize: '1.25rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
                   {subjects.length} Katedr
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Wszystkie dyscypliny akademii
                 </div>
               </div>
@@ -512,23 +531,24 @@ export const AcademicView = () => {
               }}
             >
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '8px',
-                background: 'rgba(56, 189, 248, 0.2)',
+                background: 'rgba(56, 189, 248, 0.18)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#38bdf8',
-                fontSize: '1.2rem'
+                flexShrink: 0
               }}>
-                ❄️
+                <Snowflake size={22} />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '1.25rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
                   {year1Count} Przedmiotów
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   I Rok • Fundamenty Magii
                 </div>
               </div>
@@ -549,23 +569,24 @@ export const AcademicView = () => {
               }}
             >
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '8px',
-                background: 'rgba(168, 85, 247, 0.2)',
+                background: 'rgba(168, 85, 247, 0.18)',
+                border: '1px solid rgba(168, 85, 247, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#c084fc',
-                fontSize: '1.2rem'
+                flexShrink: 0
               }}>
-                ⚔️
+                <Swords size={22} />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ color: '#c084fc', fontWeight: 800, fontSize: '1.25rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
                   {year2Count} Przedmiotów
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   II Rok • Magia Zaawansowana
                 </div>
               </div>
@@ -586,23 +607,24 @@ export const AcademicView = () => {
               }}
             >
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '8px',
-                background: 'rgba(46, 196, 182, 0.2)',
+                background: 'rgba(46, 196, 182, 0.18)',
+                border: '1px solid rgba(46, 196, 182, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#2ec4b6',
-                fontSize: '1.2rem'
+                flexShrink: 0
               }}>
-                🌟
+                <Sparkles size={22} />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ color: '#2ec4b6', fontWeight: 800, fontSize: '1.25rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
                   {bothYearsCount} Wspólne
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Ciągłość I i II Klasy
                 </div>
               </div>
@@ -613,7 +635,7 @@ export const AcademicView = () => {
       </div>
 
       {/* =========================================================================
-          CONTROL HUB: SEARCH, VIEW MODES & FILTERS
+          CONTROL HUB: SEARCH, VIEW MODES & FILTERS (CENTERED & HARMONIOUS)
           ========================================================================= */}
       <div style={{
         display: 'flex',
@@ -622,61 +644,68 @@ export const AcademicView = () => {
         background: 'rgba(11, 15, 24, 0.88)',
         border: '1px solid rgba(197, 159, 78, 0.25)',
         borderRadius: '14px',
-        padding: '1.4rem 1.6rem',
-        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
+        padding: '1.6rem 1.8rem',
+        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)',
+        alignItems: 'center'
       }}>
         
-        {/* Row 1: Search Bar & View Mode Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          
-          {/* Search Box */}
-          <div style={{
-            position: 'relative',
-            flex: '1 1 340px',
-            minWidth: '260px'
-          }}>
-            <Search size={16} color="var(--gold-ancient)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Szukaj katedry, profesora, sali, kodu (np. DARK-101) lub tematu..."
+        {/* Row 1: Centered Search Bar */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '780px'
+        }}>
+          <Search size={16} color="var(--gold-ancient)" style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Szukaj katedry, profesora, sali, kodu (np. DARK-101) lub tematu..."
+            style={{
+              width: '100%',
+              padding: '0.8rem 2.6rem 0.8rem 2.9rem',
+              background: 'rgba(16, 22, 34, 0.95)',
+              border: '1px solid rgba(197, 159, 78, 0.35)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              fontSize: '0.92rem',
+              outline: 'none',
+              fontFamily: 'var(--font-ui)',
+              boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)',
+              transition: 'border 0.2s'
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--gold-ancient)'}
+            onBlur={e => e.currentTarget.style.borderColor = 'rgba(197, 159, 78, 0.35)'}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
               style={{
-                width: '100%',
-                padding: '0.75rem 2.4rem 0.75rem 2.8rem',
-                background: 'rgba(16, 22, 34, 0.95)',
-                border: '1px solid rgba(197, 159, 78, 0.35)',
-                borderRadius: '8px',
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                outline: 'none',
-                fontFamily: 'var(--font-ui)',
-                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)',
-                transition: 'border 0.2s'
+                position: 'absolute',
+                right: '0.9rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                padding: '0.2rem'
               }}
-              onFocus={e => e.currentTarget.style.borderColor = 'var(--gold-ancient)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(197, 159, 78, 0.35)'}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                style={{
-                  position: 'absolute',
-                  right: '0.8rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '0.2rem'
-                }}
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
 
+        {/* Row 2: View Modes & Sort Controls Centered */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          width: '100%'
+        }}>
           {/* View Modes Switcher */}
           <div style={{
             display: 'inline-flex',
@@ -690,7 +719,7 @@ export const AcademicView = () => {
               onClick={() => { playWandSwoosh(); setViewMode('grid'); }}
               title="Widok Siatki Kart (Mozaika)"
               style={{
-                padding: '0.45rem 0.9rem',
+                padding: '0.45rem 0.95rem',
                 background: viewMode === 'grid' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
                 border: viewMode === 'grid' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
                 borderRadius: '6px',
@@ -712,7 +741,7 @@ export const AcademicView = () => {
               onClick={() => { playWandSwoosh(); setViewMode('curriculum'); }}
               title="Widok Szlaku Kształcenia (Dwuletni Program)"
               style={{
-                padding: '0.45rem 0.9rem',
+                padding: '0.45rem 0.95rem',
                 background: viewMode === 'curriculum' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
                 border: viewMode === 'curriculum' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
                 borderRadius: '6px',
@@ -734,7 +763,7 @@ export const AcademicView = () => {
               onClick={() => { playWandSwoosh(); setViewMode('studio'); }}
               title="Widok Pracowni i Sali Wykładowej"
               style={{
-                padding: '0.45rem 0.9rem',
+                padding: '0.45rem 0.95rem',
                 background: viewMode === 'studio' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
                 border: viewMode === 'studio' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
                 borderRadius: '6px',
@@ -754,7 +783,7 @@ export const AcademicView = () => {
           </div>
 
           {/* Sort Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
             <SlidersHorizontal size={14} color="var(--gold-ancient)" />
             <select
               value={sortBy}
@@ -763,7 +792,7 @@ export const AcademicView = () => {
                 background: 'rgba(16, 22, 34, 0.95)',
                 border: '1px solid rgba(197, 159, 78, 0.3)',
                 borderRadius: '6px',
-                padding: '0.5rem 0.8rem',
+                padding: '0.5rem 0.85rem',
                 color: '#e2e8f0',
                 fontSize: '0.82rem',
                 fontFamily: 'var(--font-ui)',
@@ -777,11 +806,19 @@ export const AcademicView = () => {
               <option value="code">Kod Katedry</option>
             </select>
           </div>
-
         </div>
 
-        {/* Row 2: Year Selector Tabs */}
-        <div style={{ display: 'flex', gap: '0.6rem', borderTop: '1px solid rgba(255, 255, 255, 0.07)', paddingTop: '1rem', flexWrap: 'wrap' }}>
+        {/* Row 3: Year Selector Tabs Centered */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '0.65rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+          paddingTop: '1.1rem',
+          flexWrap: 'wrap',
+          width: '100%'
+        }}>
           <button
             onClick={() => { playWandSwoosh(); setSelectedYearTab('all'); }}
             style={{
@@ -878,14 +915,48 @@ export const AcademicView = () => {
             </span>
           </button>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
-            Wyników: <strong style={{ color: 'var(--gold-glow)', marginLeft: '0.35rem' }}>{processedSubjects.length}</strong>
-          </div>
+          {/* Centered Results Badge */}
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(197, 159, 78, 0.25)',
+            padding: '0.45rem 0.85rem',
+            borderRadius: '8px',
+            color: '#cbd5e1',
+            fontSize: '0.8rem',
+            fontWeight: 600
+          }}>
+            Wyników: <strong style={{ color: 'var(--gold-glow)' }}>{processedSubjects.length}</strong>
+          </span>
         </div>
 
-        {/* Row 3: Category Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', paddingTop: '0.2rem' }}>
-          <Filter size={13} color="var(--gold-ancient)" />
+        {/* Row 4: Category Pills Centered */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.45rem',
+          flexWrap: 'wrap',
+          paddingTop: '0.2rem',
+          width: '100%'
+        }}>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            color: 'var(--gold-ancient)',
+            fontSize: '0.74rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginRight: '0.25rem'
+          }}>
+            <Filter size={13} color="var(--gold-ancient)" />
+            Dziedzina:
+          </span>
+
           {allCategories.map(cat => {
             const isCatActive = selectedCategory === cat;
             const count = cat === 'all' 
@@ -1005,22 +1076,7 @@ export const AcademicView = () => {
 
                     {/* Icon + Title */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.9rem', marginBottom: '0.85rem' }}>
-                      <div style={{
-                        fontSize: '2.2rem',
-                        lineHeight: 1,
-                        flexShrink: 0,
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '10px',
-                        width: '54px',
-                        height: '54px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
-                      }}>
-                        {s.icon || '📚'}
-                      </div>
+                      <SubjectIcon subject={s} size={24} containerSize={52} />
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{
@@ -1248,7 +1304,7 @@ export const AcademicView = () => {
                         {auroraEnabled && <div className="aurora-flowing-veil" />}
                         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', minWidth: 0 }}>
-                            <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>{s.icon || '📚'}</span>
+                            <SubjectIcon subject={s} size={20} containerSize={42} />
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontSize: '0.68rem', color: '#7dd3fc', fontWeight: 800, textTransform: 'uppercase' }}>
                                 {s.code} • {s.category}
@@ -1339,7 +1395,7 @@ export const AcademicView = () => {
                         {auroraEnabled && <div className="aurora-flowing-veil" />}
                         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', minWidth: 0 }}>
-                            <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>{s.icon || '⚔️'}</span>
+                            <SubjectIcon subject={s} size={20} containerSize={42} />
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontSize: '0.68rem', color: '#d8b4fe', fontWeight: 800, textTransform: 'uppercase' }}>
                                 {s.code} • {s.category}
@@ -1430,7 +1486,7 @@ export const AcademicView = () => {
                   )}
 
                   <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '0.8rem', width: '100%', minWidth: 0 }}>
-                    <span style={{ fontSize: '1.8rem', flexShrink: 0, lineHeight: 1 }}>{s.icon || '📚'}</span>
+                    <SubjectIcon subject={s} size={18} containerSize={38} />
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1616,12 +1672,20 @@ export const AcademicView = () => {
                       <h3 style={{ fontSize: '1.4rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>
                         {activeStudioLesson.title}
                       </h3>
-                      <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.82rem', color: '#94a3af' }}>
-                        {activeStudioLesson.duration && <span>⏱️ Czas: {activeStudioLesson.duration}</span>}
+                      <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', fontSize: '0.82rem', color: '#94a3af' }}>
+                        {activeStudioLesson.duration && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Clock size={13} color="var(--gold-ancient)" />
+                            <span>Czas: {activeStudioLesson.duration}</span>
+                          </span>
+                        )}
                         {activeStudioLesson.difficulty && (
                           <>
                             <span>•</span>
-                            <span>⚔️ Trudność: {activeStudioLesson.difficulty}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Shield size={13} color="#c084fc" />
+                              <span>Trudność: {activeStudioLesson.difficulty}</span>
+                            </span>
                           </>
                         )}
                       </div>
@@ -1948,8 +2012,8 @@ export const AcademicView = () => {
             </button>
 
             <div style={{ position: 'relative', zIndex: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '1.2rem' }}>
-                <span style={{ fontSize: '2.5rem' }}>{inspectorSubject.icon || '📚'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '1.2rem' }}>
+                <SubjectIcon subject={inspectorSubject} size={28} containerSize={56} />
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                     <span style={{ color: 'var(--gold-ancient)', fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -2007,8 +2071,16 @@ export const AcademicView = () => {
                           <h3 style={{ fontSize: '1.3rem', color: '#ffffff', margin: '0 0 0.3rem', fontFamily: 'var(--font-heading)' }}>
                             {les.title}
                           </h3>
-                          <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-                            ⏱️ Czas: {les.duration || '45 min'} • ⚔️ Trudność: {les.difficulty || 'Średnia'}
+                          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', fontSize: '0.82rem', color: '#94a3b8' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Clock size={13} color="var(--gold-ancient)" />
+                              <span>Czas: {les.duration || '45 min'}</span>
+                            </span>
+                            <span>•</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Shield size={13} color="#c084fc" />
+                              <span>Trudność: {les.difficulty || 'Średnia'}</span>
+                            </span>
                           </div>
                         </div>
 
@@ -2018,8 +2090,9 @@ export const AcademicView = () => {
 
                         {les.materials && les.materials.length > 0 && (
                           <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '8px', padding: '1rem 1.2rem' }}>
-                            <div style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.84rem', marginBottom: '0.4rem' }}>
-                              📖 Wymagane Materiały:
+                            <div style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.84rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              <Scroll size={14} color="var(--gold-ancient)" />
+                              <span>Wymagane Materiały:</span>
                             </div>
                             <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#cbd5e1', fontSize: '0.86rem', lineHeight: 1.6 }}>
                               {les.materials.map((m, i) => <li key={i}>{m}</li>)}

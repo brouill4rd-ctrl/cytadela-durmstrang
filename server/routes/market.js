@@ -230,13 +230,11 @@ router.get('/shopping-lists', (req, res) => {
     const ownedCount = list.requiredItemIds.filter(id => ownedItemIds.has(id)).length;
     const totalCount = list.requiredItemIds.length;
     const isCompleted = userCompletedIds.has(list.id) || (totalCount > 0 && ownedCount === totalCount);
-
     return {
       ...list,
       requiredItems,
       ownedCount,
       totalCount,
-      progressPercent: totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0,
       isCompleted
     };
   });
@@ -244,23 +242,143 @@ router.get('/shopping-lists', (req, res) => {
   res.json(result);
 });
 
-// POST /api/market/shopping-lists/check — force re-check and claim for user (zalogowani)
-router.post('/shopping-lists/check', requireAuth, (req, res) => {
-  const { userId } = req.body;
-  const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
-  const user = dbUserToFrontend(userRow);
+// POST /api/market/items — create new store item
+router.post('/items', requireAuth, (req, res) => {
+  const {
+    id,
+    name,
+    category,
+    categorySlug,
+    shopId,
+    shopName,
+    price,
+    icon,
+    houseExclusive,
+    rarity,
+    description,
+    lore,
+    placeholderType,
+    imageUrl
+  } = req.body;
 
-  const completed = checkShoppingListCompletion(user.id, user.fullName, user.house);
-  const updatedUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(userId));
-  const rankings = calculateHouseRankings('overall');
+  if (!name || !price) {
+    return res.status(400).json({ error: 'Wymagana nazwa i cena przedmiotu.' });
+  }
 
-  res.json({
-    success: true,
-    completedLists: completed,
-    user: updatedUser,
-    rankings
-  });
+  const itemId = id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const itemPrice = parseInt(price, 10) || 10;
+  const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+  const insert = db.prepare(`
+    INSERT INTO store_items (id, name, category, category_slug, shop_id, shop_name, price, icon, house_exclusive, rarity, description, lore, placeholder_type, image_url, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      category = excluded.category,
+      category_slug = excluded.category_slug,
+      shop_id = excluded.shop_id,
+      shop_name = excluded.shop_name,
+      price = excluded.price,
+      icon = excluded.icon,
+      house_exclusive = excluded.house_exclusive,
+      rarity = excluded.rarity,
+      description = excluded.description,
+      lore = excluded.lore,
+      placeholder_type = excluded.placeholder_type,
+      image_url = excluded.image_url
+  `);
+
+  insert.run(
+    itemId,
+    name,
+    category || 'Artefakty & Talizmany',
+    categorySlug || 'artifacts',
+    shopId || 'vault-artifacts',
+    shopName || 'Skarbiec Artefaktów i Amuletów Odyna',
+    itemPrice,
+    icon || '📦',
+    houseExclusive || null,
+    rarity || 'Zwykły',
+    description || '',
+    lore || '',
+    placeholderType || 'artifact_pendant',
+    imageUrl || '',
+    nowStr
+  );
+
+  const createdRow = db.prepare('SELECT * FROM store_items WHERE id = ?').get(itemId);
+  res.status(201).json(dbStoreItemToFrontend(createdRow));
+});
+
+// PUT /api/market/items/:id — update store item
+router.put('/items/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const existing = db.prepare('SELECT * FROM store_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Przedmiot nie istnieje.' });
+
+  const {
+    name,
+    category,
+    categorySlug,
+    shopId,
+    shopName,
+    price,
+    icon,
+    houseExclusive,
+    rarity,
+    description,
+    lore,
+    placeholderType,
+    imageUrl
+  } = req.body;
+
+  const update = db.prepare(`
+    UPDATE store_items SET
+      name = COALESCE(?, name),
+      category = COALESCE(?, category),
+      category_slug = COALESCE(?, category_slug),
+      shop_id = COALESCE(?, shop_id),
+      shop_name = COALESCE(?, shop_name),
+      price = COALESCE(?, price),
+      icon = COALESCE(?, icon),
+      house_exclusive = ?,
+      rarity = COALESCE(?, rarity),
+      description = COALESCE(?, description),
+      lore = COALESCE(?, lore),
+      placeholder_type = COALESCE(?, placeholder_type),
+      image_url = COALESCE(?, image_url)
+    WHERE id = ?
+  `);
+
+  update.run(
+    name !== undefined ? name : existing.name,
+    category !== undefined ? category : existing.category,
+    categorySlug !== undefined ? categorySlug : existing.category_slug,
+    shopId !== undefined ? shopId : existing.shop_id,
+    shopName !== undefined ? shopName : existing.shop_name,
+    price !== undefined ? parseInt(price, 10) : existing.price,
+    icon !== undefined ? icon : existing.icon,
+    houseExclusive !== undefined ? houseExclusive : existing.house_exclusive,
+    rarity !== undefined ? rarity : existing.rarity,
+    description !== undefined ? description : existing.description,
+    lore !== undefined ? lore : existing.lore,
+    placeholderType !== undefined ? placeholderType : existing.placeholder_type,
+    imageUrl !== undefined ? imageUrl : existing.image_url,
+    id
+  );
+
+  const updatedRow = db.prepare('SELECT * FROM store_items WHERE id = ?').get(id);
+  res.json(dbStoreItemToFrontend(updatedRow));
+});
+
+// DELETE /api/market/items/:id — delete store item
+router.delete('/items/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const existing = db.prepare('SELECT * FROM store_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Przedmiot nie istnieje.' });
+
+  db.prepare('DELETE FROM store_items WHERE id = ?').run(id);
+  res.json({ success: true, message: 'Przedmiot usunięty z magazynu.' });
 });
 
 export default router;

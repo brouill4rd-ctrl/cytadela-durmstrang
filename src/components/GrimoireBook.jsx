@@ -77,6 +77,56 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const renderWandStroke = (pts) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (pts.length < 2) return;
+
+    // Outer wand aura
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = '#e5c07b';
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = '#ffe599';
+    ctx.globalAlpha = 0.4;
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.stroke();
+    ctx.restore();
+
+    // Core bright beam
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#fff2b2';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ffffff';
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.stroke();
+    ctx.restore();
+  };
+
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -84,13 +134,10 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     setIsDrawing(true);
-    setPoints([{ x, y }]);
+    const newPts = [{ x, y }];
+    setPoints(newPts);
     setCastSpellResult(null);
-
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    renderWandStroke(newPts);
   };
 
   const draw = (e) => {
@@ -101,11 +148,9 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const ctx = canvas.getContext('2d');
-    ctx.lineTo(x, y);
-    ctx.stroke();
-
-    setPoints((prev) => [...prev, { x, y }]);
+    const newPts = [...points, { x, y }];
+    setPoints(newPts);
+    renderWandStroke(newPts);
   };
 
   const stopDrawing = () => {
@@ -408,7 +453,7 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.75rem', color: spell.color, textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.75rem', color: spell.color, textTransform: 'uppercase', fontWeight: 700 }}>
                       {spell.type}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>

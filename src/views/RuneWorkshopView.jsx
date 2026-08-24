@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { AlchemicalCauldron } from '../components/AlchemicalCauldron';
+import { GrimoireBook } from '../components/GrimoireBook';
+import { RuneCalligraphyModal } from '../components/RuneCalligraphyModal';
 import {
   Sparkles,
   Flame,
@@ -29,6 +31,8 @@ export const RuneWorkshopView = () => {
   const { playRuneChime, playSortingFanfare, playWandSwoosh } = useSound();
 
   const [activeTab, setActiveTab] = useState('runes'); // 'runes' | 'alchemy'
+  const [grimoireOpen, setGrimoireOpen] = useState(false);
+  const [runeCalligraphyOpen, setRuneCalligraphyOpen] = useState(false);
 
   // Altar slots (up to 3 runes)
   const [altarRunes, setAltarRunes] = useState([]);
@@ -145,6 +149,50 @@ export const RuneWorkshopView = () => {
             }}
           >
             <Droplets size={16} /> Kocioł Alchemiczny
+          </button>
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              setRuneCalligraphyOpen(true);
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              background: 'rgba(245, 158, 11, 0.15)',
+              color: '#ffe599',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              fontFamily: 'var(--font-heading)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <span style={{ fontSize: '1rem', color: '#f59e0b' }}>ᚠ</span> Akademia Kaligrafii Run
+          </button>
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              setGrimoireOpen(true);
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: '1px solid rgba(197, 159, 78, 0.3)',
+              background: 'rgba(0,0,0,0.4)',
+              color: '#d1d5db',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              fontFamily: 'var(--font-heading)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <BookOpen size={16} color="var(--gold-ancient)" /> Grimuar Zaklęć
           </button>
         </div>
       </div>
@@ -409,6 +457,10 @@ export const RuneWorkshopView = () => {
           </div>
         </div>
       )}
+
+      {/* Separate Modals: Grimoire & Rune Calligraphy */}
+      <GrimoireBook isOpen={grimoireOpen} onClose={() => setGrimoireOpen(false)} />
+      <RuneCalligraphyModal isOpen={runeCalligraphyOpen} onClose={() => setRuneCalligraphyOpen(false)} />
     </div>
   );
 };

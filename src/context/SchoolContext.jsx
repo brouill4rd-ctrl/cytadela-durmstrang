@@ -11,7 +11,7 @@ import { LORE_ARCHIVES } from '../data/seedLore';
 import { CEREMONY_QUESTIONS } from '../data/seedCeremonyQuestions';
 import { NEWS_ITEMS } from '../data/seedNews';
 import { EVENTS } from '../data/seedEvents';
-import { DEMO_ACCOUNTS, LEADERBOARD_STUDENTS, PENDING_APPLICATIONS } from '../data/seedStudents';
+import { DEMO_ACCOUNTS, LEADERBOARD_STUDENTS, LEADERBOARD_STAFF, PENDING_APPLICATIONS } from '../data/seedStudents';
 import { SEED_USERS } from '../data/seedUsers';
 import { SECRETS } from '../data/seedSecrets';
 import { RUNES_CATALOG, RUNE_FORMULAS } from '../data/seedRunes';
@@ -34,6 +34,11 @@ const ROUTE_ALIASES = {
   '/zasady-oceniania': 'rules-guide',
   '/pakt': 'rules-guide',
   '/rules': 'rules-guide',
+  '/wladze': 'documents',
+  '/obowiazki': 'documents',
+  '/obowiazki-wladz': 'documents',
+  '/kompetencje': 'documents',
+  '/wladze-twierdzy': 'documents',
   '/dekrety': 'documents',
   '/edykty': 'documents',
   '/regulamin-dc': 'documents',
@@ -104,7 +109,16 @@ const ROUTE_ALIASES = {
   '/raven-post': 'raven-post',
   '/admin': 'admin',
   '/cms': 'admin',
-  '/dyrekcja': 'admin'
+  '/dyrekcja': 'admin',
+  '/gazetka': 'gazette',
+  '/gazeta': 'gazette',
+  '/zelazne-pioro': 'gazette',
+  '/pioro': 'gazette',
+  '/gazette': 'gazette',
+  '/iron-quill': 'gazette',
+  '/gazette-archive': 'gazette-archive',
+  '/gazette-panel': 'gazette-panel',
+  '/gazette-reader': 'gazette-reader'
 };
 
 const parseHashRoute = () => {
@@ -119,6 +133,9 @@ const parseHashRoute = () => {
   if (root === '/dokument' || root === '/strona' || root === '/podstrona') {
     if (parts[1]) return { view: 'documents', docSlug: parts[1] };
     return { view: 'documents' };
+  }
+  if (['/wladze', '/obowiazki-wladz', '/obowiazki', '/kompetencje', '/wladze-twierdzy'].includes(root)) {
+    return { view: 'documents', docCategory: 'wladze', docSlug: 'obowiazki-i-kompetencje-wladz-twierdzy' };
   }
   if (['/dekrety', '/wizytacje', '/hospitacje', '/regulamin-dc', '/regulamin-discord', '/statut', '/zabawy', '/dokumenty'].includes(root)) {
     return { view: 'documents', docCategory: root.replace('/', '') };
@@ -143,6 +160,23 @@ const parseHashRoute = () => {
     return { view: 'rules-guide', tab: parts[1] || null };
   }
 
+  // Żelazne Pióro — Gazetka Szkolna
+  if (root === '/gazetka' || root === '/gazeta' || root === '/zelazne-pioro' || root === '/gazette' || root === '/pioro') {
+    if (parts[1] === 'archiwum' || parts[1] === 'archive') return { view: 'gazette-archive' };
+    if ((parts[1] === 'numer' || parts[1] === 'issue' || parts[1] === 'czytaj') && parts[2]) return { view: 'gazette-reader', gazetteIssueId: parts[2] };
+    if (parts[1] === 'panel' || parts[1] === 'redakcja') return { view: 'gazette-panel' };
+    return { view: 'gazette' };
+  }
+  if (root === '/gazette-reader' || root === '/czytnik-gazetki') {
+    return { view: 'gazette-reader', gazetteIssueId: parts[1] || null };
+  }
+  if (root === '/gazette-archive' || root === '/archiwum-gazetki') {
+    return { view: 'gazette-archive' };
+  }
+  if (root === '/gazette-panel' || root === '/redakcja-gazetki' || (root === '/panel' && parts[1] === 'gazetka')) {
+    return { view: 'gazette-panel' };
+  }
+
   if (ROUTE_ALIASES[root]) {
     return { view: ROUTE_ALIASES[root] };
   }
@@ -162,6 +196,7 @@ export const SchoolProvider = ({ children }) => {
   const [activeLessonTab, setActiveLessonTab] = useState('journal'); // 'journal' | 'log'
   const [activeDocumentSlug, setActiveDocumentSlug] = useState(initialRoute.docSlug || null);
   const [activeDocumentCategory, setActiveDocumentCategory] = useState(initialRoute.docCategory || 'all');
+  const [activeGazetteIssueId, setActiveGazetteIssueId] = useState(initialRoute.gazetteIssueId || null);
 
   const navigateToDocumentModule = (category, slug = null) => {
     setActiveDocumentCategory(category || 'all');
@@ -174,6 +209,25 @@ export const SchoolProvider = ({ children }) => {
     } else {
       window.location.hash = '#/dokumenty';
     }
+  };
+
+  // Żelazne Pióro — Navigation helpers
+  const navigateToGazette = () => {
+    setActiveView('gazette');
+    window.location.hash = '#/gazetka';
+  };
+  const navigateToGazetteIssue = (issueId) => {
+    setActiveGazetteIssueId(issueId);
+    setActiveView('gazette-reader');
+    window.location.hash = `#/gazetka/numer/${issueId}`;
+  };
+  const navigateToGazettePanel = () => {
+    setActiveView('gazette-panel');
+    window.location.hash = '#/gazetka/panel';
+  };
+  const navigateToGazetteArchive = () => {
+    setActiveView('gazette-archive');
+    window.location.hash = '#/gazetka/archiwum';
   };
 
   // Users Database & Active Account
@@ -197,8 +251,14 @@ export const SchoolProvider = ({ children }) => {
   });
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState('login'); // 'login' | 'register'
   const [emailInboxOpen, setEmailInboxOpen] = useState(false);
   const [discordSimulatorOpen, setDiscordSimulatorOpen] = useState(false);
+
+  const openAuthModal = (tab = 'login') => {
+    setAuthModalTab(tab);
+    setAuthModalOpen(true);
+  };
 
   const currentUser = (currentUserId && currentUserId !== 'guest')
     ? (users.find(u => u.id === currentUserId) || null)
@@ -305,42 +365,77 @@ Dyrektor Cytadeli Durmstrang`
     if (!saved) return INITIAL_DOCUMENTS;
     try {
       const parsed = JSON.parse(saved);
-      const missing = INITIAL_DOCUMENTS.filter(d => !parsed.some(p => p.id === d.id));
-      if (missing.length > 0) {
-        const merged = [...parsed, ...missing];
-        localStorage.setItem('durmstrang_documents_db', JSON.stringify(merged));
-        return merged;
-      }
-      return parsed;
+      // Keep custom user pages
+      const customPages = parsed.filter(d => d.isCustom);
+      // Merge initial official documents with any custom documents
+      const merged = [
+        ...INITIAL_DOCUMENTS,
+        ...customPages.filter(c => !INITIAL_DOCUMENTS.some(init => init.id === c.id))
+      ];
+      localStorage.setItem('durmstrang_documents_db', JSON.stringify(merged));
+      return merged;
     } catch {
       return INITIAL_DOCUMENTS;
     }
   });
 
-  const saveDocument = (doc) => {
+  const saveDocument = async (doc) => {
+    // 1. Local state update
     setDocuments(prev => {
       const exists = prev.some(d => d.id === doc.id || d.slug === doc.slug);
-      let updated;
-      if (exists) {
-        updated = prev.map(d => (d.id === doc.id || d.slug === doc.slug) ? { ...d, ...doc } : d);
-      } else {
-        updated = [doc, ...prev];
-      }
-      localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      const updated = exists
+        ? prev.map(d => (d.id === doc.id || d.slug === doc.slug) ? { ...d, ...doc } : d)
+        : [doc, ...prev];
+      try {
+        localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
     setActiveDocumentSlug(doc.slug);
+
+    // 2. Backend SQLite persistence
+    if (backendAvailable) {
+      try {
+        const existing = documents.find(d => d.id === doc.id || d.slug === doc.slug);
+        if (existing && existing.id) {
+          const res = await api.updateDocument(existing.id, doc);
+          if (res.ok && res.data) {
+            setDocuments(prev => prev.map(d => d.id === existing.id ? res.data : d));
+            return res.data;
+          }
+        } else {
+          const res = await api.createDocument(doc);
+          if (res.ok && res.data) {
+            setDocuments(prev => [res.data, ...prev.filter(d => d.id !== doc.id && d.slug !== doc.slug)]);
+            return res.data;
+          }
+        }
+      } catch (err) {
+        console.error('Error saving document to backend:', err);
+      }
+    }
+    return doc;
   };
 
-  const deleteDocument = (idOrSlug) => {
+  const deleteDocument = async (idOrSlug) => {
     setDocuments(prev => {
       const updated = prev.filter(d => d.id !== idOrSlug && d.slug !== idOrSlug);
-      localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_documents_db', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.deleteDocument(idOrSlug);
+      } catch (err) {
+        console.error('Error deleting document from backend:', err);
+      }
+    }
   };
 
-  const createCategoryBanner = (newCat) => {
+  const createCategoryBanner = async (newCat) => {
     const slug = newCat.id || newCat.categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const catObject = {
       id: slug,
@@ -356,33 +451,65 @@ Dyrektor Cytadeli Durmstrang`
     setCategoryBanners(prev => {
       const exists = prev.some(b => b.id === slug);
       const updated = exists ? prev.map(b => b.id === slug ? { ...b, ...catObject } : b) : [...prev, catObject];
-      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.createCmsBanner(catObject);
+      } catch (err) {
+        console.error('Error creating banner on backend:', err);
+      }
+    }
 
     showNotification('Nowa Kategoria Utworzona', `Dodano nową kategorię edyktów: ${catObject.categoryName}`, 'success');
     return catObject;
   };
 
-  const deleteCategoryBanner = (id) => {
+  const deleteCategoryBanner = async (id) => {
     setCategoryBanners(prev => {
       const updated = prev.filter(b => b.id !== id);
-      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.deleteCmsBanner(id);
+      } catch (err) {
+        console.error('Error deleting banner on backend:', err);
+      }
+    }
+
     showNotification('Kategoria Usunięta', 'Pomyślnie usunięto kategorię z rejestru.', 'info');
   };
 
-  const updateCategoryBanner = (id, patch) => {
+  const updateCategoryBanner = async (id, patch) => {
     setCategoryBanners(prev => {
       const updated = prev.map(b => b.id === id ? { ...b, ...patch } : b);
-      localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_category_banners', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.updateCmsBanner(id, patch);
+      } catch (err) {
+        console.error('Error updating banner on backend:', err);
+      }
+    }
+
     showNotification('Baner Zaktualizowany', 'Zaktualizowano konfigurację grafiki dla wybranej kategorii.', 'success');
   };
 
-  const createBlockGraphic = (newBlock) => {
+  const createBlockGraphic = async (newBlock) => {
     const slug = newBlock.id || newBlock.title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     const blockObject = {
       id: slug,
@@ -398,41 +525,83 @@ Dyrektor Cytadeli Durmstrang`
     setBlockGraphics(prev => {
       const exists = prev.some(b => b.id === slug);
       const updated = exists ? prev.map(b => b.id === slug ? { ...b, ...blockObject } : b) : [...prev, blockObject];
-      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.createCmsBlock(blockObject);
+      } catch (err) {
+        console.error('Error creating block on backend:', err);
+      }
+    }
 
     showNotification('Blok Dodany', `Dodano konfigurację dla bloku: ${blockObject.title}`, 'success');
     return blockObject;
   };
 
-  const deleteBlockGraphic = (id) => {
+  const deleteBlockGraphic = async (id) => {
     setBlockGraphics(prev => {
       const updated = prev.filter(b => b.id !== id);
-      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.deleteCmsBlock(id);
+      } catch (err) {
+        console.error('Error deleting block on backend:', err);
+      }
+    }
+
     showNotification('Blok Usunięty', 'Usunięto konfigurację bloku.', 'info');
   };
 
-  const updateBlockGraphic = (id, patch) => {
+  const updateBlockGraphic = async (id, patch) => {
     setBlockGraphics(prev => {
       const updated = prev.map(b => b.id === id ? { ...b, ...patch } : b);
-      localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      try {
+        localStorage.setItem('durmstrang_block_graphics', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        await api.updateCmsBlock(id, patch);
+      } catch (err) {
+        console.error('Error updating block on backend:', err);
+      }
+    }
+
     showNotification('Grafika Bloku Zapisana', 'Zaktualizowano grafikę nagłówka wybranego bloku bocznego.', 'success');
   };
 
-  const resetCategoryBanners = () => {
+  const resetCategoryBanners = async () => {
     localStorage.removeItem('durmstrang_category_banners');
     setCategoryBanners(CATEGORY_BANNERS);
+    if (backendAvailable) {
+      for (const b of CATEGORY_BANNERS) {
+        await api.createCmsBanner(b).catch(() => {});
+      }
+    }
     showNotification('Przywrócono Domyślne', 'Przywrócono oryginalne banery runiczne kategorii.', 'info');
   };
 
-  const resetBlockGraphics = () => {
+  const resetBlockGraphics = async () => {
     localStorage.removeItem('durmstrang_block_graphics');
     setBlockGraphics(DEFAULT_BLOCK_GRAPHICS);
+    if (backendAvailable) {
+      for (const blk of DEFAULT_BLOCK_GRAPHICS) {
+        await api.createCmsBlock(blk).catch(() => {});
+      }
+    }
     showNotification('Przywrócono Domyślne', 'Przywrócono domyślne grafiki bloków bocznych.', 'info');
   };
 
@@ -445,6 +614,9 @@ Dyrektor Cytadeli Durmstrang`
         if (parsed.houseId) setActiveHouseTab(parsed.houseId);
         if (parsed.subjectId) setActiveSubjectId(parsed.subjectId);
         if (parsed.lessonId) setActiveLessonId(parsed.lessonId);
+        if (parsed.docSlug !== undefined) setActiveDocumentSlug(parsed.docSlug);
+        if (parsed.docCategory !== undefined) setActiveDocumentCategory(parsed.docCategory);
+        if (parsed.gazetteIssueId !== undefined) setActiveGazetteIssueId(parsed.gazetteIssueId);
       }
     };
 
@@ -510,14 +682,35 @@ Dyrektor Cytadeli Durmstrang`
       case 'professor-journal-editor':
         targetHash = '#/redaguj-dziennik';
         break;
+      case 'gazette':
+        targetHash = '#/gazetka';
+        break;
+      case 'gazette-reader':
+        targetHash = activeGazetteIssueId ? `#/gazetka/numer/${activeGazetteIssueId}` : '#/gazetka';
+        break;
+      case 'gazette-archive':
+        targetHash = '#/gazetka/archiwum';
+        break;
+      case 'gazette-panel':
+        targetHash = '#/gazetka/panel';
+        break;
+      case 'documents':
+        if (activeDocumentSlug) {
+          targetHash = `#/dokument/${activeDocumentSlug}`;
+        } else if (activeDocumentCategory && activeDocumentCategory !== 'all') {
+          targetHash = `#/${activeDocumentCategory}`;
+        } else {
+          targetHash = '#/dokumenty';
+        }
+        break;
       default:
         targetHash = `#/${activeView}`;
     }
 
     if (window.location.hash !== targetHash && !(activeView === 'home' && (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#'))) {
-      window.history.replaceState(null, '', targetHash);
+      window.location.hash = targetHash;
     }
-  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId]);
+  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId, activeDocumentSlug, activeDocumentCategory, activeGazetteIssueId]);
 
   const navigateTo = useCallback((view, options = {}) => {
     if (options.houseId) setActiveHouseTab(options.houseId);
@@ -565,10 +758,10 @@ Dyrektor Cytadeli Durmstrang`
       schoolYear: 'XIX Rok Szkolny (2026/2027)',
       term: 'Semestr Zimowy',
       standings: [
-        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: '🦌', color: '#7a1818', secondaryColor: '#c59f4e', basePoints: 480, lessonPoints: 30, totalPoints: 510, txCount: 2, momentum: 30, rank: 3 },
-        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: '🐻', color: '#202530', secondaryColor: '#c02b2b', basePoints: 520, lessonPoints: 10, totalPoints: 530, txCount: 1, momentum: 10, rank: 2 },
-        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: '🐦', color: '#1c132e', secondaryColor: '#a77de0', basePoints: 510, lessonPoints: 30, totalPoints: 540, txCount: 2, momentum: 30, rank: 1 },
-        { houseKey: 'otergard', name: 'Otergard', crestIcon: '🦦', color: '#0d2d33', secondaryColor: '#2ec4b6', basePoints: 495, lessonPoints: 10, totalPoints: 505, txCount: 1, momentum: 10, rank: 4 }
+        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: 'ᚦ', color: '#7a1818', secondaryColor: '#c59f4e', basePoints: 480, lessonPoints: 30, totalPoints: 510, txCount: 2, momentum: 30, rank: 3 },
+        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: 'ᛉ', color: '#202530', secondaryColor: '#c02b2b', basePoints: 520, lessonPoints: 10, totalPoints: 530, txCount: 1, momentum: 10, rank: 2 },
+        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: 'ᚱ', color: '#1c132e', secondaryColor: '#a77de0', basePoints: 510, lessonPoints: 30, totalPoints: 540, txCount: 2, momentum: 30, rank: 1 },
+        { houseKey: 'otergard', name: 'Otergard', crestIcon: 'ᛞ', color: '#0d2d33', secondaryColor: '#2ec4b6', basePoints: 495, lessonPoints: 10, totalPoints: 505, txCount: 1, momentum: 10, rank: 4 }
       ]
     };
   });
@@ -622,6 +815,11 @@ Dyrektor Cytadeli Durmstrang`
   const [students, setStudents] = useState(() => {
     const saved = localStorage.getItem('durmstrang_students');
     return saved ? JSON.parse(saved) : LEADERBOARD_STUDENTS;
+  });
+
+  const [staffRanking, setStaffRanking] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_staff_ranking');
+    return saved ? JSON.parse(saved) : LEADERBOARD_STAFF;
   });
 
   // Runes & Workshop System
@@ -711,7 +909,16 @@ Dyrektor Cytadeli Durmstrang`
   const [teacherSalaries, setTeacherSalaries] = useState([]);
 
   // ==================== RYNEK KAUPANGR & SKLEPY ====================
-  const [storeItems, setStoreItems] = useState(STORE_ITEMS);
+  const [storeItems, setStoreItems] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_store_items');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+    }
+    return STORE_ITEMS;
+  });
   const [shoppingLists, setShoppingLists] = useState(() => {
     const saved = localStorage.getItem('durmstrang_shopping_lists');
     return saved ? JSON.parse(saved) : SEED_SHOPPING_LISTS;
@@ -735,6 +942,12 @@ Dyrektor Cytadeli Durmstrang`
   });
 
   const [lotteryModalOpen, setLotteryModalOpen] = useState(false);
+
+  // Completed Quests from Marauder's Map
+  const [completedQuests, setCompletedQuests] = useState(() => {
+    const saved = localStorage.getItem('durmstrang_completed_quests');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Visual Atmosphere settings
   const [snowEnabled, setSnowEnabled] = useState(true);
@@ -872,6 +1085,59 @@ Dyrektor Cytadeli Durmstrang`
       if (lotHistRes.ok && lotHistRes.data.length > 0) {
         setLotteryHistory(lotHistRes.data);
       }
+
+      // Load Documents
+      const docsRes = await api.getDocuments();
+      if (docsRes.ok && docsRes.data.length > 0) {
+        setDocuments(docsRes.data);
+      }
+
+      // Load CMS Banners & Blocks
+      const bannersRes = await api.getCmsBanners();
+      if (bannersRes.ok && bannersRes.data.length > 0) {
+        setCategoryBanners(bannersRes.data);
+      }
+
+      const blocksRes = await api.getCmsBlocks();
+      if (blocksRes.ok && blocksRes.data.length > 0) {
+        setBlockGraphics(blocksRes.data);
+      }
+
+      // Load Calendar Events
+      const eventsRes = await api.getEvents();
+      if (eventsRes.ok && eventsRes.data.length > 0) {
+        setEvents(eventsRes.data);
+      }
+
+      // Load Raven Messages
+      const ravenRes = await api.getRavenMessages();
+      if (ravenRes.ok && ravenRes.data.length > 0) {
+        setRavenMessages(ravenRes.data);
+      }
+
+      // Load Homework Submissions
+      const hwRes = await api.getHomework();
+      if (hwRes.ok && hwRes.data.length > 0) {
+        setHomeworkSubmissions(hwRes.data);
+      }
+
+      // Load User Quests, Secrets & Formulas
+      if (currentUserId && currentUserId !== 'guest') {
+        const questsRes = await api.getCompletedQuests(currentUserId);
+        if (questsRes.ok) {
+          setCompletedQuests(questsRes.data);
+        }
+
+        const secretsRes = await api.getDiscoveredSecrets(currentUserId);
+        if (secretsRes.ok) {
+          setDiscoveredSecrets(secretsRes.data.map(s => s.secretId));
+        }
+
+        const formsRes = await api.getCraftedFormulas(currentUserId);
+        if (formsRes.ok && formsRes.data.length > 0) {
+          setCraftedFormulas(formsRes.data.map(f => f.formulaId));
+        }
+      }
     };
 
     loadFromAPI();
@@ -902,6 +1168,14 @@ Dyrektor Cytadeli Durmstrang`
       if (lotRes.ok && lotRes.data.round) {
         setCurrentLottery(lotRes.data.round);
         setUserLotteryTickets(lotRes.data.userTickets || []);
+      }
+      const ravenRes = await api.getRavenMessages();
+      if (ravenRes.ok && ravenRes.data) {
+        setRavenMessages(ravenRes.data);
+      }
+      const hwRes = await api.getHomework();
+      if (hwRes.ok && hwRes.data) {
+        setHomeworkSubmissions(hwRes.data);
       }
     }, 3000);
 
@@ -952,6 +1226,30 @@ Dyrektor Cytadeli Durmstrang`
   useEffect(() => {
     localStorage.setItem('durmstrang_lottery_tickets', JSON.stringify(userLotteryTickets));
   }, [userLotteryTickets]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_completed_quests', JSON.stringify(completedQuests));
+  }, [completedQuests]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_secrets', JSON.stringify(discoveredSecrets));
+  }, [discoveredSecrets]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_crafted_formulas', JSON.stringify(craftedFormulas));
+  }, [craftedFormulas]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_messages', JSON.stringify(ravenMessages));
+  }, [ravenMessages]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_submissions', JSON.stringify(homeworkSubmissions));
+  }, [homeworkSubmissions]);
+
+  useEffect(() => {
+    localStorage.setItem('durmstrang_events', JSON.stringify(events));
+  }, [events]);
 
   // Push UI Notification Banner
   const showNotification = (title, message, type = 'info') => {
@@ -1265,7 +1563,7 @@ Dyrektor Cytadeli Durmstrang`
       };
 
       await updateCurrentUser(updated);
-      awardHousePoints(25, `Przysięga wierności Zakonowi ${houseName} (Ceremonia)`);
+      awardHousePoints(targetHouse, 25, `Przysięga wierności Zakonowi ${houseName} (Ceremonia)`);
     } else {
       setStudentProfile(prev => ({
         ...prev,
@@ -1277,7 +1575,7 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   // Craft Rune Formula on Galdrastofa Altar
-  const craftRuneFormula = (runeIds, catalyst = 'Krew Renifera') => {
+  const craftRuneFormula = async (runeIds, catalyst = 'Krew Renifera') => {
     if (!runeIds || runeIds.length < 2) return null;
     const sortedRunes = [...runeIds].sort();
 
@@ -1299,6 +1597,22 @@ Dyrektor Cytadeli Durmstrang`
       } catch (_) {}
     }
 
+    if (backendAvailable) {
+      try {
+        await api.craftFormula({
+          formulaId,
+          name: formulaName,
+          type: formulaType,
+          catalyst,
+          runes: sortedRunes,
+          rewardPoints: 15,
+          rewardCurrency: 20
+        });
+      } catch (err) {
+        console.error('Error crafting formula on backend:', err);
+      }
+    }
+
     awardHousePoints(15, `Ukucie Formuły: ${formulaName}`);
     addCurrency(20, 'Nagroda za pracę rzemieślniczą (Galdrastofa)');
 
@@ -1318,7 +1632,7 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   // Discover Hidden Secret Rune
-  const discoverSecret = (secretId) => {
+  const discoverSecret = async (secretId) => {
     if (discoveredSecrets.includes(secretId)) {
       showNotification('Znana Tajemnica', 'Ta pradawna runa została już przez Ciebie odczytana.', 'info');
       return;
@@ -1330,13 +1644,74 @@ Dyrektor Cytadeli Durmstrang`
       localStorage.setItem('durmstrang_secrets', JSON.stringify(nextSecrets));
     } catch (_) {}
 
+    if (backendAvailable) {
+      try {
+        await api.discoverSecret({ secretId, points: 10, currency: 15 });
+      } catch (err) {
+        console.error('Error discovering secret on backend:', err);
+      }
+    }
+
     awardHousePoints(10, `Odkrycie Prastarej Runy Cytadeli (${secretId})`);
     addCurrency(15, 'Skarb ukryty w runicznej szczelinie');
     showNotification('Tajemnica Odkryta! ᚱ', 'Odczytałeś ukrytą runę Cytadeli! Zdobywasz +10 Punktów Domu i +15 Skirnirów!', 'success');
   };
 
+  // Complete Quest from Marauder's Map
+  const completeMapQuest = async (questData) => {
+    const { questId, questTitle, locationId, locationName, rewardPoints = 20, rewardXp = 50, rewardGalleons = 15, rewardItem } = questData;
+    
+    if (completedQuests.some(q => q.questId === questId || q.id === questId)) {
+      showNotification('Misja Ukończona', 'To zadanie zostało już zrealizowane w tej sesji roku szkolnego.', 'info');
+      return;
+    }
+
+    const completionRecord = {
+      id: `comp-${currentUserId}-${questId}-${Date.now()}`,
+      userId: currentUserId,
+      questId,
+      questTitle: questTitle || questId,
+      locationId: locationId || '',
+      locationName: locationName || 'Cytadela Durmstrang',
+      rewardPoints,
+      rewardXp,
+      rewardGalleons,
+      rewardItem: typeof rewardItem === 'object' ? (rewardItem?.name || 'Artefakt') : (rewardItem || 'Artefakt'),
+      completedAt: new Date().toISOString()
+    };
+
+    setCompletedQuests(prev => [completionRecord, ...prev]);
+    try {
+      localStorage.setItem('durmstrang_completed_quests', JSON.stringify([completionRecord, ...completedQuests]));
+    } catch (_) {}
+
+    if (backendAvailable) {
+      try {
+        const res = await api.completeQuest({
+          questId,
+          questTitle,
+          locationId,
+          locationName,
+          rewardPoints,
+          rewardXp,
+          rewardGalleons,
+          rewardItem
+        });
+        if (res.ok && res.data?.user) {
+          setUsers(prev => prev.map(u => u.id === currentUserId ? res.data.user : u));
+        }
+      } catch (err) {
+        console.error('Error completing quest on backend:', err);
+      }
+    }
+
+    awardHousePoints(rewardPoints, `Side Quest Mapy: ${questTitle || questId}`);
+    addCurrency(rewardGalleons, `Nagroda za quest w lokacji: ${locationName || 'Cytadela'}`);
+    showNotification('Misja z Mapy Ukończona! 🧭', `Brawo! Zdobywasz +${rewardPoints} pkt, +${rewardXp} XP i +${rewardGalleons} Skirnirów!`, 'success');
+  };
+
   // Send Raven Post Message
-  const sendRavenMessage = (toRecipient, subject, body) => {
+  const sendRavenMessage = async (toRecipient, subject, body, tag = 'posłaniec') => {
     const newMsg = {
       id: `msg-${Date.now()}`,
       sender: currentUser?.fullName || 'Adept Durmstrangu',
@@ -1346,19 +1721,198 @@ Dyrektor Cytadeli Durmstrang`
       subject: subject,
       body: body,
       date: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      read: true,
+      read: false,
       starred: false,
-      tag: 'posłaniec'
+      tag: tag
     };
 
-    const nextMessages = [newMsg, ...ravenMessages];
-    setRavenMessages(nextMessages);
+    setRavenMessages(prev => [newMsg, ...prev]);
     try {
-      localStorage.setItem('durmstrang_messages', JSON.stringify(nextMessages));
+      localStorage.setItem('durmstrang_messages', JSON.stringify([newMsg, ...ravenMessages]));
     } catch (_) {}
+
+    if (backendAvailable) {
+      try {
+        const res = await api.sendRavenMessage({
+          recipient: toRecipient,
+          subject,
+          body,
+          tag
+        });
+        if (res.ok && res.data?.messageData) {
+          setRavenMessages(prev => [res.data.messageData, ...prev.filter(m => m.id !== newMsg.id)]);
+        }
+      } catch (err) {
+        console.error('Error sending raven message to backend:', err);
+      }
+    }
 
     showNotification('Kruk Posłany!', `Twój pergamin z pieczęcią poleciał do: ${toRecipient}!`, 'success');
     return newMsg;
+  };
+
+  const markRavenRead = async (id) => {
+    setRavenMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
+    if (backendAvailable) {
+      try {
+        await api.markRavenRead(id);
+      } catch (_) {}
+    }
+  };
+
+  const toggleRavenStar = async (id) => {
+    setRavenMessages(prev => prev.map(m => m.id === id ? { ...m, starred: !m.starred } : m));
+    if (backendAvailable) {
+      try {
+        await api.toggleRavenStar(id);
+      } catch (_) {}
+    }
+  };
+
+  const deleteRavenMessage = async (id) => {
+    setRavenMessages(prev => prev.filter(m => m.id !== id));
+    if (backendAvailable) {
+      try {
+        await api.deleteRavenMessage(id);
+      } catch (_) {}
+    }
+    showNotification('Wiadomość Usunięta', 'List został zniszczony.', 'info');
+  };
+
+  // Submit Homework
+  const submitHomework = async ({ subjectId, subjectName, lessonId = '', lessonTitle = '', content }) => {
+    const sub = {
+      id: `sub-${Date.now()}`,
+      studentId: currentUserId,
+      studentName: currentUser?.fullName || studentProfile?.fullName || 'Adept',
+      house: currentUser?.house || 'ravnheim',
+      subjectId,
+      subjectName: subjectName || subjectId,
+      lessonId,
+      lessonTitle,
+      content,
+      status: 'submitted',
+      submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      grade: null,
+      feedback: null
+    };
+
+    setHomeworkSubmissions(prev => [sub, ...prev]);
+    try {
+      localStorage.setItem('durmstrang_submissions', JSON.stringify([sub, ...homeworkSubmissions]));
+    } catch (_) {}
+
+    if (backendAvailable) {
+      try {
+        const res = await api.submitHomework({ subjectId, subjectName, lessonId, lessonTitle, content });
+        if (res.ok && res.data?.submission) {
+          setHomeworkSubmissions(prev => [res.data.submission, ...prev.filter(s => s.id !== sub.id)]);
+        }
+      } catch (err) {
+        console.error('Error submitting homework on backend:', err);
+      }
+    }
+
+    showNotification('Zadanie Złożone!', 'Twoja praca została przekazana do oceny przez Profesora Katedry.', 'success');
+    return sub;
+  };
+
+  // Grade Homework
+  const gradeHomework = async (id, { grade, feedback, pointsToAward = 15 }) => {
+    setHomeworkSubmissions(prev => prev.map(s => s.id === id ? {
+      ...s,
+      status: 'graded',
+      grade,
+      feedback,
+      gradedBy: currentUser?.fullName || 'Profesor Katedry',
+      gradedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+    } : s));
+
+    if (backendAvailable) {
+      try {
+        await api.gradeHomework(id, { grade, feedback, pointsToAward });
+      } catch (err) {
+        console.error('Error grading homework on backend:', err);
+      }
+    }
+
+    showNotification('Praca Oceniona', `Wystawiono ocenę ${grade} i przyznano punkty.`, 'success');
+  };
+
+  const deleteHomework = async (id) => {
+    setHomeworkSubmissions(prev => prev.filter(s => s.id !== id));
+    if (backendAvailable) {
+      try {
+        await api.deleteHomework(id);
+      } catch (_) {}
+    }
+  };
+
+  // Events (Kalendarz)
+  const addEvent = async (eventData) => {
+    const id = eventData.id || `event-${Date.now()}`;
+    const ev = { ...eventData, id };
+    setEvents(prev => [...prev, ev]);
+    try {
+      localStorage.setItem('durmstrang_events', JSON.stringify([...events, ev]));
+    } catch (_) {}
+
+    if (backendAvailable) {
+      try {
+        await api.createEvent(ev);
+      } catch (err) {
+        console.error('Error creating event on backend:', err);
+      }
+    }
+    showNotification('Wydarzenie Dodane', `Dodano do kalendarza: ${ev.title}`, 'success');
+  };
+
+  const updateEvent = async (id, patch) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    if (backendAvailable) {
+      try {
+        await api.updateEvent(id, patch);
+      } catch (err) {
+        console.error('Error updating event on backend:', err);
+      }
+    }
+    showNotification('Wydarzenie Zaktualizowane', 'Zapisano zmiany w kalendarzu.', 'success');
+  };
+
+  const deleteEvent = async (id) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+    if (backendAvailable) {
+      try {
+        await api.deleteEvent(id);
+      } catch (err) {
+        console.error('Error deleting event on backend:', err);
+      }
+    }
+    showNotification('Wydarzenie Usunięte', 'Usunięto z kalendarza roku.', 'info');
+  };
+
+  // Full Database Import / Restore from JSON
+  const importDatabaseBackup = async (backupJson) => {
+    if (!backupJson) return { ok: false, error: 'Brak danych kopii zapasowej.' };
+    if (backendAvailable) {
+      try {
+        const res = await api.importDatabaseBackup(backupJson);
+        if (res.ok) {
+          showNotification('Baza Danych Przywrócona!', 'Pomyślnie i w 100% przywrócono stan Cytadeli z kopii zapasowej JSON!', 'success');
+          // Reload from backend
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+          return { ok: true };
+        } else {
+          showNotification('Błąd Przywracania', res.error || 'Nie udało się przywrócić bazy.', 'error');
+          return { ok: false, error: res.error };
+        }
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    }
+    return { ok: false, error: 'Backend SQLite jest niedostępny.' };
   };
 
   // React to News
@@ -1648,14 +2202,49 @@ Dyrektor Cytadeli Durmstrang`
         const { user, email } = res.data;
         setUsers(prev => [user, ...prev]);
         if (email) setEmails(prev => [email, ...prev]);
-        showNotification('Podanie Złożone', `Wysłano potwierdzenie na e-mail: ${user.email}.`, 'success');
+        showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
         return true;
       } else {
-        showNotification('Błąd Rejestracji', res.error || 'Błąd rejestracji.', 'warning');
+        showNotification('Błąd Rejestracji', res.error || 'Błąd rejestracji podania.', 'warning');
         return false;
       }
     }
-    return false;
+    // Local fallback if offline
+    const newId = `usr-${Date.now()}`;
+    const userEmail = (userData.email || '').trim() || `${userData.username || 'adept'}@durmstrang.edu`;
+    const role = userData.role || 'student';
+    const fullName = `${(userData.name || '').trim()} ${(userData.surname || '').trim()}`;
+    const localUser = {
+      id: newId,
+      username: (userData.username || '').trim().toLowerCase(),
+      password: userData.password || '123',
+      email: userEmail,
+      name: (userData.name || '').trim(),
+      surname: (userData.surname || '').trim(),
+      fullName,
+      role,
+      status: 'pending',
+      house: userData.house || null,
+      title: role === 'professor' ? `Kandydat na Profesora • ${userData.departmentName || 'Katedra'}` : 'Kandydat na Adepta',
+      avatar: userData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+      origin: userData.origin || 'Skandynawia (Norwegia)',
+      gender: userData.gender || 'Kobieta',
+      classYear: userData.classYear || 'Klasa I • Fundamenty',
+      wand: userData.wand || 'Cis Arktyczny, Włókno Serca Smoka, 12 cali, Sztywna',
+      patronus: userData.patronus || 'Wilk Polarny',
+      companion: userData.companion || 'Puchacz Śnieżny',
+      appearance: userData.appearance || '',
+      backstory: userData.backstory || '',
+      level: 1,
+      xp: 0,
+      nextLevelXp: 500,
+      points: 20,
+      currency: 150,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setUsers(prev => [localUser, ...prev]);
+    showNotification('Podanie Złożone', `Karta adepta ${fullName} zapisana. Oczekuje na zatwierdzenie.`, 'success');
+    return true;
   };
 
   const approveUser = async (userId) => {
@@ -1954,12 +2543,19 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const addTimetableEntry = async (entryData) => {
+    if (currentRole !== 'admin') {
+      showNotification('Brak Uprawnień', 'Tylko Dyrekcja Cytadeli może dodawać nowe zajęcia do planu lekcji.', 'error');
+      return null;
+    }
     if (backendAvailable) {
       const res = await api.createTimetableEntry(entryData);
       if (res.ok) {
         setTimetable(prev => [...prev, res.data]);
         showNotification('Zajęcia Dodane', `${res.data.subjectName} dodano do planu (${res.data.dayName}, ${res.data.startTime}).`, 'success');
         return res.data;
+      } else {
+        showNotification('Błąd Dodawania', res.error || 'Nie udało się dodać zajęć do planu.', 'error');
+        return null;
       }
     }
     // Fallback local
@@ -1976,12 +2572,19 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const updateTimetableEntry = async (id, entryData) => {
+    if (currentRole !== 'admin') {
+      showNotification('Brak Uprawnień', 'Tylko Dyrekcja Cytadeli może edytować zajęcia w planie.', 'error');
+      return null;
+    }
     if (backendAvailable) {
       const res = await api.updateTimetableEntry(id, entryData);
       if (res.ok) {
         setTimetable(prev => prev.map(t => t.id === id ? res.data : t));
         showNotification('Plan Zaktualizowany', `Pomyślnie zaktualizowano zajęcia: ${res.data.subjectName}.`, 'success');
         return res.data;
+      } else {
+        showNotification('Błąd Edycji', res.error || 'Nie udało się zaktualizować zajęć w planie.', 'error');
+        return null;
       }
     }
     // Fallback local
@@ -1991,12 +2594,19 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const substituteTimetableEntry = async (id, subData) => {
+    if (currentRole !== 'admin') {
+      showNotification('Brak Uprawnień', 'Tylko Dyrekcja Cytadeli może wyznaczać i wpisywać zastępstwa.', 'error');
+      return null;
+    }
     if (backendAvailable) {
       const res = await api.substituteTimetableEntry(id, subData);
       if (res.ok) {
         setTimetable(prev => prev.map(t => t.id === id ? res.data : t));
         showNotification('Zastępstwo Wprowadzone', `Zastępca: ${res.data.substituteProfessorName} dla ${res.data.subjectName}.`, 'warning');
         return res.data;
+      } else {
+        showNotification('Błąd Zastępstwa', res.error || 'Nie udało się wyznaczyć zastępstwa.', 'error');
+        return null;
       }
     }
     // Fallback local
@@ -2020,12 +2630,31 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const cancelTimetableEntry = async (id, reason) => {
+    const entry = timetable.find(t => t.id === id);
+    const isDirector = currentRole === 'admin';
+    const isOwnerProf = currentRole === 'professor' && entry && (
+      (currentUser && entry.professorId === currentUser.id) ||
+      (currentUser && entry.professorName && (
+        (currentUser.fullName && entry.professorName.toLowerCase().includes(currentUser.fullName.toLowerCase())) ||
+        (currentUser.name && entry.professorName.toLowerCase().includes(currentUser.name.toLowerCase())) ||
+        (currentUser.surname && entry.professorName.toLowerCase().includes(currentUser.surname.toLowerCase()))
+      ))
+    );
+
+    if (!isDirector && !isOwnerProf) {
+      showNotification('Brak Uprawnień', 'Możesz odwołać wyłącznie swoje własne zajęcia lub wymagane są uprawnienia Dyrekcji.', 'error');
+      return null;
+    }
+
     if (backendAvailable) {
       const res = await api.cancelTimetableEntry(id, reason);
       if (res.ok) {
         setTimetable(prev => prev.map(t => t.id === id ? res.data : t));
         showNotification('Zajęcia Odwołane', `Lekcja ${res.data.subjectName} została odwołana.`, 'warning');
         return res.data;
+      } else {
+        showNotification('Błąd Odwołania', res.error || 'Nie udało się odwołać zajęć.', 'error');
+        return null;
       }
     }
     // Fallback local
@@ -2046,12 +2675,31 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const restoreTimetableEntry = async (id) => {
+    const entry = timetable.find(t => t.id === id);
+    const isDirector = currentRole === 'admin';
+    const isOwnerProf = currentRole === 'professor' && entry && (
+      (currentUser && entry.professorId === currentUser.id) ||
+      (currentUser && entry.professorName && (
+        (currentUser.fullName && entry.professorName.toLowerCase().includes(currentUser.fullName.toLowerCase())) ||
+        (currentUser.name && entry.professorName.toLowerCase().includes(currentUser.name.toLowerCase())) ||
+        (currentUser.surname && entry.professorName.toLowerCase().includes(currentUser.surname.toLowerCase()))
+      ))
+    );
+
+    if (!isDirector && !isOwnerProf) {
+      showNotification('Brak Uprawnień', 'Możesz przywrócić wyłącznie swoje własne zajęcia lub wymagane są uprawnienia Dyrekcji.', 'error');
+      return null;
+    }
+
     if (backendAvailable) {
       const res = await api.restoreTimetableEntry(id);
       if (res.ok) {
         setTimetable(prev => prev.map(t => t.id === id ? res.data : t));
         showNotification('Zajęcia Przywrócone', `Lekcja ${res.data.subjectName} odbywa się normalnie według planu.`, 'success');
         return res.data;
+      } else {
+        showNotification('Błąd Przywracania', res.error || 'Nie udało się przywrócić zajęć.', 'error');
+        return null;
       }
     }
     // Fallback local
@@ -2074,12 +2722,19 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const deleteTimetableEntry = async (id) => {
+    if (currentRole !== 'admin') {
+      showNotification('Brak Uprawnień', 'Tylko Dyrekcja Cytadeli może usuwać zajęcia z planu.', 'error');
+      return false;
+    }
     if (backendAvailable) {
       const res = await api.deleteTimetableEntry(id);
       if (res.ok) {
         setTimetable(prev => prev.filter(t => t.id !== id));
         showNotification('Zajęcia Usunięte', 'Wpis wymazano z planu lekcji.', 'info');
         return true;
+      } else {
+        showNotification('Błąd Usuwania', res.error || 'Nie udało się usunąć zajęć.', 'error');
+        return false;
       }
     }
     // Fallback local
@@ -2321,6 +2976,88 @@ Dyrektor Cytadeli Durmstrang`
     return shoppingLists;
   };
 
+  const createStoreItem = async (newItemData) => {
+    const slug = newItemData.id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const fullItem = {
+      id: slug,
+      name: newItemData.name?.trim() || 'Nowy Artefakt',
+      category: newItemData.category || 'Artefakty & Talizmany',
+      categorySlug: newItemData.categorySlug || 'artifacts',
+      shopId: newItemData.shopId || 'vault-artifacts',
+      shopName: newItemData.shopName || 'Skarbiec Artefaktów i Amuletów Odyna',
+      price: parseInt(newItemData.price, 10) || 50,
+      icon: newItemData.icon || '📦',
+      houseExclusive: newItemData.houseExclusive || null,
+      rarity: newItemData.rarity || 'Zwykły',
+      description: newItemData.description?.trim() || '',
+      lore: newItemData.lore?.trim() || '',
+      placeholderType: newItemData.placeholderType || 'artifact_pendant',
+      imageUrl: newItemData.imageUrl?.trim() || '',
+      image: newItemData.imageUrl?.trim() || '',
+      createdAt: new Date().toISOString()
+    };
+
+    setStoreItems(prev => {
+      const updated = [fullItem, ...prev.filter(i => i.id !== fullItem.id)];
+      localStorage.setItem('durmstrang_store_items', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (backendAvailable) {
+      await api.createStoreItem(fullItem);
+    }
+
+    showNotification('Przedmiot Dodany', `Dodano nowy artefakt: ${fullItem.name} do asortymentu!`, 'success');
+    return fullItem;
+  };
+
+  const updateStoreItem = async (id, patch) => {
+    let updatedItem = null;
+    setStoreItems(prev => {
+      const updated = prev.map(item => {
+        if (item.id === id) {
+          updatedItem = {
+            ...item,
+            ...patch,
+            imageUrl: patch.imageUrl !== undefined ? patch.imageUrl : item.imageUrl,
+            image: patch.imageUrl !== undefined ? patch.imageUrl : item.image
+          };
+          return updatedItem;
+        }
+        return item;
+      });
+      localStorage.setItem('durmstrang_store_items', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (backendAvailable) {
+      await api.updateStoreItem(id, patch);
+    }
+
+    showNotification('Przedmiot Zaktualizowany', `Pomyślnie zaktualizowano właściwości i grafikę artefaktu.`, 'success');
+    return updatedItem;
+  };
+
+  const deleteStoreItem = async (id) => {
+    setStoreItems(prev => {
+      const updated = prev.filter(i => i.id !== id);
+      localStorage.setItem('durmstrang_store_items', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (backendAvailable) {
+      await api.deleteStoreItem(id);
+    }
+
+    showNotification('Przedmiot Usunięty', 'Usunięto artefakt z rejestru rynku.', 'info');
+  };
+
+  const resetStoreItems = () => {
+    localStorage.removeItem('durmstrang_store_items');
+    setStoreItems(STORE_ITEMS);
+    showNotification('Przywrócono Domyślny Magazyn', 'Przywrócono oryginalną ofertę kramów Kaupangr.', 'info');
+  };
+
   // ==================== METODY SKANDYNAWSKIEJ LOTERII ====================
 
   const buyLotteryTicket = async (chosenRunes) => {
@@ -2443,6 +3180,9 @@ Dyrektor Cytadeli Durmstrang`
         hasPermission,
         authModalOpen,
         setAuthModalOpen,
+        authModalTab,
+        setAuthModalTab,
+        openAuthModal,
         passwordRecoveryModalOpen,
         setPasswordRecoveryModalOpen,
         emails,
@@ -2496,6 +3236,10 @@ Dyrektor Cytadeli Durmstrang`
         shops: SHOPS,
         storeItems,
         setStoreItems,
+        createStoreItem,
+        updateStoreItem,
+        deleteStoreItem,
+        resetStoreItems,
         buyStoreItem,
         shoppingLists,
         setShoppingLists,
@@ -2530,6 +3274,10 @@ Dyrektor Cytadeli Durmstrang`
         setEvents,
         pendingApplications,
         students,
+        setStudents,
+        staffRanking,
+        setStaffRanking,
+        teachers: staffRanking,
         userRunes,
         setUserRunes,
         craftedFormulas,
@@ -2593,7 +3341,27 @@ Dyrektor Cytadeli Durmstrang`
         setActiveDocumentSlug,
         activeDocumentCategory,
         setActiveDocumentCategory,
-        navigateToDocumentModule
+        navigateToDocumentModule,
+        // Nowe moduły: Zadania z Mapy, Poczta, Kalendarz, Prace Domowe & Kopia Zapasowa
+        completedQuests,
+        completeMapQuest,
+        markRavenRead,
+        toggleRavenStar,
+        deleteRavenMessage,
+        submitHomework,
+        gradeHomework,
+        deleteHomework,
+        addEvent,
+        updateEvent,
+        deleteEvent,
+        importDatabaseBackup,
+        // Żelazne Pióro — Gazetka Szkolna
+        activeGazetteIssueId,
+        setActiveGazetteIssueId,
+        navigateToGazette,
+        navigateToGazetteIssue,
+        navigateToGazettePanel,
+        navigateToGazetteArchive
       }}
     >
       {children}

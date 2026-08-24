@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { CustomPageEditorModal } from '../components/CustomPageEditorModal';
+import { INITIAL_DOCUMENTS } from '../data/seedDocuments';
 import {
   Scroll,
   Shield,
@@ -24,11 +25,16 @@ import {
   FileText,
   Printer,
   ArrowLeft,
-  ClipboardCheck
+  ClipboardCheck,
+  Crown,
+  UserCheck,
+  Mail,
+  Zap
 } from 'lucide-react';
 
 const CATEGORY_ICONS = {
   'all': FileText,
+  'wladze': Crown,
   'dekrety': ShieldAlert,
   'wizytacje': ClipboardCheck,
   'statut': Scale,
@@ -48,7 +54,8 @@ export const DocumentsCodexView = () => {
     showNotification,
     currentUser,
     currentRole,
-    setActiveView
+    setActiveView,
+    users
   } = useSchool();
 
   const { playWandSwoosh, playRuneChime } = useSound();
@@ -56,6 +63,14 @@ export const DocumentsCodexView = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+
+  // Combine stored documents with initial documents to ensure newly added ones are always present
+  const allDocs = Array.from(
+    new Map([
+      ...INITIAL_DOCUMENTS.map(d => [d.slug || d.id, d]),
+      ...(documents || []).map(d => [d.slug || d.id, d])
+    ]).values()
+  );
 
   // Sync hash routing on mount and on every hashchange event
   useEffect(() => {
@@ -65,7 +80,14 @@ export const DocumentsCodexView = () => {
         const slug = hash.split('/')[2];
         if (slug) {
           setActiveDocumentSlug(slug);
+          const found = allDocs.find(d => d.slug === slug || d.id === slug);
+          if (found && found.category) {
+            setActiveDocumentCategory(found.category);
+          }
         }
+      } else if (hash.includes('/wladze') || hash.includes('/obowiazki') || hash.includes('/kompetencje')) {
+        setActiveDocumentCategory('wladze');
+        setActiveDocumentSlug('obowiazki-i-kompetencje-wladz-twierdzy');
       } else if (hash.includes('/dekrety')) {
         setActiveDocumentCategory('dekrety');
         setActiveDocumentSlug(null);
@@ -91,7 +113,6 @@ export const DocumentsCodexView = () => {
     return () => window.removeEventListener('hashchange', syncHash);
   }, []);
 
-  const allDocs = documents || [];
   const selectedCategory = activeDocumentCategory || 'all';
 
   // Filter documents
@@ -105,11 +126,16 @@ export const DocumentsCodexView = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // Active document resolution (ensures document belongs to the active category)
+  // Active document resolution (if specific slug requested, always honor it)
   const docFromSlug = activeDocumentSlug ? allDocs.find(d => d.slug === activeDocumentSlug || d.id === activeDocumentSlug) : null;
-  const activeDoc = (docFromSlug && (selectedCategory === 'all' || docFromSlug.category === selectedCategory || (selectedCategory === 'custom' && docFromSlug.isCustom)))
-    ? docFromSlug
-    : (filteredDocs[0] || allDocs[0]);
+  const activeDoc = docFromSlug || (filteredDocs[0] || allDocs[0]);
+
+  // Auto-sync category tab if active document belongs to a category
+  useEffect(() => {
+    if (activeDoc && activeDoc.category && activeDocumentCategory !== 'all' && activeDocumentCategory !== activeDoc.category) {
+      setActiveDocumentCategory(activeDoc.category);
+    }
+  }, [activeDoc?.id]);
 
   const handleSelectDoc = (doc) => {
     playWandSwoosh();
@@ -263,6 +289,7 @@ export const DocumentsCodexView = () => {
       >
         {[
           { id: 'all', label: 'Wszystkie Dokumenty', icon: FileText, count: allDocs.length },
+          { id: 'wladze', label: 'Obowiązki Władz Twierdzy', icon: Crown, count: allDocs.filter(d => d.category === 'wladze').length },
           { id: 'dekrety', label: 'Dekrety Władz', icon: ShieldAlert, count: allDocs.filter(d => d.category === 'dekrety').length },
           { id: 'wizytacje', label: 'Wizytacje Nauczycieli', icon: ClipboardCheck, count: allDocs.filter(d => d.category === 'wizytacje').length },
           { id: 'statut', label: 'Statut Szkoły', icon: Scale, count: allDocs.filter(d => d.category === 'statut').length },
@@ -585,6 +612,75 @@ export const DocumentsCodexView = () => {
                 );
               }
 
+              if (block.type === 'table') {
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      overflowX: 'auto',
+                      margin: '1.2rem 0',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(197, 159, 78, 0.3)',
+                      background: 'rgba(8, 11, 16, 0.85)',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.5)'
+                    }}
+                  >
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.92rem' }}>
+                      {block.headers && (
+                        <thead>
+                          <tr style={{ background: 'rgba(197, 159, 78, 0.18)', borderBottom: '1px solid rgba(197, 159, 78, 0.35)' }}>
+                            {block.headers.map((h, hIdx) => (
+                              <th
+                                key={hIdx}
+                                style={{
+                                  padding: '0.9rem 1.1rem',
+                                  color: 'var(--gold-ancient)',
+                                  fontFamily: 'var(--font-heading)',
+                                  fontSize: '0.86rem',
+                                  letterSpacing: '0.06em',
+                                  textTransform: 'uppercase',
+                                  fontWeight: 700
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                      )}
+                      <tbody>
+                        {(block.rows || []).map((row, rIdx) => (
+                          <tr
+                            key={rIdx}
+                            style={{
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                              background: rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)',
+                              transition: 'background 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(197, 159, 78, 0.08)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)'; }}
+                          >
+                            {row.map((cell, cIdx) => (
+                              <td
+                                key={cIdx}
+                                style={{
+                                  padding: '0.9rem 1.1rem',
+                                  color: cIdx === 0 ? '#ffffff' : cIdx === 1 ? 'var(--gold-glow)' : '#d1d5db',
+                                  fontWeight: cIdx === 0 ? 600 : 400,
+                                  lineHeight: 1.55
+                                }}
+                              >
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+
               if (block.type === 'quote') {
                 return (
                   <blockquote
@@ -607,6 +703,185 @@ export const DocumentsCodexView = () => {
 
               return null;
             })}
+
+            {/* Special Interactive Authority Personnel Showcase when viewing Authorities category */}
+            {activeDoc.category === 'wladze' && (
+              <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid rgba(197, 159, 78, 0.3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                  <Crown size={22} color="var(--gold-ancient)" />
+                  <h3 style={{ color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.4rem', margin: 0 }}>
+                    Wizytówki & Bezpośredni Kontakt do Władz Twierdzy
+                  </h3>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: '1.25rem'
+                  }}
+                >
+                  {[
+                    {
+                      name: 'Arcymistrzyni Valgerda Storm',
+                      role: 'Dyrekcja Naczelna • Strażniczka Paktu 1294',
+                      office: 'Komnaty Najwyższej Wieży Durmstrang',
+                      spec: 'Najwyższe dekrety, reprezentacja, budżet, pakt obronny',
+                      badge: 'DYREKCJA',
+                      badgeBg: '#b45309',
+                      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-valgerda'
+                    },
+                    {
+                      name: 'Prof. Gunnar Vargson',
+                      role: 'Mistrz Straży & Dyscypliny • Opiekun Björnhall',
+                      office: 'Twierdza Żelaznego Kręgu, Zbrojownia Północy',
+                      spec: 'Godzina policyjna, areszty, pojedynki Hólmganga, poligon',
+                      badge: 'STRAŻ & BJÖRNHALL',
+                      badgeBg: '#991b1b',
+                      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-gunnar'
+                    },
+                    {
+                      name: 'Prof. Morana Vane',
+                      role: 'Dziekan ds. Nauczania • Opiekunka Ravnheim',
+                      office: 'Wieża Nocnych Szeptów, Sala Cienia IV',
+                      spec: 'Katedry, hospitacje, dzienniki lekcyjne, Czarna Magia',
+                      badge: 'DZIEKAN & RAVNHEIM',
+                      badgeBg: '#581c87',
+                      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-morana'
+                    },
+                    {
+                      name: 'Prof. Sigrid Hällström',
+                      role: 'Kancelaria Runiczna • Opiekunka Reinhall',
+                      office: 'Komnata Runiczna pod Zachodnim Skrzydłem',
+                      spec: 'Starożytne Runy, Futhark, egzaminy roczne, ceremonie',
+                      badge: 'RUNY & REINHALL',
+                      badgeBg: '#8b1e2d',
+                      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-sigrid'
+                    },
+                    {
+                      name: 'Prof. Klaus Lindqvist',
+                      role: 'Nadzorca Laboratoriów • Opiekun Otergard',
+                      office: 'Ogrody Lodowych Cieplic, Laboratorium Alchemii',
+                      spec: 'Kotły alchemiczne, toksyny, aprowizacja drakkarów',
+                      badge: 'ALCHEMIA & OTERGARD',
+                      badgeBg: '#0f766e',
+                      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-klaus'
+                    },
+                    {
+                      name: 'Zarządca Banku Skirnirów',
+                      role: 'Naczelny Skarbnik Cytadeli & Kaupangr',
+                      office: 'Skarbiec Banku Skirnirów pod Bastionem',
+                      spec: 'Konta adeptów, stypendia za oceny, licencje handlowe',
+                      badge: 'SKARB & HANDEL',
+                      badgeBg: '#a16207',
+                      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+                      recipientId: null
+                    }
+                  ].map((auth, aIdx) => (
+                    <div
+                      key={aIdx}
+                      style={{
+                        background: 'rgba(10, 14, 22, 0.85)',
+                        border: '1px solid rgba(197, 159, 78, 0.25)',
+                        borderRadius: '10px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <img
+                          src={auth.avatar}
+                          alt={auth.name}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid var(--gold-ancient)',
+                            flexShrink: 0
+                          }}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                background: auth.badgeBg,
+                                color: '#ffffff',
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: '4px',
+                                fontWeight: 800,
+                                letterSpacing: '0.05em'
+                              }}
+                            >
+                              {auth.badge}
+                            </span>
+                          </div>
+                          <h4 style={{ margin: '0 0 0.2rem 0', color: '#ffffff', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
+                            {auth.name}
+                          </h4>
+                          <div style={{ color: 'var(--gold-ancient)', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>
+                            {auth.role}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '0.82rem', color: '#9ca3af', lineHeight: 1.5, background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ color: '#d1d5db', marginBottom: '0.25rem' }}>
+                          📍 <strong>Gabinet:</strong> {auth.office}
+                        </div>
+                        <div>
+                          ⚖️ <strong>Kompetencje:</strong> {auth.spec}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          playWandSwoosh();
+                          if (!currentUser) {
+                            showNotification('Wymagane Logowanie', 'Zaloguj się, aby wysłać list za pośrednictwem Poczty Kruków.', 'warning');
+                          } else {
+                            setActiveView('raven-post');
+                            showNotification('Poczta Kruków', `Przekierowano do skrzynki nadawczej. Wybierz odbiorcę: ${auth.name}`, 'info');
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem',
+                          background: 'rgba(197, 159, 78, 0.15)',
+                          border: '1px solid var(--gold-ancient)',
+                          borderRadius: '6px',
+                          color: '#ffffff',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-ancient)'; e.currentTarget.style.color = '#000000'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(197, 159, 78, 0.15)'; e.currentTarget.style.color = '#ffffff'; }}
+                      >
+                        <Mail size={14} /> Wyślij Pismo Krukiem (Hrafnapóstur)
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bottom Official Seals & Tags */}

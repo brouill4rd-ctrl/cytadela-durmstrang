@@ -15,7 +15,8 @@ import {
   Heart,
   Compass,
   FileText,
-  Eye
+  Eye,
+  Lock
 } from 'lucide-react';
 
 const AVATAR_PRESETS = [
@@ -203,7 +204,7 @@ export const ProfileEditorModal = ({ isOpen, onClose }) => {
       appearance: formData.appearance.trim(),
       backstory: formData.backstory.trim(),
       office: formData.office.trim(),
-      classYear: formData.classYear
+      ...(currentUser?.role === 'admin' ? { classYear: formData.classYear } : {})
     };
 
     await updateCurrentUser(payload);
@@ -555,7 +556,7 @@ export const ProfileEditorModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Office or Year */}
-                {currentUser?.role === 'admin' || currentUser?.role === 'professor' ? (
+                {currentUser?.role === 'professor' ? (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.4rem', fontWeight: 600 }}>
                       Siedziba / Komnaty Urzędowe
@@ -570,10 +571,10 @@ export const ProfileEditorModal = ({ isOpen, onClose }) => {
                       style={{ width: '100%', padding: '0.75rem 1rem' }}
                     />
                   </div>
-                ) : (
+                ) : currentUser?.role === 'admin' ? (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.4rem', fontWeight: 600 }}>
-                      Rok Nauki / Klasa
+                      Rok Nauki / Klasa (Uprawnienia Administratora)
                     </label>
                     <select
                       name="classYear"
@@ -588,6 +589,47 @@ export const ProfileEditorModal = ({ isOpen, onClose }) => {
                       <option value="Klasa IV">Klasa IV (Mistrz Przysięgi)</option>
                       <option value="Klasa V">Klasa V (Arcyadept)</option>
                     </select>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Lock size={13} style={{ color: 'var(--gold-ancient)' }} /> Rok Nauki / Klasa
+                      </label>
+                      <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(255, 255, 255, 0.05)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                        🔒 Pole zablokowane
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(15, 23, 42, 0.5)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '6px',
+                        color: '#e2e8f0',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'not-allowed'
+                      }}
+                    >
+                      <span style={{ fontWeight: 500 }}>
+                        {formData.classYear === 'Klasa I' ? 'Klasa I (Nowicjat)' :
+                         formData.classYear === 'Klasa II' ? 'Klasa II (Adept Północy)' :
+                         formData.classYear === 'Klasa III' ? 'Klasa III (Starszy Adept)' :
+                         formData.classYear === 'Klasa IV' ? 'Klasa IV (Mistrz Przysięgi)' :
+                         formData.classYear === 'Klasa V' ? 'Klasa V (Arcyadept)' :
+                         (formData.classYear || currentUser?.classYear || currentUser?.class_year || 'Klasa I (Nowicjat)')}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)' }}>
+                        Status Ucznia
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', fontStyle: 'italic' }}>
+                      Przydział do klasy jest nadawany przez Dyrekcję Cytadeli i nie może być modyfikowany w profilu adepta.
+                    </div>
                   </div>
                 )}
               </div>

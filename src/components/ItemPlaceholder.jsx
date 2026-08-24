@@ -1,48 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Image as ImageIcon } from 'lucide-react';
 
 /**
- * ItemPlaceholder — Visual fantasy artwork renderer for Durmstrang store artifacts.
- * Renders stylized SVG illustrations with runic frames, elemental glows and rarity aesthetics.
+ * ItemPlaceholder — Visual fantasy artwork and image renderer for Durmstrang store artifacts.
+ * Renders user-provided photographs/artworks with gothic runic frames, or fallback stylized SVG illustrations.
  */
 export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) => {
-  const { placeholderType, rarity, name, icon } = item || {};
+  const { placeholderType, rarity, name, icon, imageUrl, image } = item || {};
+  const [imageError, setImageError] = useState(false);
+
+  const finalImageUrl = imageUrl || image || '';
+
+  // Reset error when URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [finalImageUrl]);
 
   // Rarity color palette
   const getRarityGlow = (rar) => {
     switch (rar) {
       case 'Legendarne':
         return {
-          glow: 'rgba(255, 215, 0, 0.4)',
-          border: 'rgba(218, 165, 32, 0.8)',
-          bg: 'radial-gradient(circle at center, rgba(80, 55, 10, 0.7) 0%, rgba(15, 20, 30, 0.95) 100%)',
+          glow: 'rgba(255, 215, 0, 0.45)',
+          border: 'rgba(218, 165, 32, 0.85)',
+          bg: 'radial-gradient(circle at center, rgba(80, 55, 10, 0.75) 0%, rgba(15, 20, 30, 0.95) 100%)',
           accent: '#ffe8aa'
         };
       case 'Epicki':
         return {
-          glow: 'rgba(168, 85, 247, 0.4)',
-          border: 'rgba(168, 85, 247, 0.8)',
-          bg: 'radial-gradient(circle at center, rgba(50, 20, 80, 0.7) 0%, rgba(15, 20, 30, 0.95) 100%)',
+          glow: 'rgba(168, 85, 247, 0.45)',
+          border: 'rgba(168, 85, 247, 0.85)',
+          bg: 'radial-gradient(circle at center, rgba(50, 20, 80, 0.75) 0%, rgba(15, 20, 30, 0.95) 100%)',
           accent: '#d8b4fe'
         };
       case 'Rzadki':
         return {
-          glow: 'rgba(46, 196, 182, 0.4)',
-          border: 'rgba(46, 196, 182, 0.7)',
-          bg: 'radial-gradient(circle at center, rgba(15, 55, 60, 0.7) 0%, rgba(15, 20, 30, 0.95) 100%)',
+          glow: 'rgba(46, 196, 182, 0.45)',
+          border: 'rgba(46, 196, 182, 0.75)',
+          bg: 'radial-gradient(circle at center, rgba(15, 55, 60, 0.75) 0%, rgba(15, 20, 30, 0.95) 100%)',
           accent: '#8cefe6'
         };
       case 'Niezbędny':
         return {
-          glow: 'rgba(197, 159, 78, 0.35)',
-          border: 'rgba(197, 159, 78, 0.6)',
-          bg: 'radial-gradient(circle at center, rgba(40, 45, 60, 0.7) 0%, rgba(15, 20, 30, 0.95) 100%)',
+          glow: 'rgba(197, 159, 78, 0.4)',
+          border: 'rgba(197, 159, 78, 0.7)',
+          bg: 'radial-gradient(circle at center, rgba(40, 45, 60, 0.75) 0%, rgba(15, 20, 30, 0.95) 100%)',
           accent: '#c59f4e'
         };
       default:
         return {
-          glow: 'rgba(156, 163, 175, 0.2)',
-          border: 'rgba(107, 114, 128, 0.5)',
-          bg: 'radial-gradient(circle at center, rgba(25, 30, 40, 0.7) 0%, rgba(12, 16, 22, 0.95) 100%)',
+          glow: 'rgba(156, 163, 175, 0.25)',
+          border: 'rgba(107, 114, 128, 0.55)',
+          bg: 'radial-gradient(circle at center, rgba(25, 30, 40, 0.75) 0%, rgba(12, 16, 22, 0.95) 100%)',
           accent: '#9ca3af'
         };
     }
@@ -50,7 +59,7 @@ export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) 
 
   const styleConfig = getRarityGlow(rarity);
 
-  const containerHeight = size === 'large' ? '220px' : size === 'small' ? '90px' : '150px';
+  const containerHeight = size === 'large' ? '230px' : size === 'small' ? '90px' : '160px';
 
   // SVG art templates based on placeholderType
   const renderArt = () => {
@@ -247,6 +256,8 @@ export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) 
     }
   };
 
+  const hasValidImage = finalImageUrl && !imageError;
+
   return (
     <div
       className="item-placeholder-wrapper"
@@ -266,23 +277,52 @@ export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) 
       }}
     >
       {/* Corner Runic Brackets */}
-      <div style={{ position: 'absolute', top: '6px', left: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif' }}>ᚠ</div>
-      <div style={{ position: 'absolute', top: '6px', right: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif' }}>ᛞ</div>
-      <div style={{ position: 'absolute', bottom: '6px', left: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif' }}>ᛟ</div>
-      <div style={{ position: 'absolute', bottom: '6px', right: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif' }}>ᛉ</div>
+      <div style={{ position: 'absolute', top: '6px', left: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif', zIndex: 3, pointerEvents: 'none' }}>ᚠ</div>
+      <div style={{ position: 'absolute', top: '6px', right: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif', zIndex: 3, pointerEvents: 'none' }}>ᛞ</div>
+      <div style={{ position: 'absolute', bottom: '6px', left: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif', zIndex: 3, pointerEvents: 'none' }}>ᛟ</div>
+      <div style={{ position: 'absolute', bottom: '6px', right: '8px', fontSize: '0.65rem', color: styleConfig.accent, opacity: 0.7, fontFamily: 'serif', zIndex: 3, pointerEvents: 'none' }}>ᛉ</div>
 
-      {/* Main SVG Vector Illustration */}
-      <div style={{ width: '80%', height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {renderArt()}
-      </div>
+      {hasValidImage ? (
+        <>
+          {/* Custom Photograph / Artwork with Gothic Ambient Glow */}
+          <img
+            src={finalImageUrl}
+            alt={name || 'Artefakt'}
+            onError={() => setImageError(true)}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              transition: 'transform 0.4s ease'
+            }}
+          />
+          {/* Vignette & Runic Frame Overlay */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(8,11,17,0.2) 0%, rgba(8,11,17,0.1) 40%, rgba(8,11,17,0.85) 100%)',
+              pointerEvents: 'none',
+              zIndex: 2
+            }}
+          />
+        </>
+      ) : (
+        /* Fallback SVG Art / Placeholder Frame */
+        <div style={{ width: '80%', height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {renderArt()}
+        </div>
+      )}
 
-      {/* Rarity Watermark */}
+      {/* Rarity & Placeholder Badge */}
       <div
         style={{
           position: 'absolute',
           bottom: '6px',
-          background: 'rgba(0, 0, 0, 0.65)',
-          padding: '0.15rem 0.6rem',
+          background: 'rgba(4, 7, 12, 0.85)',
+          backdropFilter: 'blur(6px)',
+          padding: '0.2rem 0.65rem',
           borderRadius: '4px',
           border: `1px solid ${styleConfig.border}`,
           fontSize: '0.68rem',
@@ -290,10 +330,16 @@ export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) 
           color: styleConfig.accent,
           fontFamily: 'var(--font-heading)',
           letterSpacing: '0.08em',
-          textTransform: 'uppercase'
+          textTransform: 'uppercase',
+          zIndex: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.3rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.7)'
         }}
       >
-        {rarity || 'Artefakt'}
+        <span>{icon || '💎'}</span>
+        <span>{rarity || 'Artefakt'}</span>
       </div>
     </div>
   );

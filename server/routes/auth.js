@@ -72,8 +72,9 @@ router.post('/register', (req, res) => {
     default_banner_category: data.department || null,
     office: data.office || (role === 'professor' ? 'Wieża Nocnych Szeptów' : null),
     specialization: data.specialization || (role === 'professor' ? 'Teoria i Praktyka Magii Starożytnej' : null),
-    class_year: role === 'student' ? 'Rok I • Semestr Zimowy' : null,
-    origin: data.origin || 'Skandynawia',
+    class_year: data.classYear || (role === 'student' ? 'Klasa I • Fundamenty' : null),
+    origin: data.origin || 'Skandynawia (Norwegia)',
+    gender: data.gender || 'Kobieta',
     level: 1,
     xp: 0,
     next_level_xp: 500,
@@ -82,7 +83,7 @@ router.post('/register', (req, res) => {
     wand: data.wand || (role === 'student' ? 'Cis Arktyczny, Włókno Serca Smoka, 12 cali, Sztywna' : null),
     patronus: data.patronus || (role === 'student' ? 'Wilk Polarny' : null),
     companion: data.companion || (role === 'student' ? 'Puchacz Śnieżny' : null),
-    appearance: data.appearance || (role === 'student' ? 'Młody adept w wełnianej szacie.' : null),
+    appearance: data.appearance || (role === 'student' ? 'Młody adept w szacie podróżnej.' : null),
     backstory: data.backstory || (role === 'student' ? 'Przybysz z dalekich krain północy.' : role === 'professor' ? `Aplikacja na stanowisko profesora w Katedrze: ${data.departmentName}` : ''),
     taught_subject_ids: role === 'professor' ? JSON.stringify(data.taughtSubjectIds || [data.department || 'czarna-magia']) : '[]',
     grades: '[]',
@@ -92,8 +93,8 @@ router.post('/register', (req, res) => {
 
   // Insert user
   db.prepare(`
-    INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
-    VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
+    INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, gender, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
+    VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @gender, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
   `).run(userFields);
 
   // Insert pending application
@@ -105,7 +106,7 @@ router.post('/register', (req, res) => {
     appId, newId, userEmail,
     userFields.name, userFields.surname, role,
     userFields.department_name,
-    userFields.origin, '15',
+    userFields.origin, data.age ? `${data.age}` : '14',
     userFields.wand || 'Różdżka Adepta',
     userFields.patronus || 'Brak',
     userFields.companion || 'Brak',

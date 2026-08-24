@@ -39,9 +39,14 @@ export const JournalsListView = () => {
   const [selectedHouse, setSelectedHouse] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
+  const canManageLessons = hasPermission('canManageLessons');
+
   // Filter lessons
   const filteredLessons = useMemo(() => {
     return lessons.filter(l => {
+      // Uczniowie i goście nie widzą szkiców (draftów)
+      if (!canManageLessons && l.status === 'draft') return false;
+
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -58,8 +63,8 @@ export const JournalsListView = () => {
       // Class filter
       if (selectedClass !== 'all' && l.classYear !== selectedClass) return false;
 
-      // Status filter
-      if (selectedStatus !== 'all' && l.status !== selectedStatus) return false;
+      // Status filter (tylko gdy użytkownik ma uprawnienia do widzenia draftów)
+      if (canManageLessons && selectedStatus !== 'all' && l.status !== selectedStatus) return false;
 
       // House filter
       if (selectedHouse !== 'all') {
@@ -69,7 +74,7 @@ export const JournalsListView = () => {
 
       return true;
     });
-  }, [lessons, searchQuery, selectedSubject, selectedClass, selectedHouse, selectedStatus]);
+  }, [lessons, canManageLessons, searchQuery, selectedSubject, selectedClass, selectedHouse, selectedStatus]);
 
   // Overall stats
   const publishedCount = lessons.filter(l => l.status === 'published').length;
@@ -140,28 +145,28 @@ export const JournalsListView = () => {
             </p>
           </div>
 
-          {/* Quick Actions Cluster */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', minWidth: '220px' }}>
-            <button
-              onClick={() => setDiscordSimulatorOpen(true)}
-              className="btn-durmstrang"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.7rem 1.2rem',
-                background: 'linear-gradient(135deg, #5865F2 0%, #3b44a9 100%)',
-                borderColor: '#7289da',
-                color: '#ffffff',
-                boxShadow: '0 4px 15px rgba(88, 101, 242, 0.35)',
-                fontWeight: 700
-              }}
-            >
-              <Radio size={16} /> Symulator Discord / Nowa Lekcja
-            </button>
+          {/* Quick Actions Cluster (Tylko dla Profesorów i Dyrekcji) */}
+          {canManageLessons && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', minWidth: '220px' }}>
+              <button
+                onClick={() => setDiscordSimulatorOpen(true)}
+                className="btn-durmstrang"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.7rem 1.2rem',
+                  background: 'linear-gradient(135deg, #5865F2 0%, #3b44a9 100%)',
+                  borderColor: '#7289da',
+                  color: '#ffffff',
+                  boxShadow: '0 4px 15px rgba(88, 101, 242, 0.35)',
+                  fontWeight: 700
+                }}
+              >
+                <Radio size={16} /> Symulator Discord / Nowa Lekcja
+              </button>
 
-            {hasPermission('canManageLessons') && (
               <button
                 onClick={() => {
                   setActiveLessonId(null);
@@ -179,8 +184,8 @@ export const JournalsListView = () => {
               >
                 <PlusCircle size={15} /> Utwórz Dziennik Manualnie
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Global Statistics Ribbon */}
@@ -338,36 +343,38 @@ export const JournalsListView = () => {
               }}
             >
               <option value="all">Wszystkie Zakony</option>
-              <option value="reinhall">🦌 Reinhall</option>
-              <option value="bjornhall">🐻 Björnhall</option>
-              <option value="ravnheim">🐦 Ravnheim</option>
-              <option value="otergard">🦦 Otergard</option>
+              <option value="reinhall">ᚦ Reinhall</option>
+              <option value="bjornhall">ᛉ Björnhall</option>
+              <option value="ravnheim">ᚱ Ravnheim</option>
+              <option value="otergard">ᛞ Otergard</option>
             </select>
           </div>
 
-          {/* Status Filter (Draft / Published) */}
-          <div>
-            <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.3rem', display: 'block' }}>
-              Status Dziennika
-            </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.55rem 0.7rem',
-                background: '#121722',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '6px',
-                color: '#ffffff',
-                fontSize: '0.82rem'
-              }}
-            >
-              <option value="all">Wszystkie Statusy</option>
-              <option value="published">📜 Opublikowane (W Kronice)</option>
-              <option value="draft">⏳ Szkic (DRAFT — Przed zatwierdzeniem)</option>
-            </select>
-          </div>
+          {/* Status Filter (Draft / Published) - tylko dla kadry */}
+          {canManageLessons && (
+            <div>
+              <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.3rem', display: 'block' }}>
+                Status Dziennika
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.7rem',
+                  background: '#121722',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  fontSize: '0.82rem'
+                }}
+              >
+                <option value="all">Wszystkie Statusy</option>
+                <option value="published">📜 Opublikowane (W Kronice)</option>
+                <option value="draft">⏳ Szkic (DRAFT — Przed zatwierdzeniem)</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -627,7 +634,7 @@ export const JournalsListView = () => {
                     <MessageSquare size={14} /> Pokaż Pełny Zapis Lekcji (Discord)
                   </button>
 
-                  {(hasPermission('canManageLessons') || isDraft) && (
+                  {canManageLessons && (
                     <button
                       onClick={() => handleEditLesson(lesson.id)}
                       style={{

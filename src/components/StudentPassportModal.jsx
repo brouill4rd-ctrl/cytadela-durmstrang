@@ -28,7 +28,7 @@ const AVATAR_PRESETS = [
 ];
 
 export const StudentPassportModal = ({ isOpen, onClose }) => {
-  const { currentUser, houses, updateStudentProfile, showNotification } = useSchool();
+  const { currentUser, houses, updateStudentProfile, showNotification, setActiveView } = useSchool();
   const { playCoinSound, playRuneChime, playWandSwoosh } = useSound();
   const passportCardRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -49,11 +49,17 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const houseKey = currentUser?.house || currentUser?.house_id;
-  const currentHouse = (houses && houseKey && houses[houseKey])
-    || (Array.isArray(houses) ? houses.find(h => h.id === houseKey) : null)
-    || (houses && typeof houses === 'object' ? Object.values(houses)[0] : null)
-    || { name: 'Reinhall', runeTitle: 'ᚦ REINHALL ᚦ', colors: { primary: '#7a1818', secondary: '#c59f4e' } };
+  const houseKey = (currentUser?.house || currentUser?.house_id || '').toLowerCase().trim();
+  const hasAssignedHouse = Boolean(
+    houseKey && (
+      (houses && houses[houseKey]) ||
+      (Array.isArray(houses) && houses.some(h => h.id === houseKey)) ||
+      (houses && typeof houses === 'object' && Object.values(houses).some(h => h.id === houseKey))
+    )
+  );
+  const currentHouse = hasAssignedHouse
+    ? ((houses && houses[houseKey]) || (Array.isArray(houses) ? houses.find(h => h.id === houseKey) : Object.values(houses).find(h => h.id === houseKey)))
+    : null;
 
   const studentName = currentUser
     ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.name || currentUser.username || 'Nowicjusz Północy'
@@ -196,7 +202,7 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
       ctx.font = '15px Georgia, serif';
       ctx.fillStyle = '#d1d5db';
       ctx.fillText(`Status / Rola: ${roleName}`, textX, 205);
-      ctx.fillText(`Zakon: ${currentHouse?.name || 'Reinhall'}`, textX, 245);
+      ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
       ctx.fillText(`Identyfikator: ${runicId}`, textX, 285);
       ctx.fillText(`Data Rejestracji: XIX Rok Szkolny`, textX, 325);
       ctx.fillText(`Kancelaria: Najwyższa Rada Mistrzów TMD`, textX, 365);
@@ -249,7 +255,7 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
       ctx.font = '15px Georgia, serif';
       ctx.fillStyle = '#d1d5db';
       ctx.fillText(`Status / Rola: ${roleName}`, textX, 205);
-      ctx.fillText(`Zakon: ${currentHouse?.name || 'Reinhall'}`, textX, 245);
+      ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
       ctx.fillText(`Identyfikator: ${runicId}`, textX, 285);
       ctx.fillText(`Data Rejestracji: XIX Rok Szkolny`, textX, 325);
 
@@ -453,9 +459,38 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                   <div>
                     <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Zakon</span>
-                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--gold-ancient)', fontFamily: 'var(--font-heading)' }}>
-                      {currentHouse?.name || 'Reinhall'}
-                    </div>
+                    {currentHouse ? (
+                      <div style={{ fontSize: '0.98rem', fontWeight: 700, color: currentHouse.colors?.secondary || 'var(--gold-ancient)', fontFamily: 'var(--font-heading)' }}>
+                        {currentHouse.name}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#fbbf24', fontStyle: 'italic', fontWeight: 600 }}>
+                          Oczekuje na Rytuał
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            if (setActiveView) setActiveView('ceremony');
+                          }}
+                          style={{
+                            background: 'rgba(197, 159, 78, 0.2)',
+                            border: '1px solid var(--gold-ancient)',
+                            borderRadius: '3px',
+                            color: 'var(--gold-ancient)',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.45rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          title="Przejdź do Ceremonii Przydziału przed Kamień Przysięgi"
+                        >
+                          ᛞ Rytuał →
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rola / Stopień</span>

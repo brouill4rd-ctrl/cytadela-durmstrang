@@ -362,3 +362,131 @@ export const OtergardCrest = ({ size = 120, className = '' }) => (
     <circle cx="122" cy="109" r="1" fill="url(#otergard-emerald-grad)" />
   </svg>
 );
+
+// ============================================================================
+// UNIFIED ORDER CREST COMPONENT (DYNAMIC DISPATCHER WITH RUNIC ACCENTS)
+// ============================================================================
+export const normalizeHouseKey = (key) => {
+  if (!key) return 'reinhall';
+  const s = String(key).toLowerCase().trim();
+  if (s === 'renifer' || s === 'reinhall' || s.includes('rein')) return 'reinhall';
+  if (s === 'niedzwiedz' || s === 'niedźwiedź' || s === 'bjornhall' || s === 'björnhall' || s.includes('bjorn') || s.includes('björn')) return 'bjornhall';
+  if (s === 'kruk' || s === 'ravnheim' || s.includes('ravn')) return 'ravnheim';
+  if (s === 'wydra' || s === 'otergard' || s.includes('oter')) return 'otergard';
+  return 'reinhall';
+};
+
+export const HOUSE_RUNIC_DATA = {
+  reinhall: {
+    rune: 'ᚦ',
+    runeName: 'Thurisaz',
+    animal: 'Renifer Północy',
+    primaryColor: '#7a1818',
+    secondaryColor: '#c59f4e',
+    glowColor: 'rgba(197, 159, 78, 0.45)',
+    element: 'Krew i Wieczna Zmarzlina'
+  },
+  bjornhall: {
+    rune: 'ᛉ',
+    runeName: 'Algiz',
+    animal: 'Niedźwiedź Jaskiniowy',
+    primaryColor: '#202530',
+    secondaryColor: '#c02b2b',
+    glowColor: 'rgba(192, 43, 43, 0.45)',
+    element: 'Żelazo i Pęknięta Skala'
+  },
+  ravnheim: {
+    rune: 'ᚱ',
+    runeName: 'Raidho',
+    animal: 'Kruk Mądrości',
+    primaryColor: '#1c132e',
+    secondaryColor: '#a77de0',
+    glowColor: 'rgba(167, 125, 224, 0.45)',
+    element: 'Cień i Astralna Noc'
+  },
+  otergard: {
+    rune: 'ᛞ',
+    runeName: 'Dagaz',
+    animal: 'Wydra Polarna',
+    primaryColor: '#0d2d33',
+    secondaryColor: '#2ec4b6',
+    glowColor: 'rgba(46, 196, 182, 0.45)',
+    element: 'Lodowcowe Wody i Toksyny'
+  }
+};
+
+export const OrderCrest = ({
+  houseKey,
+  size = 48,
+  showRuneBadge = false,
+  showFrame = false,
+  className = '',
+  style = {}
+}) => {
+  const normKey = normalizeHouseKey(houseKey);
+  const data = HOUSE_RUNIC_DATA[normKey] || HOUSE_RUNIC_DATA.reinhall;
+
+  let CrestSvg = ReinhallCrest;
+  if (normKey === 'bjornhall') CrestSvg = BjornhallCrest;
+  else if (normKey === 'ravnheim') CrestSvg = RavnheimCrest;
+  else if (normKey === 'otergard') CrestSvg = OtergardCrest;
+
+  const inner = (
+    <div
+      style={{
+        position: 'relative',
+        width: size,
+        height: size,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        ...style
+      }}
+      className={className}
+    >
+      <CrestSvg size={size} />
+      {showRuneBadge && (
+        <span
+          style={{
+            position: 'absolute',
+            bottom: -2,
+            right: -2,
+            background: 'rgba(10, 14, 22, 0.92)',
+            border: `1px solid ${data.secondaryColor}`,
+            color: data.secondaryColor,
+            fontFamily: 'serif',
+            fontSize: `${Math.max(10, Math.round(size * 0.26))}px`,
+            lineHeight: 1,
+            padding: '2px 4px',
+            borderRadius: '4px',
+            boxShadow: `0 0 8px ${data.glowColor}`
+          }}
+        >
+          {data.rune}
+        </span>
+      )}
+    </div>
+  );
+
+  if (!showFrame) return inner;
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0.4rem',
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${data.primaryColor} 0%, rgba(10, 14, 22, 0.95) 80%)`,
+        border: `1.5px solid ${data.secondaryColor}`,
+        boxShadow: `0 0 15px ${data.glowColor}`,
+        ...style
+      }}
+      className={className}
+    >
+      {inner}
+    </div>
+  );
+};

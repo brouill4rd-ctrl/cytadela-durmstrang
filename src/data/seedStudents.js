@@ -66,11 +66,19 @@ export const DEMO_ACCOUNTS = {
 };
 
 export const LEADERBOARD_STUDENTS = [
-  { id: 'stud-2', name: 'Astrid Vargadottir', house: 'bjornhall', points: 145, year: 'V', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80' },
-  { id: 'stud-1', name: 'Valdemar Krag-Hansen', house: 'ravnheim', points: 115, year: 'IV', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-  { id: 'stud-3', name: 'Magnus Blom', house: 'reinhall', points: 110, year: 'VI', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
-  { id: 'stud-4', name: 'Sigrun Lindqvist', house: 'otergard', points: 95, year: 'IV', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80' },
-  { id: 'stud-5', name: 'Einar Jarnskjold', house: 'bjornhall', points: 85, year: 'III', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' }
+  { id: 'stud-2', name: 'Astrid Vargadottir', fullName: 'Astrid Vargadottir', house: 'bjornhall', points: 145, year: 'V', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80' },
+  { id: 'stud-1', name: 'Valdemar Krag-Hansen', fullName: 'Valdemar Krag-Hansen', house: 'ravnheim', points: 115, year: 'IV', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
+  { id: 'stud-3', name: 'Magnus Blom', fullName: 'Magnus Blom', house: 'reinhall', points: 110, year: 'VI', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
+  { id: 'stud-4', name: 'Sigrun Lindqvist', fullName: 'Sigrun Lindqvist', house: 'otergard', points: 95, year: 'IV', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80' },
+  { id: 'stud-5', name: 'Einar Jarnskjold', fullName: 'Einar Jarnskjold', house: 'bjornhall', points: 85, year: 'III', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' }
+];
+
+export const LEADERBOARD_STAFF = [
+  { id: 'usr-valgerda', name: 'Valgerda Storm', fullName: 'Arcymistrzyni Valgerda Storm', role: 'admin', roleLabel: 'Dyrekcja Cytadeli', house: null, points: 320, department: 'Rada Dyrekcji Cytadeli', title: 'Arcymistrzyni Cytadeli Durmstrang', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80' },
+  { id: 'usr-morana', name: 'Morana Vane', fullName: 'Prof. Morana Vane', role: 'professor', roleLabel: 'Opiekunka Ravnheim', house: 'ravnheim', points: 285, department: 'Czarna Magia & Klątwy', title: 'Katedra Czarnej Magii', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80' },
+  { id: 'usr-gunnar', name: 'Gunnar Vargson', fullName: 'Prof. Gunnar Vargson', role: 'professor', roleLabel: 'Opiekun Björnhall', house: 'bjornhall', points: 260, department: 'Liga Bojowa & Hólmganga', title: 'Mistrz Szermierki Runicznej', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80' },
+  { id: 'usr-sigrid', name: 'Sigrid Hällström', fullName: 'Prof. Sigrid Hällström', role: 'professor', roleLabel: 'Opiekunka Reinhall', house: 'reinhall', points: 240, department: 'Starożytne Runy & Futhark', title: 'Katedra Starożytnych Run', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80' },
+  { id: 'usr-klaus', name: 'Klaus Lindqvist', fullName: 'Prof. Klaus Lindqvist', role: 'professor', roleLabel: 'Opiekun Otergard', house: 'otergard', points: 220, department: 'Eliksiry & Toksyny Fiordów', title: 'Katedra Eliksirów & Toksyn', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80' }
 ];
 
 export const PENDING_APPLICATIONS = [

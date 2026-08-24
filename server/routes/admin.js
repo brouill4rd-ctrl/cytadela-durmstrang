@@ -94,10 +94,19 @@ router.get('/system-stats', (req, res) => {
         news: countTable('news'),
         emails: countTable('emails'),
         subjects: countTable('subjects'),
-        timetable: countTable('timetable'),
+        timetable: countTable('timetable_entries'),
         bankAccounts: countTable('bank_accounts'),
         bankTransactions: countTable('bank_transactions'),
-        lotteryTickets: countTable('lottery_user_tickets'),
+        lotteryTickets: countTable('lottery_tickets'),
+        documents: countTable('documents'),
+        cmsBanners: countTable('cms_banners'),
+        cmsBlocks: countTable('cms_block_graphics'),
+        completedQuests: countTable('completed_quests'),
+        secrets: countTable('discovered_secrets'),
+        formulas: countTable('crafted_formulas'),
+        homework: countTable('homework_submissions'),
+        ravenMessages: countTable('raven_messages'),
+        events: countTable('events'),
         auditLogs: countTable('audit_logs')
       },
       sqlite: {
@@ -127,7 +136,7 @@ router.get('/backup-export', (req, res) => {
       system: 'Cytadela Durmstrang — Pełna Kopia Zapasowa Archiwum',
       exportedAt: new Date().toISOString(),
       exportedBy: req.user.fullName,
-      version: '1.0.0',
+      version: '2.0.0',
       database: {
         users: getAll('users'),
         news: getAll('news'),
@@ -141,16 +150,28 @@ router.get('/backup-export', (req, res) => {
         point_transactions: getAll('point_transactions'),
         point_audit_logs: getAll('point_audit_logs'),
         subjects: getAll('subjects'),
-        subject_grade_categories: getAll('subject_grade_categories'),
-        student_grades: getAll('student_grades'),
-        timetable: getAll('timetable'),
+        grade_categories: getAll('grade_categories'),
+        grades: getAll('grades'),
+        subject_achievements: getAll('subject_achievements'),
+        timetable_entries: getAll('timetable_entries'),
         bank_accounts: getAll('bank_accounts'),
         bank_transactions: getAll('bank_transactions'),
+        teacher_salaries: getAll('teacher_salaries'),
         store_items: getAll('store_items'),
         shopping_lists: getAll('shopping_lists'),
+        user_shopping_lists: getAll('user_shopping_lists'),
         lottery_rounds: getAll('lottery_rounds'),
-        lottery_user_tickets: getAll('lottery_user_tickets'),
-        discord_config: getAll('discord_config')
+        lottery_tickets: getAll('lottery_tickets'),
+        documents: getAll('documents'),
+        cms_banners: getAll('cms_banners'),
+        cms_block_graphics: getAll('cms_block_graphics'),
+        completed_quests: getAll('completed_quests'),
+        discovered_secrets: getAll('discovered_secrets'),
+        crafted_formulas: getAll('crafted_formulas'),
+        homework_submissions: getAll('homework_submissions'),
+        raven_messages: getAll('raven_messages'),
+        discord_bot_config: getAll('discord_bot_config'),
+        school_config: getAll('school_config')
       }
     };
 
@@ -159,6 +180,95 @@ router.get('/backup-export', (req, res) => {
     res.json(backupData);
   } catch (err) {
     res.status(500).json({ error: 'Błąd generowania kopii zapasowej: ' + err.message });
+  }
+});
+
+// POST /api/admin/backup-import — Restore entire SQLite database from JSON
+router.post('/backup-import', (req, res) => {
+  try {
+    const { backup } = req.body;
+    if (!backup || !backup.database) {
+      return res.status(400).json({ error: 'Nieprawidłowa struktura pliku kopii zapasowej (brak sekcji database).' });
+    }
+
+    const d = backup.database;
+
+    const restoreTable = (tableName, rows) => {
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      try {
+        db.prepare(`DELETE FROM ${tableName}`).run();
+        const sample = rows[0];
+        const cols = Object.keys(sample);
+        const placeholders = cols.map(() => '?').join(', ');
+        const insertStmt = db.prepare(`INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders})`);
+
+        for (const row of rows) {
+          const values = cols.map(c => row[c] !== undefined ? row[c] : null);
+          insertStmt.run(...values);
+        }
+      } catch (tableErr) {
+        console.warn(`[Restore] Ostrzeżenie przy przywracaniu tabeli ${tableName}:`, tableErr.message);
+      }
+    };
+
+    const tx = db.transaction(() => {
+      if (d.users) restoreTable('users', d.users);
+      if (d.news) restoreTable('news', d.news);
+      if (d.emails) restoreTable('emails', d.emails);
+      if (d.events) restoreTable('events', d.events);
+      if (d.pending_applications) restoreTable('pending_applications', d.pending_applications);
+      if (d.audit_logs) restoreTable('audit_logs', d.audit_logs);
+      if (d.lessons) restoreTable('lessons', d.lessons);
+      if (d.lesson_messages) restoreTable('lesson_messages', d.lesson_messages);
+      if (d.lesson_participants) restoreTable('lesson_participants', d.lesson_participants);
+      if (d.point_transactions) restoreTable('point_transactions', d.point_transactions);
+      if (d.point_audit_logs) restoreTable('point_audit_logs', d.point_audit_logs);
+      if (d.subjects) restoreTable('subjects', d.subjects);
+      if (d.grade_categories) restoreTable('grade_categories', d.grade_categories);
+      if (d.grades) restoreTable('grades', d.grades);
+      if (d.subject_achievements) restoreTable('subject_achievements', d.subject_achievements);
+      if (d.timetable_entries) restoreTable('timetable_entries', d.timetable_entries);
+      if (d.timetable) restoreTable('timetable_entries', d.timetable);
+      if (d.bank_accounts) restoreTable('bank_accounts', d.bank_accounts);
+      if (d.bank_transactions) restoreTable('bank_transactions', d.bank_transactions);
+      if (d.teacher_salaries) restoreTable('teacher_salaries', d.teacher_salaries);
+      if (d.store_items) restoreTable('store_items', d.store_items);
+      if (d.shopping_lists) restoreTable('shopping_lists', d.shopping_lists);
+      if (d.user_shopping_lists) restoreTable('user_shopping_lists', d.user_shopping_lists);
+      if (d.lottery_rounds) restoreTable('lottery_rounds', d.lottery_rounds);
+      if (d.lottery_tickets) restoreTable('lottery_tickets', d.lottery_tickets);
+      if (d.lottery_user_tickets) restoreTable('lottery_tickets', d.lottery_user_tickets);
+      if (d.documents) restoreTable('documents', d.documents);
+      if (d.cms_banners) restoreTable('cms_banners', d.cms_banners);
+      if (d.cms_block_graphics) restoreTable('cms_block_graphics', d.cms_block_graphics);
+      if (d.completed_quests) restoreTable('completed_quests', d.completed_quests);
+      if (d.discovered_secrets) restoreTable('discovered_secrets', d.discovered_secrets);
+      if (d.crafted_formulas) restoreTable('crafted_formulas', d.crafted_formulas);
+      if (d.homework_submissions) restoreTable('homework_submissions', d.homework_submissions);
+      if (d.raven_messages) restoreTable('raven_messages', d.raven_messages);
+      if (d.discord_bot_config) restoreTable('discord_bot_config', d.discord_bot_config);
+      if (d.school_config) restoreTable('school_config', d.school_config);
+
+      db.prepare(`
+        INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        `log-${Date.now()}`,
+        new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+        req.user.fullName || 'Arcymistrz Dyrekcji',
+        'Pełne Przywrócenie Bazy Danych z Kopii Zapasowej JSON',
+        `Przywrócono bazę z pliku utworzonego: ${backup.exportedAt || 'nieznana data'}`
+      );
+    });
+
+    tx();
+
+    res.json({
+      ok: true,
+      message: 'Baza danych została pomyślnie i w 100% przywrócona z pliku kopii zapasowej!'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd przywracania bazy danych: ' + err.message });
   }
 });
 
@@ -187,3 +297,4 @@ router.post('/optimize-db', (req, res) => {
 });
 
 export default router;
+

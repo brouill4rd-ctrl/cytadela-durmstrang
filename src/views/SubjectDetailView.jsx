@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
+import { SubjectIcon } from '../components/SubjectIcon';
 import {
   BookOpen, ArrowLeft, User, MapPin, ScrollText, FileText,
   Star, Award, Trophy, ChevronDown, ChevronUp, Edit3, Save,
@@ -183,7 +184,8 @@ export const SubjectDetailView = () => {
 
   const grades = subject.grades || [];
   const categories = subject.categories || [];
-  const recentLessons = subject.recentLessons || [];
+  const canManageLessons = isAdmin || isAssignedProfessor || hasPermission('canManageLessons');
+  const recentLessons = (subject.recentLessons || []).filter(l => canManageLessons || l.status === 'published');
   const stats = subject.stats || {};
   const achievements = stats.achievements || [];
 
@@ -311,7 +313,7 @@ export const SubjectDetailView = () => {
 
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 0 12px rgba(197,159,78,0.4))', lineHeight: 1 }}>{subject.icon}</div>
+                <SubjectIcon subject={subject} size={36} containerSize={68} />
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>

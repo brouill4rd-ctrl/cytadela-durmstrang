@@ -496,11 +496,208 @@ export const INITIAL_DOCUMENTS = [
       }
     ],
     tags: ['zabawy', 'gry', 'hnefatafl', 'pojedynki', 'alchemia', 'wyprawy', 'turnieje']
+  },
+
+  // =========================================================================
+  // 4. OBOWIĄZKI I KOMPETENCJE WŁADZ TWIERDZY (PODZIAŁ ODPOWIEDZIALNOŚCI)
+  // =========================================================================
+  {
+    id: 'authorities-responsibilities',
+    slug: 'obowiazki-i-kompetencje-wladz-twierdzy',
+    category: 'wladze',
+    categoryLabel: 'Obowiązki Władz Twierdzy',
+    number: 'KOMP-01/TMD',
+    title: 'Księga Kompetencji i Podział Obowiązków Władz Twierdzy Magii Durmstrang (TMD)',
+    subtitle: 'Oficjalny rejestr hierarchii decyzyjnej, odpowiedzialności i przypisania spraw do członków Dyrekcji, Profesorów i Prefektów',
+    author: 'Najwyższa Rada Powiernicza & Kancelaria Dyrekcji TMD',
+    authorRole: 'Kancelaria Główna Cytadeli',
+    date: 'Zatwierdzony na XIX Rok Szkolny • Pakt z 1294 roku',
+    sealType: 'gold',
+    iconName: 'Crown',
+    severity: 'najwyższy',
+    summary: 'Naczelny dokument organizacyjny określający precyzyjny podział zadań, kompetencji wykonawczych, sądowniczych i wychowawczych pomiędzy Arcymistrzynię, Dziekanat, Mistrza Straży, Opiekunów Czterech Zakonów, Skarbnika oraz Kolegium Prefektów.',
+    content: [
+      {
+        type: 'callout',
+        variant: 'gold',
+        title: 'HIERARCHIA I ZASADA ODPOWIEDZIALNOŚCI OSOBISTEJ',
+        text: 'W myśl art. IV Paktu z 1294 roku, każdy członek Władz Twierdzy Magii Durmstrang sprawuje powierzony urząd w sposób suwerenny w ramach swoich kompetencji. Decyzje podejmowane w granicach przydzielonych obowiązków posiadają moc wiążącą dla wszystkich adeptów i nowicjuszy.'
+      },
+      {
+        type: 'heading',
+        text: '§ 1. Arcymistrzyni Cytadeli — Dyrekcja Naczelna (Arcymistrzyni Valgerda Storm)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Arcymistrzyni jest najwyższym organem wykonawczym, prawodawczym i reprezentacyjnym Instytutu Twierdzy Magii Durmstrang. Odpowiada za całość funkcjonowania uczelni oraz nienaruszalność barier obronnych Cytadeli.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Wyłączność stanowienia Dekretów i Edyktów Dyrekcji o rygorze natychmiastowej wykonalności.',
+          'Nadzór nad pieczęciami pradawnej magii Północy, stanem wyjątkowym i procedurami obrony zamku.',
+          'Mianowanie oraz odwoływanie Dziekanów, Profesorów Katedr, Wizytatorów oraz Opiekunów Zakonów.',
+          'Ostateczna instancja apelacyjna od wyroków Trybunału Honorowego i decyzji o relegacji z uczelni.',
+          'Zarządzanie Skarbcem Centralnym Cytadeli, zatwierdzanie budżetów Katedr i dysponowanie funduszem stypendialnym.',
+          'Oficjalna reprezentacja w relacjach dyplomatycznych z Międzynarodową Konfederacją Czarodziejów i innymi akademiami magii.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 2. Mistrz Straży Cytadeli, Dyscypliny & Ligi Bojowej (Prof. Gunnar Vargson)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Naczelny dowódca garnizonu obronnego, straży runicznej oraz przewodniczący komisji dyscyplinarnej i turniejowej.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Utrzymanie porządku publicznego w murach Twierdzy, na dziedzińcach oraz w obrębie przystani Kaupangr.',
+          'Egzekwowanie godziny policyjnej, kontrola patroli prefektów oraz rozpatrywanie wniosków o areszty w Skalnym Bastionie.',
+          'Organizacja, sędziowanie i nadzór nad pojedynkami Hólmganga, sparingami i oficjalną Ligą Bojową Durmstrangu.',
+          'Zabezpieczenie Poligonu Runicznego, weryfikacja stabilności barier antymagicznych w salach ćwiczebnych.',
+          'Kierowanie Katedrą Magii Bojowej, Klątw i Uroków Obronnych.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 3. Dziekanat Akademicki & Nadzór Pedagogiczny (Prof. Morana Vane)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Dziekan ds. Nauczania odpowiada za jakość kształcenia, programy edukacyjne Katedr oraz kontrolę rzetelności oceniania.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Koordynacja siatki zajęć, planów lekcji oraz zatwierdzanie sylabusów dla 21 Katedr Naukowych.',
+          'Przeprowadzanie okresowych hospitacji i wizytacji lekcji profesorskich (Karta Wizytacji TMD).',
+          'Nadzór nad Dziennikiem Lekcyjnym na portalu WWW, ewidencją obecności i transkrypcjami lekcyjnymi z Discorda.',
+          'Prowadzenie Archiwum Zakazanych Ksiąg, Grimuarów i Kodeksów Cienia w Wieży Nocnych Szeptów.',
+          'Kierowanie Katedrą Czarnej Magii, Nekromancji i Wiązania Cieni.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 4. Kancelaria Runiczna, Egzaminy & Rytuały Paktu (Prof. Sigrid Hällström)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Odpowiedzialna za dziedzictwo runiczne, weryfikację rodowodów magicznych oraz procedury egzaminacyjne.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Nadzór nad Warsztatem Runicznym (Galdrastofa) i kaligrafią Futharku Starszego.',
+          'Organizacja i weryfikacja państwowych egzaminów rocznych (awans na wyższe kręgi adeptów).',
+          'Prowadzenie ceremonii przesilenia zimowego, letniego oraz odnawiania przysięgi przed Kamieniem Przysięgi.',
+          'Kierowanie Katedrą Starożytnych Run, Rytuałów i Pieczęci Ochronnych.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 5. Katedra Alchemii, Nadzór Laboratoriów & Aprowizacja (Prof. Klaus Lindqvist)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Nadzoruje zaplecze badawcze, bezpieczeństwo chemiczne i mikstury warzone w Cytadeli.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Nadzór nad Kotłami Alchemicznymi, pracowniami eliksirów, cieplicami oraz Arktycznym Ogrodem Toksyn.',
+          'Atestacja i certyfikacja ziół, esencji i mikstur dopuszczonych do obrotu handlowego.',
+          'Aprowizacja twierdzy w surowce strategiczne i współpraca z gildią żeglarzy drakkarów w Kaupangr.',
+          'Kierowanie Katedrą Eliksirów, Toksyn i Alchemii Fiordów.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 6. Kolegium Opiekunów Czterech Zakonów (Reinhall, Björnhall, Ravnheim, Otergard)'
+      },
+      {
+        type: 'paragraph',
+        text: 'Opiekunowie sprawują bezpośrednią pieczę nad życiem i rozwojem adeptów w swoich domach zakonnych:'
+      },
+      {
+        type: 'list',
+        items: [
+          'Opiekunka Zakonu Ravnheim (Prof. Morana Vane) — nadzór nad adeptami Kruka, dyscyplina w wieżach cienia.',
+          'Opiekun Zakonu Björnhall (Prof. Gunnar Vargson) — hartowanie bojowe adeptów Niedźwiedzia, szermierka i tężyzna.',
+          'Opiekunka Zakonu Reinhall (Prof. Sigrid Hällström) — krzewienie tradycji, etykiety i godności adeptów Renifera.',
+          'Opiekun Zakonu Otergard (Prof. Klaus Lindqvist) — wsparcie alchemiczne i naukowe adeptów Wydry.',
+          'Wspólne obowiązki: zwoływanie zebrań zakonnych, przyznawanie i odbieranie punktów domowych, wydawanie nocnych przepustek, mianowanie kandydatów na Prefektów.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 7. Naczelny Skarbnik i Nadzorca Handlu (Bank Skirnirów & Kaupangr)'
+      },
+      {
+        type: 'list',
+        items: [
+          'Prowadzenie Banku Skirnirów (Skírnisbanki), zarządzanie skarbcami, lokatami i rozliczeniami adeptów.',
+          'Terminowa wypłata stypendiów za średnią ocen i osiągnięcia w Dzienniku oraz pensji kadry pedagogicznej.',
+          'Wydawanie licencji kupieckich na Rynku Kaupangr oraz bezwzględne zwalczanie nielegalnego Czarnego Rynku.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 8. Administracja Sieci Runicznej & Poczty Kruków (Mistrz Poczty i Bot TMD)'
+      },
+      {
+        type: 'list',
+        items: [
+          'Zarządzanie i całodobowa moderacja oficjalnego serwera Discord Cytadeli.',
+          'Weryfikacja tożsamości adeptów, nadawanie ról i uprawnień zgodnie z kartą postaci ze strony WWW.',
+          'Obsługa techniczna bota lekcyjnego, symulatora zajęć oraz synchronizacji ocen.',
+          'Zapewnienie bezpiecznego przepływu korespondencji w systemie Poczty Kruków (Hrafnapóstur).'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 9. Kolegium Prefektów Naczelnych'
+      },
+      {
+        type: 'list',
+        items: [
+          'Dyżury i patrole korytarzy, Wież Młotów i Komnat Wspólnych w czasie ciszy nocnej.',
+          'Pomoc i opieka mentorska nad nowo przydzielonymi adeptami Klasy I.',
+          'Organizowanie turniejów Hnefatafl, wypraw polarnych w tundrę oraz wieczornic zakonnych.',
+          'Prawo nakładania kar punktowych (do 15 pkt) za drobne przewinienia porządkowe i kierowanie wniosków do Opiekuna.'
+        ]
+      },
+      {
+        type: 'heading',
+        text: '§ 10. Matryca Odpowiedzialności RACI — „Z Jaką Sprawą Do Kogo?”'
+      },
+      {
+        type: 'table',
+        headers: ['Kategoria Sprawy', 'Właściwy Organ / Osoba', 'Tryb Kontaktu', 'Czas Odpowiedzi'],
+        rows: [
+          ['Odwołanie od oceny z lekcji / błąd w dzienniku', 'Profesor prowadzący -> Dziekan Morana Vane', 'Poczta Kruków / Dziennik', 'Do 48 godzin'],
+          ['Zatwierdzenie karty postaci / zmiana tożsamości', 'Arcymistrzyni Valgerda Storm', 'Panel Weryfikacji WWW', 'Do 24 godzin'],
+          ['Wniosek o przepustkę nocną / opuszczenie bramy', 'Opiekun Twojego Zakonu', 'Poczta Kruków / Komnata Wspólna', 'Przed godziną 20:00'],
+          ['Zgłoszenie pojedynku honorowego Hólmganga', 'Mistrz Straży Gunnar Vargson', 'Zbrojownia / Poczta Kruków', 'Przed terminem starcia'],
+          ['Wypłata stypendium / kradzież ze skrytki bankowej', 'Bank Skirnirów / Skarbnik', 'Skarbiec Bankowy', 'W godzinach urzędowania'],
+          ['Zgłoszenie awarii runicznej / problemu z Discordem', 'Mistrz Sieci Runicznej / TMD Bot', 'Kanał #pomoc-techniczna na DC', 'Natychmiast'],
+          ['Konflikt w dormitorium / pomoc w adaptacji', 'Prefekt Zakonu -> Opiekun Zakonu', 'Komnata Wspólna Zakonu', 'Bieżący kontakt'],
+          ['Wypożyczenie zakazanego grimuaru z Wieży Cienia', 'Prof. Morana Vane (Wymagana zgoda Arcymistrza)', 'Oficjalny wniosek pisemny', 'Do 3 dni']
+        ]
+      },
+      {
+        type: 'quote',
+        text: '„Władza w Durmstrangu nie jest przywilejem próżności, lecz żelazną przysięgą złożoną wiecznym śniegom Północy.” — Kodeks Władz Cytadeli'
+      }
+    ],
+    tags: ['władze', 'dyrekcja', 'obowiązki', 'kompetencje', 'opiekunowie', 'prefekci', 'hierarchia']
   }
 ];
 
 export const DOCUMENT_CATEGORIES = [
   { id: 'all', label: 'Wszystkie Dokumenty', icon: 'FileText' },
+  { id: 'wladze', label: 'Obowiązki Władz Twierdzy', icon: 'Crown' },
   { id: 'dekrety', label: 'Dekrety Władz', icon: 'ShieldAlert' },
   { id: 'wizytacje', label: 'Wizytacje Nauczycieli', icon: 'ClipboardCheck' },
   { id: 'statut', label: 'Statut Szkoły', icon: 'Scale' },

@@ -336,19 +336,19 @@ export const HomeView = () => {
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.8rem' }}>
                       <div style={{ padding: '0.65rem', border: '1px solid #b32626', background: 'rgba(179,38,38,0.15)', borderRadius: '4px', textAlign: 'center' }}>
-                        <span style={{ color: '#ff9e9e', fontWeight: 700, fontSize: '0.82rem' }}>🐻 Björnhall:</span><br />
+                        <span style={{ color: '#ff9e9e', fontWeight: 700, fontSize: '0.82rem' }}>ᛉ Björnhall:</span><br />
                         <strong style={{ color: '#ffffff', fontSize: '1.25rem', fontFamily: 'var(--font-heading)' }}>520 pkt</strong>
                       </div>
                       <div style={{ padding: '0.65rem', border: '1px solid #9b72cf', background: 'rgba(155,114,207,0.15)', borderRadius: '4px', textAlign: 'center' }}>
-                        <span style={{ color: '#d8c2ff', fontWeight: 700, fontSize: '0.82rem' }}>🐦 Ravnheim:</span><br />
+                        <span style={{ color: '#d8c2ff', fontWeight: 700, fontSize: '0.82rem' }}>ᚱ Ravnheim:</span><br />
                         <strong style={{ color: '#ffffff', fontSize: '1.25rem', fontFamily: 'var(--font-heading)' }}>510 pkt</strong>
                       </div>
                       <div style={{ padding: '0.65rem', border: '1px solid #2ec4b6', background: 'rgba(46,196,182,0.15)', borderRadius: '4px', textAlign: 'center' }}>
-                        <span style={{ color: '#8cefe6', fontWeight: 700, fontSize: '0.82rem' }}>🦦 Otergard:</span><br />
+                        <span style={{ color: '#8cefe6', fontWeight: 700, fontSize: '0.82rem' }}>ᛞ Otergard:</span><br />
                         <strong style={{ color: '#ffffff', fontSize: '1.25rem', fontFamily: 'var(--font-heading)' }}>495 pkt</strong>
                       </div>
                       <div style={{ padding: '0.65rem', border: '1px solid #c59f4e', background: 'rgba(197,159,78,0.15)', borderRadius: '4px', textAlign: 'center' }}>
-                        <span style={{ color: '#f7dca0', fontWeight: 700, fontSize: '0.82rem' }}>🦌 Reinhall:</span><br />
+                        <span style={{ color: '#f7dca0', fontWeight: 700, fontSize: '0.82rem' }}>ᚦ Reinhall:</span><br />
                         <strong style={{ color: '#ffffff', fontSize: '1.25rem', fontFamily: 'var(--font-heading)' }}>480 pkt</strong>
                       </div>
                     </div>

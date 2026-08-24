@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { Sparkles, Trophy } from 'lucide-react';
+import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
 
 export const LivingHourglasses = () => {
   const { houses } = useSchool();
@@ -13,7 +14,6 @@ export const LivingHourglasses = () => {
       name: 'Reinhall',
       gemColor: '#d4af37',
       gemGlow: 'rgba(212, 175, 55, 0.6)',
-      symbol: '🦌',
       border: 'rgba(212, 175, 55, 0.4)',
       bgGrad: 'linear-gradient(180deg, rgba(122, 24, 24, 0.5) 0%, rgba(20, 10, 10, 0.85) 100%)'
     },
@@ -21,7 +21,6 @@ export const LivingHourglasses = () => {
       name: 'Björnhall',
       gemColor: '#ef4444',
       gemGlow: 'rgba(239, 68, 68, 0.6)',
-      symbol: '🐻',
       border: 'rgba(239, 68, 68, 0.4)',
       bgGrad: 'linear-gradient(180deg, rgba(90, 18, 18, 0.5) 0%, rgba(15, 10, 10, 0.85) 100%)'
     },
@@ -29,7 +28,6 @@ export const LivingHourglasses = () => {
       name: 'Ravnheim',
       gemColor: '#a855f7',
       gemGlow: 'rgba(168, 85, 247, 0.6)',
-      symbol: '🐦',
       border: 'rgba(168, 85, 247, 0.4)',
       bgGrad: 'linear-gradient(180deg, rgba(28, 19, 46, 0.5) 0%, rgba(10, 15, 25, 0.85) 100%)'
     },
@@ -37,40 +35,6 @@ export const LivingHourglasses = () => {
       name: 'Otergard',
       gemColor: '#2dd4bf',
       gemGlow: 'rgba(45, 212, 191, 0.6)',
-      symbol: '🦦',
-      border: 'rgba(45, 212, 191, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(13, 45, 51, 0.5) 0%, rgba(10, 20, 18, 0.85) 100%)'
-    },
-    // Aliases for safety
-    renifer: {
-      name: 'Reinhall',
-      gemColor: '#d4af37',
-      gemGlow: 'rgba(212, 175, 55, 0.6)',
-      symbol: '🦌',
-      border: 'rgba(212, 175, 55, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(122, 24, 24, 0.5) 0%, rgba(20, 10, 10, 0.85) 100%)'
-    },
-    niedzwiedz: {
-      name: 'Björnhall',
-      gemColor: '#ef4444',
-      gemGlow: 'rgba(239, 68, 68, 0.6)',
-      symbol: '🐻',
-      border: 'rgba(239, 68, 68, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(90, 18, 18, 0.5) 0%, rgba(15, 10, 10, 0.85) 100%)'
-    },
-    kruk: {
-      name: 'Ravnheim',
-      gemColor: '#a855f7',
-      gemGlow: 'rgba(168, 85, 247, 0.6)',
-      symbol: '🐦',
-      border: 'rgba(168, 85, 247, 0.4)',
-      bgGrad: 'linear-gradient(180deg, rgba(28, 19, 46, 0.5) 0%, rgba(10, 15, 25, 0.85) 100%)'
-    },
-    wydra: {
-      name: 'Otergard',
-      gemColor: '#2dd4bf',
-      gemGlow: 'rgba(45, 212, 191, 0.6)',
-      symbol: '🦦',
       border: 'rgba(45, 212, 191, 0.4)',
       bgGrad: 'linear-gradient(180deg, rgba(13, 45, 51, 0.5) 0%, rgba(10, 20, 18, 0.85) 100%)'
     }
@@ -98,9 +62,10 @@ export const LivingHourglasses = () => {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem' }}>
         {houseList.map((house) => {
-          const theme = houseThemes[house.id] || houseThemes.reinhall;
+          const normKey = normalizeHouseKey(house.id);
+          const theme = houseThemes[normKey] || houseThemes.reinhall;
           const points = house.startingPoints || house.points || 0;
           const fillPercent = Math.min(Math.max((points / maxPoints) * 100, 15), 100);
 
@@ -119,7 +84,9 @@ export const LivingHourglasses = () => {
                 overflow: 'hidden'
               }}
             >
-              <div style={{ fontSize: '1.3rem', marginBottom: '0.2rem' }}>{theme.symbol}</div>
+              <div style={{ marginBottom: '0.3rem' }}>
+                <OrderCrest houseKey={house.id} size={36} />
+              </div>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f3f4f6', fontFamily: 'var(--font-heading)' }}>
                 {theme.name}
               </span>
@@ -207,3 +174,4 @@ export const LivingHourglasses = () => {
     </div>
   );
 };
+

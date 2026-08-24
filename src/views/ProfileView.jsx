@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { StudentPassportModal } from '../components/StudentPassportModal';
 import { ProfileEditorModal } from '../components/ProfileEditorModal';
 import { GrimoireBook } from '../components/GrimoireBook';
+import { RuneCalligraphyModal } from '../components/RuneCalligraphyModal';
 import { RunicDuelModal } from '../components/RunicDuelModal';
 import { OracleModal } from '../components/OracleModal';
 import { ExpeditionsModal } from '../components/ExpeditionsModal';
@@ -14,6 +15,8 @@ import { IceFishingModal } from '../components/IceFishingModal';
 import { BestiaryModal } from '../components/BestiaryModal';
 import { BlackMarketModal } from '../components/BlackMarketModal';
 import { TournamentGauntletModal } from '../components/TournamentGauntletModal';
+import { DiscordVerificationModal } from '../components/DiscordVerificationModal';
+import { RUNIC_ACHIEVEMENTS } from '../data/ancientRunesData';
 import {
   User,
   Shield,
@@ -51,7 +54,9 @@ export const ProfileView = () => {
     pointLedger,
     lessons,
     setActiveLessonId,
-    setActiveView
+    setActiveView,
+    updateCurrentUser,
+    showNotification
   } = useSchool();
 
   const { playWandSwoosh, playRuneChime } = useSound();
@@ -75,6 +80,7 @@ export const ProfileView = () => {
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [passportOpen, setPassportOpen] = useState(false);
   const [grimoireOpen, setGrimoireOpen] = useState(false);
+  const [runeCalligraphyOpen, setRuneCalligraphyOpen] = useState(false);
   const [duelOpen, setDuelOpen] = useState(false);
   const [oracleOpen, setOracleOpen] = useState(false);
   const [expeditionsOpen, setExpeditionsOpen] = useState(false);
@@ -85,6 +91,7 @@ export const ProfileView = () => {
   const [bestiaryOpen, setBestiaryOpen] = useState(false);
   const [blackMarketOpen, setBlackMarketOpen] = useState(false);
   const [tournamentOpen, setTournamentOpen] = useState(false);
+  const [discordModalOpen, setDiscordModalOpen] = useState(false);
 
   const house = activeUser.house ? houses[activeUser.house] : null;
   const xpPercentage = Math.min(100, Math.round(((activeUser.xp || 0) / (activeUser.nextLevelXp || 1000)) * 100));
@@ -264,6 +271,33 @@ export const ProfileView = () => {
             <Edit3 size={14} /> Edytuj Profil & Awatar
           </button>
 
+          {/* DISCORD VERIFICATION QUICK BUTTON */}
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              setDiscordModalOpen(true);
+            }}
+            style={{
+              padding: '0.5rem 1.1rem',
+              fontSize: '0.82rem',
+              background: activeUser.discordId ? 'rgba(16, 185, 129, 0.2)' : 'linear-gradient(135deg, rgba(88, 101, 242, 0.35) 0%, rgba(59, 71, 196, 0.4) 100%)',
+              border: activeUser.discordId ? '1px solid #10b981' : '1px solid #5865F2',
+              color: activeUser.discordId ? '#6ee7b7' : '#e0e7ff',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              fontWeight: 700,
+              boxShadow: activeUser.discordId ? '0 0 15px rgba(16, 185, 129, 0.3)' : '0 0 15px rgba(88, 101, 242, 0.3)'
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+            </svg>
+            {activeUser.discordId ? '✨ Discord Połączony' : '⚡ Połącz Discord (Kodem)'}
+          </button>
+
           <button
             onClick={() => {
               playRuneChime();
@@ -273,6 +307,26 @@ export const ProfileView = () => {
             style={{ padding: '0.5rem 0.9rem', fontSize: '0.8rem' }}
           >
             <Download size={13} /> Paszport (PNG)
+          </button>
+
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              setGrimoireOpen(true);
+            }}
+            style={{ background: 'rgba(197, 159, 78, 0.15)', border: '1px solid var(--gold-ancient)', color: '#ffe599', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}
+          >
+            <BookOpen size={13} color="var(--gold-ancient)" /> Grimuar Zaklęć
+          </button>
+
+          <button
+            onClick={() => {
+              playWandSwoosh();
+              setRuneCalligraphyOpen(true);
+            }}
+            style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid #f59e0b', color: '#fde68a', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}
+          >
+            <span style={{ color: '#f59e0b', fontSize: '0.95rem' }}>ᚠ</span> Kaligrafia Run
           </button>
 
           <button
@@ -467,6 +521,32 @@ export const ProfileView = () => {
           }}
         >
           <Package size={16} /> Ekwipunek
+        </button>
+
+        <button
+          onClick={() => {
+            playWandSwoosh();
+            setActiveTab('discord');
+          }}
+          style={{
+            padding: '0.65rem 1.4rem',
+            background: activeTab === 'discord' ? 'rgba(88, 101, 242, 0.22)' : 'rgba(88, 101, 242, 0.08)',
+            border: activeTab === 'discord' ? '1px solid #5865F2' : '1px solid rgba(88, 101, 242, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'discord' ? '#c7d2fe' : '#94a3b8',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.88rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          Discord & Role {activeUser.discordId && '✓'}
         </button>
       </div>
 
@@ -669,6 +749,100 @@ export const ProfileView = () => {
               ))}
             </div>
           </div>
+
+          {/* Honorary Titles & Achievements Section */}
+          <div className="gothic-card" style={{ padding: '1.8rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Award size={18} color="var(--gold-ancient)" /> Tytuły Honorowe & Osiągnięcia Kaligrafii Run
+              </h3>
+              <button
+                onClick={() => { playWandSwoosh(); setRuneCalligraphyOpen(true); }}
+                style={{
+                  background: 'rgba(197, 159, 78, 0.15)',
+                  border: '1px solid var(--gold-ancient)',
+                  color: 'var(--gold-glow)',
+                  borderRadius: '4px',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                ᚠ Akademia Run & Alfabetów
+              </button>
+            </div>
+            <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1.2rem' }}>
+              Zdobyte tytuły możesz nosić jako swoją oficjalną godność honorową w całej Twierdzy Durmstrang:
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.9rem' }}>
+              {RUNIC_ACHIEVEMENTS.map(ach => {
+                let unlockedAchs = [];
+                try {
+                  unlockedAchs = JSON.parse(localStorage.getItem('durmstrang_runic_achievements') || '[]');
+                } catch (_) {}
+                const isUnlocked = unlockedAchs.includes(ach.id);
+                const isEquipped = activeUser.title === ach.rewardTitle;
+
+                return (
+                  <div
+                    key={ach.id}
+                    style={{
+                      background: isEquipped ? 'rgba(197, 159, 78, 0.15)' : isUnlocked ? 'rgba(15, 22, 32, 0.8)' : 'rgba(10, 14, 20, 0.5)',
+                      border: isEquipped ? '2px solid var(--gold-ancient)' : isUnlocked ? '1px solid rgba(197, 159, 78, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.8rem',
+                      opacity: isUnlocked ? 1 : 0.65
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                      <div style={{ fontSize: '1.6rem' }}>{ach.icon}</div>
+                      <div>
+                        <div style={{ color: isUnlocked ? '#ffffff' : '#9ca3af', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-heading)' }}>
+                          „{ach.rewardTitle}”
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
+                          {ach.title} {isUnlocked ? '• Odblokowane' : '• Zablokowane'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isUnlocked ? (
+                      <button
+                        onClick={() => {
+                          playRuneChime();
+                          if (updateCurrentUser) {
+                            updateCurrentUser({ title: ach.rewardTitle });
+                            if (showNotification) showNotification('Założono Tytuł', `Twój tytuł to teraz: „${ach.rewardTitle}”!`, 'success');
+                          }
+                        }}
+                        style={{
+                          background: isEquipped ? 'var(--gold-ancient)' : 'rgba(197, 159, 78, 0.15)',
+                          border: '1px solid var(--gold-ancient)',
+                          color: isEquipped ? '#000000' : 'var(--gold-glow)',
+                          borderRadius: '4px',
+                          padding: '0.35rem 0.65rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {isEquipped ? 'Założony' : 'Załóż'}
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>🔒</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -746,10 +920,110 @@ export const ProfileView = () => {
         </div>
       )}
 
+      {/* 5. DISCORD TAB CONTENT */}
+      {activeTab === 'discord' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div
+            className="gothic-card"
+            style={{
+              padding: '2.5rem',
+              background: 'radial-gradient(circle at 80% 20%, rgba(88, 101, 242, 0.15) 0%, rgba(10, 13, 18, 0.98) 80%)',
+              border: activeUser.discordId ? '2px solid #10b981' : '2px solid #5865F2'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(135deg, #5865F2 0%, #3b47c4 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    boxShadow: '0 8px 30px rgba(88, 101, 242, 0.4)'
+                  }}
+                >
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                  </svg>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: activeUser.discordId ? '#10b981' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>
+                    {activeUser.discordId ? '✓ Tożsamość Zweryfikowana' : 'Status: Oczekuje na Weryfikację'}
+                  </div>
+                  <h2 style={{ fontSize: '1.8rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: '0.2rem 0' }}>
+                    Integracja Konta Discord
+                  </h2>
+                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.9rem' }}>
+                    Połącz konto kodem na oficjalnym Discordzie Cytadeli, aby bot automatycznie nadał Ci role Zakonu, rangi oraz klasy.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  playWandSwoosh();
+                  setDiscordModalOpen(true);
+                }}
+                className="btn-durmstrang"
+                style={{
+                  padding: '0.8rem 1.6rem',
+                  fontSize: '0.92rem',
+                  background: activeUser.discordId ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #5865F2 0%, #3b47c4 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  boxShadow: '0 8px 25px rgba(88, 101, 242, 0.4)'
+                }}
+              >
+                <Sparkles size={16} /> {activeUser.discordId ? 'Zarządzaj Połączeniem & Rolami' : 'Otwórz Kreator Weryfikacji (Kod)'}
+              </button>
+            </div>
+
+            {/* Quick Summary Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.2rem', marginTop: '2rem' }}>
+              <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Konto Discord</div>
+                <div style={{ fontSize: '1.05rem', color: '#ffffff', fontWeight: 700, marginTop: '0.2rem' }}>
+                  {activeUser.discordUsername || 'Niepołączone'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.3rem' }}>
+                  {activeUser.discordId ? `ID: ${activeUser.discordId}` : 'Użyj /weryfikuj kod: ...'}
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Rola Zakonu</div>
+                <div style={{ fontSize: '1.05rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontWeight: 700, marginTop: '0.2rem' }}>
+                  {house ? `${house.crestIcon} ${house.name}` : (activeUser.house || 'Brak')}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '0.3rem' }}>
+                  Automatyczny przydział
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Ranga & Klasa</div>
+                <div style={{ fontSize: '1.05rem', color: '#fef08a', fontWeight: 700, marginTop: '0.2rem' }}>
+                  {activeUser.role === 'admin' ? '⚡ Rada Arcymistrzów' : activeUser.role === 'professor' ? '🧙‍♂️ Profesor' : '📜 Adept'} • {activeUser.classYear || 'Kadra'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.3rem' }}>
+                  Synchronizowane z Dziennikiem
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* All Activity Modals */}
       <ProfileEditorModal isOpen={profileEditorOpen} onClose={() => setProfileEditorOpen(false)} />
       <StudentPassportModal isOpen={passportOpen} onClose={() => setPassportOpen(false)} />
       <GrimoireBook isOpen={grimoireOpen} onClose={() => setGrimoireOpen(false)} />
+      <RuneCalligraphyModal isOpen={runeCalligraphyOpen} onClose={() => setRuneCalligraphyOpen(false)} />
       <RunicDuelModal isOpen={duelOpen} onClose={() => setDuelOpen(false)} />
       <OracleModal isOpen={oracleOpen} onClose={() => setOracleOpen(false)} />
       <ExpeditionsModal isOpen={expeditionsOpen} onClose={() => setExpeditionsOpen(false)} />
@@ -760,6 +1034,7 @@ export const ProfileView = () => {
       <BestiaryModal isOpen={bestiaryOpen} onClose={() => setBestiaryOpen(false)} />
       <BlackMarketModal isOpen={blackMarketOpen} onClose={() => setBlackMarketOpen(false)} />
       <TournamentGauntletModal isOpen={tournamentOpen} onClose={() => setTournamentOpen(false)} />
+      <DiscordVerificationModal isOpen={discordModalOpen} onClose={() => setDiscordModalOpen(false)} />
     </div>
   );
 };

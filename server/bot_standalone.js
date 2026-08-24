@@ -4,7 +4,7 @@
  */
 
 import 'dotenv/config';
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ActivityType } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -33,7 +33,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers
   ]
 });
 
@@ -57,8 +58,162 @@ async function downloadDiscordAttachment(url, filename) {
   });
 }
 
+// Pomocnicza funkcja tworząca bogate powitanie z nordycką grafiką i przyciskami
+export function buildWelcomePayload(member = null, guild = null) {
+  const assetsDir = path.join(__dirname, 'assets');
+  const bannerFile = path.join(assetsDir, 'durmstrang_welcome_banner.jpg');
+  const crestFile = path.join(assetsDir, 'tmd_herb.png');
+
+  const files = [];
+  let hasBanner = false;
+  let hasCrest = false;
+
+  if (fs.existsSync(bannerFile)) {
+    files.push(new AttachmentBuilder(bannerFile, { name: 'durmstrang_welcome_banner.jpg' }));
+    hasBanner = true;
+  }
+  if (fs.existsSync(crestFile)) {
+    files.push(new AttachmentBuilder(crestFile, { name: 'tmd_herb.png' }));
+    hasCrest = true;
+  }
+
+  const memberMention = member ? (member.id ? `<@${member.id}>` : `${member}`) : 'młody adepcie';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  const embed = new EmbedBuilder()
+    .setColor(0xC59F4E)
+    .setTitle('❄️ WITAJ W MURACH CYTADELI DURMSTRANG! 🏰')
+    .setDescription(
+      `> *„W krainie wiecznej zmarzliny, północnych wiatrów i pradawnych runów — siła woli i dyscyplina kształtują prawdziwych czarodziejów.”*\n\n` +
+      `Niechaj północne zorze rozświetlą Twoją drogę, **${memberMention}**! Twoje przybycie na Archipelag Północy zostało odnotowane w Rocznikach Twierdzy.\n\n` +
+      `Przekraczasz żelazną bramę jednej z najstarszych i najbardziej potężnych akademii magii na świecie.`
+    )
+    .addFields(
+      {
+        name: '📜 1. PIERWSZY KROK — WERYFIKACJA TOŻSAMOŚCI',
+        value: 
+          `Aby odblokować komnaty Katedr, barwy Zakonu i dziennik:\n` +
+          `1️⃣ Zaloguj się na **[Portalu Cytadeli Durmstrang](${frontendUrl})**.\n` +
+          `2️⃣ Przejdź do zakładki **Profil** i kliknij **„Połącz konto Discord”**.\n` +
+          `3️⃣ Wpisz na serwerze komendę: \`/weryfikuj kod:DURM-XXXX\`\n` +
+          `*(Twój Zakon, szaty, klasa i pseudonim zostaną nadane automatycznie!)*`,
+        inline: false
+      },
+      {
+        name: '🏛️ 2. CZTERY WIELKIE ZAKONY PÓŁNOCY',
+        value:
+          `• **🦌 Reinhall** — Spadkobiercy Jelenia *(Tradycja, Rzemiosło, Honor)*\n` +
+          `• **🐻 Björnhall** — Bractwo Niedźwiedzia *(Siła, Męstwo, Wytrwałość)*\n` +
+          `• **🐦 Ravnheim** — Mistrzowie Kruka *(Mądrość, Intelekt, Runy)*\n` +
+          `• **🦦 Otergard** — Przymierze Wydry *(Spryt, Pasja, Zwinność)*`,
+        inline: false
+      },
+      {
+        name: '⚔️ 3. LEKCJE, RYTUAŁY I DZIENNIKI',
+        value:
+          `Bierz udział w lekcjach prowadzonych na żywo przez Profesorów, rzucaj zaklęcia, zdobywaj punkty i Skirniry dla swojego Domu oraz zgłębiaj prastare tajemnice!`,
+        inline: false
+      }
+    )
+    .setFooter({
+      text: 'Virtus • Disciplina • Potestas | Oficjalny Bot Cytadeli Durmstrang',
+      iconURL: hasCrest ? 'attachment://tmd_herb.png' : undefined
+    })
+    .setTimestamp();
+
+  if (hasCrest) {
+    embed.setThumbnail('attachment://tmd_herb.png');
+    embed.setAuthor({
+      name: 'CYTADELA DURMSTRANG • BRAMA GŁÓWNA',
+      iconURL: 'attachment://tmd_herb.png'
+    });
+  } else {
+    embed.setAuthor({
+      name: 'CYTADELA DURMSTRANG • BRAMA GŁÓWNA'
+    });
+  }
+
+  if (hasBanner) {
+    embed.setImage('attachment://durmstrang_welcome_banner.jpg');
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('welcome_btn_verify_help')
+      .setLabel('Jak się zweryfikować?')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📜'),
+    new ButtonBuilder()
+      .setCustomId('welcome_btn_houses_info')
+      .setLabel('Zakony Cytadeli')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏛️'),
+    new ButtonBuilder()
+      .setCustomId('welcome_btn_rules_info')
+      .setLabel('Kodeks Północy')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🛡️'),
+    new ButtonBuilder()
+      .setLabel('Portal Adepta')
+      .setStyle(ButtonStyle.Link)
+      .setURL(frontendUrl)
+      .setEmoji('🌐')
+  );
+
+  return {
+    content: member ? `❄️ **Wrota Cytadeli otwierają się przed nowym adeptem:** ${memberMention}` : `❄️ **Wrota Cytadeli Durmstrang stają otworem!**`,
+    embeds: [embed],
+    components: [row],
+    files
+  };
+}
+
+// Funkcja wysyłająca oficjalne powitanie na odpowiedni kanał serwera
+export async function sendWelcomeToGuild(guild, member = null, specificChannel = null) {
+  if (!guild) return null;
+
+  let targetChannel = specificChannel;
+
+  if (!targetChannel) {
+    const config = db.prepare('SELECT welcome_channel_id, welcome_enabled FROM discord_bot_config LIMIT 1').get();
+    if (config && config.welcome_enabled === 0) {
+      console.log('[Discord Bot] Powitania są wyłączone w konfiguracji.');
+      return null;
+    }
+    if (config?.welcome_channel_id) {
+      targetChannel = guild.channels.cache.get(config.welcome_channel_id);
+    }
+  }
+
+  if (!targetChannel) {
+    const welcomeKeywords = ['witamy', 'powitania', 'welcome', 'powitanie', 'dziedziniec', 'brama-glowna', 'brama', 'weryfikacja', 'ogólny', 'ogolny', 'general'];
+    targetChannel = guild.channels.cache.find(ch => 
+      ch.isTextBased() && welcomeKeywords.some(kw => ch.name.toLowerCase().includes(kw))
+    );
+  }
+
+  if (!targetChannel) {
+    targetChannel = guild.systemChannel || guild.channels.cache.find(ch => ch.isTextBased() && ch.permissionsFor(guild.members.me)?.has('SendMessages'));
+  }
+
+  if (!targetChannel) {
+    console.warn('[Discord Bot] Nie odnaleziono odpowiedniego kanału tekstowego do wysłania powitania.');
+    return null;
+  }
+
+  const payload = buildWelcomePayload(member, guild);
+  const sent = await targetChannel.send(payload);
+  console.log(`🏰 [Discord Bot] Wysłano oficjalne powitanie dla ${member ? (member.user?.tag || member.displayName || member.id) : 'nowych adeptów'} na kanale #${targetChannel.name}`);
+  return sent;
+}
+
 // Definicje komend Slash
 const commands = [
+  new SlashCommandBuilder()
+    .setName('powitaj')
+    .setDescription('Wysyła oficjalne powitanie Cytadeli Durmstrang z runiczną grafiką na kanale')
+    .addUserOption(opt => opt.setName('adept').setDescription('Wskaż adepta, którego chcesz uroczyście powitać').setRequired(false))
+    .addChannelOption(opt => opt.setName('kanal').setDescription('Wskaż kanał, na którym ma pojawić się powitanie').setRequired(false)),
   new SlashCommandBuilder()
     .setName('lekcja')
     .setDescription('Zarządzanie sesją lekcyjną w wątku Cytadeli Durmstrang')
@@ -106,7 +261,28 @@ const commands = [
           { name: '🦦 Otergard', value: 'otergard' }
         )
         .setRequired(false)
-    )
+    ),
+
+  new SlashCommandBuilder()
+    .setName('weryfikuj')
+    .setDescription('Weryfikacja tożsamości adepta/profesora kodem z portalu Cytadeli Durmstrang')
+    .addStringOption(opt =>
+      opt.setName('kod')
+        .setDescription('Runiczny kod weryfikacyjny wygenerowany w profilu (np. DURM-XXXX)')
+        .setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName('synchronizuj')
+    .setDescription('Ponowna synchronizacja ról i pseudonimu z Twoim profilem w Cytadeli'),
+
+  new SlashCommandBuilder()
+    .setName('profil')
+    .setDescription('Wyświetla kartę adepta, Zakon, rangę i punkty z Cytadeli Durmstrang'),
+
+  new SlashCommandBuilder()
+    .setName('odlacz')
+    .setDescription('Odłącza powiązane konto Discord od profilu w Cytadeli')
 ];
 
 client.on('clientReady', async () => {
@@ -155,6 +331,93 @@ client.on('error', (err) => {
 
 // Obsługa interakcji Slash Commands
 client.on('interactionCreate', async (interaction) => {
+  // Obsługa interaktywnych przycisków w powitaniu
+  if (interaction.isButton()) {
+    try {
+      const { customId } = interaction;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+      if (customId === 'welcome_btn_verify_help') {
+        const helpEmbed = new EmbedBuilder()
+          .setTitle('📜 PRZEWODNIK: WERYFIKACJA TOŻSAMOŚCI ADEPTA')
+          .setDescription(
+            `Połączenie konta Discord z Portalem Cytadeli Durmstrang pozwala na automatyczne nadanie barw Zakonnych, klasy, tytułu oraz synchronizację punktów i ocen.\n\n` +
+            `**KROK PO KROKU:**\n` +
+            `1️⃣ Otwórz stronę **[Cytadeli Durmstrang](${frontendUrl})** w przeglądarce.\n` +
+            `2️⃣ Zaloguj się na swoje konto adepta lub profesora.\n` +
+            `3️⃣ Przejdź do zakładki **Profil** (ikona w prawym górnym rogu lub w menu).\n` +
+            `4️⃣ W sekcji **"Integracja z Discordem"** kliknij **"Połącz konto Discord"**.\n` +
+            `5️⃣ System wygeneruje unikalny 20-minutowy kod runiczny (np. \`DURM-7842\`).\n` +
+            `6️⃣ Wpisz na dowolnym kanale tego serwera:\n` +
+            `\`\`\`\n/weryfikuj kod:DURM-XXXX\n\`\`\`\n` +
+            `✨ Bot natychmiast nada Ci barwy Twojego Zakonu, rangę, szaty i ustawi oficjalny pseudonim!`
+          )
+          .setColor(0xC59F4E)
+          .setFooter({ text: 'Cytadela Durmstrang • System Tożsamości Runicznej' });
+
+        await interaction.reply({ embeds: [helpEmbed], ephemeral: true });
+        return;
+      }
+
+      if (customId === 'welcome_btn_houses_info') {
+        const housesEmbed = new EmbedBuilder()
+          .setTitle('🏛️ CZTERY WIELKIE ZAKONY CYTADELI DURMSTRANG')
+          .setDescription(`Każdy adept przyjęty w mury twierdzy trafia pod pieczę jednego z czterech prastarych Zakonów Północy:`)
+          .addFields(
+            {
+              name: '🦌 ZAKON REINHALL (Złoto & Czerń)',
+              value: '• **Totem**: Dumny Północny Jeleń\n• **Dewiza**: *Honor, Tradycja, Rzemiosło i Niezłomność*\n• **Domena**: Alchemia, Transmutacja, Starożytne Rytuały i Mistrzostwo Formuł.',
+              inline: false
+            },
+            {
+              name: '🐻 ZAKON BJÖRNHALL (Morski Turkus & Stal)',
+              value: '• **Totem**: Polarny Niedźwiedź\n• **Dewiza**: *Siła, Męstwo, Odwaga i Dyscyplina Bojowa*\n• **Domena**: Obrona przed Czarną Magią, Pojedynki Czarodziejów, Hartowanie Ducha.',
+              inline: false
+            },
+            {
+              name: '🐦 ZAKON RAVNHEIM (Mistyczny Fiolet & Srebro)',
+              value: '• **Totem**: Kruk Północy\n• **Dewiza**: *Mądrość, Intelekt, Przenikliwość i Tajemnica*\n• **Domena**: Starożytne Runy, Wróżbiarstwo, Astronomia, Odszyfrowywanie Przeklętych Ksiąg.',
+              inline: false
+            },
+            {
+              name: '🦦 ZAKON OTERGARD (Karmazyn & Miedź)',
+              value: '• **Totem**: Zwinna Wydra\n• **Dewiza**: *Spryt, Zwinność, Pasja i Elastyczność*\n• **Domena**: Zielarstwo Arktyczne, Opieka nad Magicznymi Stworzeniami, Fortele.',
+              inline: false
+            }
+          )
+          .setColor(0x2EC4B6)
+          .setFooter({ text: 'Cytadela Durmstrang • Cztery Totemy Północy' });
+
+        await interaction.reply({ embeds: [housesEmbed], ephemeral: true });
+        return;
+      }
+
+      if (customId === 'welcome_btn_rules_info') {
+        const rulesEmbed = new EmbedBuilder()
+          .setTitle('🛡️ KODEKS PÓŁNOCY — ETYKIETA I PRAWA CYTADELI')
+          .setDescription(
+            `W murach Durmstrangu panuje żelazny porządek i bezwzględna dyscyplina:\n\n` +
+            `⚔️ **I. Posłuszeństwo i Etykieta Magiczna**\n` +
+            `Słowo Profesorów i Rady Arcymistrzów jest prawem. W komnatach lekcyjnych zachowujemy ciszę i skupienie podczas inkantacji.\n\n` +
+            `📖 **II. Praca na Rzecz Zakonu**\n` +
+            `Punkty zdobyte w lekcjach i pojedynkach trafiają do Skarbca Twojego Domu. Nieposłuszeństwo i łamanie regulaminu skutkuje karami punktowymi.\n\n` +
+            `⚡ **III. Używanie Zaklęć i Rytuałów**\n` +
+            `Zaklęcia rzucamy w wyznaczonych salach ćwiczeń oraz w wątkach lekcyjnych. Zakaz niekontrolowanego rzucania uroków na korytarzach.\n\n` +
+            `❄️ **IV. Szacunek dla Dziedzictwa Północy**\n` +
+            `Wszyscy adepci tworzą jedną brać. Dbaj o wysoki poziom klimatu i szacunek wobec innych czarodziejów.`
+          )
+          .setColor(0xE63946)
+          .setFooter({ text: 'Virtus • Disciplina • Potestas' });
+
+        await interaction.reply({ embeds: [rulesEmbed], ephemeral: true });
+        return;
+      }
+    } catch (err) {
+      console.warn('[Discord Button Error]', err.message);
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   try {
@@ -163,6 +426,34 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const { commandName } = interaction;
+
+    // /powitaj
+    if (commandName === 'powitaj') {
+      const targetUser = interaction.options.getUser('adept');
+      const targetChannelOption = interaction.options.getChannel('kanal');
+      
+      let targetMember = null;
+      if (targetUser && interaction.guild) {
+        try {
+          targetMember = await interaction.guild.members.fetch(targetUser.id);
+        } catch (_) {
+          targetMember = targetUser;
+        }
+      } else if (!targetUser) {
+        targetMember = interaction.member;
+      }
+
+      const targetChannel = targetChannelOption || interaction.channel;
+      
+      if (targetChannel.id !== interaction.channel.id) {
+        await interaction.editReply(`🏰 Wysłano oficjalne powitanie na kanał <#${targetChannel.id}>!`);
+        await sendWelcomeToGuild(interaction.guild, targetMember, targetChannel);
+      } else {
+        const payload = buildWelcomePayload(targetMember, interaction.guild);
+        await interaction.editReply(payload);
+      }
+      return;
+    }
 
     if (commandName === 'lekcja') {
       const sub = interaction.options.getSubcommand();
@@ -296,6 +587,304 @@ client.on('interactionCreate', async (interaction) => {
       const label = zakon ? `z Zakonu ${houseNames[zakon] || zakon}` : 'spośród wszystkich obecnych adeptów';
       await interaction.editReply(`🎲 *Kielich Przeznaczenia krąży w powietrzu...* Wylosowano adepta ${label}!`);
     }
+
+    // ==================== WERYFIKACJA I ROLE DISCORD ====================
+    if (commandName === 'weryfikuj') {
+      const rawCode = interaction.options.getString('kod') || '';
+      const cleanCode = rawCode.trim().toUpperCase();
+
+      const verif = db.prepare(`
+        SELECT * FROM discord_verifications 
+        WHERE code = ? AND status = 'pending' AND expires_at > datetime('now')
+      `).get(cleanCode);
+
+      if (!verif) {
+        const errEmbed = new EmbedBuilder()
+          .setTitle('❌ BŁĄD WERYFIKACJI TOŻSAMOŚCI')
+          .setDescription(`Podany kod **${cleanCode}** jest nieprawidłowy, został już wykorzystany lub jego czas ważności wygasł.\n\n👉 **Jak połączyć konto?**\n1. Zaloguj się w portalu Cytadeli Durmstrang.\n2. Przejdź do zakładki **Profil** i kliknij **Połącz konto Discord**.\n3. Skopiuj nowy, 20-minutowy kod runiczny i wpisz go ponownie tutaj.`)
+          .setColor(0xEF4444)
+          .setFooter({ text: 'Cytadela Durmstrang • System Weryfikacji Adeptów' });
+
+        await interaction.editReply({ embeds: [errEmbed] });
+        return;
+      }
+
+      const user = db.prepare('SELECT * FROM users WHERE id = ?').get(verif.user_id);
+      if (!user) {
+        await interaction.editReply('⚠️ Nie odnaleziono adepta powiązanego z tym kodem w księgach Cytadeli.');
+        return;
+      }
+
+      const assignedRoleNames = [];
+      const guild = interaction.guild;
+      let member = interaction.member;
+
+      if (guild) {
+        if (!member?.roles?.add) {
+          try { member = await guild.members.fetch(interaction.user.id); } catch (_) {}
+        }
+
+        const mappings = db.prepare('SELECT * FROM discord_role_mappings WHERE auto_assign = 1').all();
+        let guildRoles = guild.roles.cache;
+        try { guildRoles = await guild.roles.fetch(); } catch (_) {}
+
+        const getOrCreateRole = async (mapping) => {
+          if (mapping.discord_role_id) {
+            const byId = guildRoles.get(mapping.discord_role_id);
+            if (byId) return byId;
+          }
+          const targetName = (mapping.discord_role_name || mapping.role_label || '').toLowerCase();
+          const cleanTarget = targetName.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+          const existing = guildRoles.find(r => {
+            const rName = r.name.toLowerCase();
+            const rClean = rName.replace(/[^\p{L}\p{N}]/gu, '');
+            return rName === targetName || (cleanTarget && rClean.includes(cleanTarget)) || (cleanTarget && cleanTarget.includes(rClean));
+          });
+
+          if (existing) return existing;
+
+          try {
+            const created = await guild.roles.create({
+              name: mapping.discord_role_name || mapping.role_label,
+              color: mapping.color || '#c59f4e',
+              reason: 'Automatyczne utworzenie roli przez bota Cytadeli Durmstrang'
+            });
+            guildRoles.set(created.id, created);
+            return created;
+          } catch (err) {
+            return null;
+          }
+        };
+
+        const rolesToAdd = [];
+
+        // 1. Zweryfikowany
+        const verifiedMap = mappings.find(m => m.internal_key === 'verified');
+        if (verifiedMap) {
+          const r = await getOrCreateRole(verifiedMap);
+          if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+          else { assignedRoleNames.push(verifiedMap.discord_role_name); }
+        }
+
+        // 2. Zakon
+        if (user.house) {
+          const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
+          if (houseMap) {
+            const r = await getOrCreateRole(houseMap);
+            if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+            else { assignedRoleNames.push(houseMap.discord_role_name); }
+          }
+        }
+
+        // 3. Ranga
+        if (user.role) {
+          const roleMap = mappings.find(m => m.category === 'role' && m.internal_key === user.role.toLowerCase());
+          if (roleMap) {
+            const r = await getOrCreateRole(roleMap);
+            if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+            else { assignedRoleNames.push(roleMap.discord_role_name); }
+          }
+        }
+
+        // 4. Klasa
+        if (user.class_year) {
+          const cy = user.class_year.toLowerCase();
+          let classKey = '';
+          if (cy.includes('1') || (cy.includes('i') && !cy.includes('ii') && !cy.includes('iii') && !cy.includes('iv'))) classKey = 'klasa_1';
+          else if (cy.includes('2') || (cy.includes('ii') && !cy.includes('iii'))) classKey = 'klasa_2';
+          else if (cy.includes('3') || cy.includes('iii')) classKey = 'klasa_3';
+          else if (cy.includes('4') || cy.includes('iv')) classKey = 'klasa_4';
+
+          if (classKey) {
+            const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
+            if (classMap) {
+              const r = await getOrCreateRole(classMap);
+              if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+              else { assignedRoleNames.push(classMap.discord_role_name); }
+            }
+          }
+        }
+
+        if (member && rolesToAdd.length > 0) {
+          try { await member.roles.add(rolesToAdd); } catch (roleErr) { console.warn('[Discord Role Error]', roleErr.message); }
+        }
+
+        try {
+          if (member && user.full_name && member.manageable) {
+            await member.setNickname(user.full_name);
+          }
+        } catch (_) {}
+      }
+
+      const now = new Date().toISOString();
+      db.prepare(`
+        UPDATE users 
+        SET discord_id = ?, discord_username = ?, discord_avatar = ?, discord_roles = ?, discord_verified_at = ?
+        WHERE id = ?
+      `).run(
+        interaction.user.id,
+        interaction.user.tag || interaction.user.username,
+        interaction.user.displayAvatarURL(),
+        JSON.stringify(assignedRoleNames),
+        now,
+        user.id
+      );
+
+      db.prepare(`
+        UPDATE discord_verifications 
+        SET status = 'verified', discord_user_id = ?, discord_username = ?, assigned_roles = ?, verified_at = ?
+        WHERE id = ?
+      `).run(
+        interaction.user.id,
+        interaction.user.tag || interaction.user.username,
+        JSON.stringify(assignedRoleNames),
+        now,
+        verif.id
+      );
+
+      const houseColors = { reinhall: 0xC59F4E, bjornhall: 0x2EC4B6, ravnheim: 0xA855F7, otergard: 0xE63946 };
+      const houseNames = { reinhall: '🦌 Zakon Reinhall (Jeleń)', bjornhall: '🐻 Zakon Björnhall (Niedźwiedź)', ravnheim: '🐦 Zakon Ravnheim (Kruk)', otergard: '🦦 Zakon Otergard (Wydra)' };
+      const roleDisplay = user.role === 'admin' ? '⚡ Rada Arcymistrzów' : user.role === 'professor' ? '🧙‍♂️ Profesor Katedry' : user.role === 'prefect' ? '🛡️ Prefekt' : '📜 Adept';
+
+      const successEmbed = new EmbedBuilder()
+        .setTitle('🏰 TOŻSAMOŚĆ POTWIERDZONA — CYTADELA DURMSTRANG')
+        .setDescription(`Witaj w murach Cytadeli, **${user.full_name}**! Twoje konto Discord zostało pomyślnie powiązane z Twoją kartą w Wiecznej Księdze Paktu.`)
+        .addFields(
+          { name: '👤 Adept / Czarodziej', value: `**${user.full_name}** (\`@${user.username}\`)`, inline: true },
+          { name: '🏛️ Zakon', value: houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony', inline: true },
+          { name: '📜 Status & Klasa', value: `${roleDisplay} • ${user.class_year || 'Kadra'}`, inline: true },
+          { name: '✨ Nadane Role Discord', value: assignedRoleNames.length > 0 ? assignedRoleNames.map(r => `• \`${r}\``).join('\n') : '• `Zweryfikowany Adept`' },
+          { name: '💰 Skarbiec', value: `🪙 **${user.currency || 0}** Skirnirów | 🏆 **${user.points || 0}** Punktów`, inline: true }
+        )
+        .setColor(houseColors[user.house?.toLowerCase()] || 0xC59F4E)
+        .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
+        .setFooter({ text: 'Cytadela Durmstrang • Weryfikacja zakończona sukcesem' })
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [successEmbed] });
+    }
+
+    if (commandName === 'synchronizuj') {
+      const user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(interaction.user.id);
+      if (!user) {
+        await interaction.editReply('⚠️ Twoje konto Discord nie jest jeszcze powiązane z Cytadelą. Użyj najpierw `/weryfikuj kod: [KOD]`.');
+        return;
+      }
+
+      const assignedRoleNames = [];
+      const guild = interaction.guild;
+      let member = interaction.member;
+
+      if (guild) {
+        if (!member?.roles?.add) {
+          try { member = await guild.members.fetch(interaction.user.id); } catch (_) {}
+        }
+        const mappings = db.prepare('SELECT * FROM discord_role_mappings WHERE auto_assign = 1').all();
+        let guildRoles = guild.roles.cache;
+        try { guildRoles = await guild.roles.fetch(); } catch (_) {}
+
+        const findRole = (mapping) => {
+          if (mapping.discord_role_id) {
+            const byId = guildRoles.get(mapping.discord_role_id);
+            if (byId) return byId;
+          }
+          const targetName = (mapping.discord_role_name || mapping.role_label || '').toLowerCase();
+          const cleanTarget = targetName.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+          return guildRoles.find(r => {
+            const rName = r.name.toLowerCase();
+            const rClean = rName.replace(/[^\p{L}\p{N}]/gu, '');
+            return rName === targetName || (cleanTarget && rClean.includes(cleanTarget)) || (cleanTarget && cleanTarget.includes(rClean));
+          });
+        };
+
+        const rolesToAdd = [];
+        const verifiedMap = mappings.find(m => m.internal_key === 'verified');
+        if (verifiedMap) {
+          const r = findRole(verifiedMap);
+          if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+        }
+        if (user.house) {
+          const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
+          if (houseMap) {
+            const r = findRole(houseMap);
+            if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+          }
+        }
+        if (user.role) {
+          const roleMap = mappings.find(m => m.category === 'role' && m.internal_key === user.role.toLowerCase());
+          if (roleMap) {
+            const r = findRole(roleMap);
+            if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+          }
+        }
+
+        if (member && rolesToAdd.length > 0) {
+          try { await member.roles.add(rolesToAdd); } catch (_) {}
+        }
+        try {
+          if (member && user.full_name && member.manageable) {
+            await member.setNickname(user.full_name);
+          }
+        } catch (_) {}
+      }
+
+      db.prepare('UPDATE users SET discord_roles = ?, discord_avatar = ? WHERE id = ?').run(
+        JSON.stringify(assignedRoleNames),
+        interaction.user.displayAvatarURL(),
+        user.id
+      );
+
+      const syncEmbed = new EmbedBuilder()
+        .setTitle('🔄 ROLE ZSYNCHRONIZOWANE')
+        .setDescription(`Zaktualizowano role i dane dla adepta **${user.full_name}** zgodnie z bieżącym stanem w portalu Cytadeli.`)
+        .setColor(0x10B981)
+        .setFooter({ text: 'Cytadela Durmstrang • Synchronizacja Tożsamości' });
+
+      await interaction.editReply({ embeds: [syncEmbed] });
+    }
+
+    if (commandName === 'profil') {
+      const user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(interaction.user.id);
+      if (!user) {
+        await interaction.editReply('⚠️ Nie odnaleziono profilu powiązanego z Twoim kontem Discord. Użyj `/weryfikuj kod: [KOD]`, aby połączyć konto.');
+        return;
+      }
+
+      const houseNames = { reinhall: '🦌 Reinhall', bjornhall: '🐻 Björnhall', ravnheim: '🐦 Ravnheim', otergard: '🦦 Otergard' };
+      const houseColors = { reinhall: 0xC59F4E, bjornhall: 0x2EC4B6, ravnheim: 0xA855F7, otergard: 0xE63946 };
+
+      const pEmbed = new EmbedBuilder()
+        .setTitle(`📜 KARTA POSTACI — ${user.full_name.toUpperCase()}`)
+        .setDescription(user.backstory ? `*„${user.backstory.slice(0, 150)}...”*` : 'Adept Północy w Cytadeli Durmstrang.')
+        .addFields(
+          { name: '🏛️ Zakon', value: houseNames[user.house?.toLowerCase()] || user.house || 'Brak', inline: true },
+          { name: '📜 Klasa / Rola', value: `${user.class_year || 'Brak'} (${user.role})`, inline: true },
+          { name: '🏆 Punkty Zakonne', value: `${user.points || 0} pkt`, inline: true },
+          { name: '🪙 Skarbiec', value: `${user.currency || 0} Skirnirów`, inline: true },
+          { name: '🪄 Różdżka', value: user.wand || 'Standardowa jesionowa', inline: true },
+          { name: '✨ Patronus', value: user.patronus || 'Niematerialny', inline: true }
+        )
+        .setColor(houseColors[user.house?.toLowerCase()] || 0xC59F4E)
+        .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
+        .setFooter({ text: 'Cytadela Durmstrang • Portal Dzienników i Magii' });
+
+      await interaction.editReply({ embeds: [pEmbed] });
+    }
+
+    if (commandName === 'odlacz') {
+      const user = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(interaction.user.id);
+      if (!user) {
+        await interaction.editReply('ℹ️ Twoje konto Discord nie jest aktualnie powiązane z żadnym profilem w Cytadeli.');
+        return;
+      }
+
+      db.prepare("UPDATE users SET discord_id = '', discord_username = '', discord_avatar = '', discord_roles = '[]', discord_verified_at = '' WHERE id = ?").run(user.id);
+      db.prepare("UPDATE discord_verifications SET status = 'cancelled' WHERE user_id = ?").run(user.id);
+
+      await interaction.editReply(`🔓 Pomyślnie odłączono konto Discord od profilu **${user.full_name}**.`);
+    }
   } catch (err) {
     console.warn('[Discord Interaction Error]', err.message);
   }
@@ -402,6 +991,16 @@ client.on('messageCreate', async (message) => {
         userHouse
       );
     }
+  }
+});
+
+// Automatyczne powitanie nowych członków na serwerze Discord
+client.on('guildMemberAdd', async (member) => {
+  try {
+    console.log(`❄️ [Discord Bot] Nowy adept przybył na serwer: ${member.user.tag} (${member.id})`);
+    await sendWelcomeToGuild(member.guild, member);
+  } catch (err) {
+    console.error('❌ [Discord Bot] Błąd powitania nowego adepta:', err.message);
   }
 });
 

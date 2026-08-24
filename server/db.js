@@ -217,6 +217,37 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS discord_verifications (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    user_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'student',
+    house TEXT,
+    class_year TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    discord_user_id TEXT DEFAULT '',
+    discord_username TEXT DEFAULT '',
+    assigned_roles TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL,
+    verified_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS discord_role_mappings (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL,
+    internal_key TEXT UNIQUE NOT NULL,
+    role_label TEXT NOT NULL,
+    discord_role_id TEXT DEFAULT '',
+    discord_role_name TEXT NOT NULL,
+    color TEXT DEFAULT '#c59f4e',
+    auto_assign INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS school_config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -383,6 +414,7 @@ db.exec(`
     description TEXT DEFAULT '',
     lore TEXT DEFAULT '',
     placeholder_type TEXT DEFAULT 'artifact_pendant',
+    image_url TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -445,6 +477,278 @@ db.exec(`
     claimed INTEGER DEFAULT 0,
     FOREIGN KEY (round_id) REFERENCES lottery_rounds(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- ==================== DOKUMENTY, DEKRETY, STATUT & KODEX ====================
+  CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    category TEXT NOT NULL,
+    category_label TEXT DEFAULT '',
+    number TEXT DEFAULT '',
+    title TEXT NOT NULL,
+    subtitle TEXT DEFAULT '',
+    author TEXT DEFAULT '',
+    author_role TEXT DEFAULT 'Dyrekcja Cytadeli',
+    date TEXT DEFAULT (date('now')),
+    seal_type TEXT DEFAULT 'gold',
+    icon_name TEXT DEFAULT 'ShieldAlert',
+    severity TEXT DEFAULT 'normalny',
+    summary TEXT DEFAULT '',
+    content TEXT NOT NULL DEFAULT '[]',
+    tags TEXT DEFAULT '[]',
+    is_official INTEGER DEFAULT 1,
+    is_pinned INTEGER DEFAULT 0,
+    cover_image TEXT DEFAULT '',
+    rune TEXT DEFAULT 'ᛟ',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- ==================== CMS BANERY I GRAFIKI BLOKÓW ====================
+  CREATE TABLE IF NOT EXISTS cms_banners (
+    id TEXT PRIMARY KEY,
+    category_name TEXT NOT NULL,
+    default_script TEXT DEFAULT '',
+    theme_color TEXT DEFAULT 'var(--gold-ancient)',
+    description TEXT DEFAULT '',
+    bg_gradient TEXT DEFAULT '',
+    bg_type TEXT DEFAULT 'citadel',
+    bg_image TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS cms_block_graphics (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    location TEXT DEFAULT 'Panel Boczny',
+    rune TEXT DEFAULT 'ᛟ',
+    default_icon TEXT DEFAULT 'Shield',
+    color TEXT DEFAULT 'var(--gold-ancient)',
+    bg_image TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- ==================== SIDE QUESTY MAPY I TAJEMNICE ====================
+  CREATE TABLE IF NOT EXISTS completed_quests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    quest_id TEXT NOT NULL,
+    quest_title TEXT NOT NULL,
+    location_id TEXT DEFAULT '',
+    location_name TEXT DEFAULT '',
+    reward_points INTEGER DEFAULT 0,
+    reward_xp INTEGER DEFAULT 0,
+    reward_galleons INTEGER DEFAULT 0,
+    reward_item TEXT DEFAULT '',
+    completed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS discovered_secrets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    secret_id TEXT NOT NULL,
+    discovered_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- ==================== WARSZTAT RUNICZNY I ALCHEMIA ====================
+  CREATE TABLE IF NOT EXISTS crafted_formulas (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    formula_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'Bojowa / Ochronna',
+    catalyst TEXT DEFAULT '',
+    runes TEXT DEFAULT '[]',
+    reward_points INTEGER DEFAULT 15,
+    reward_currency INTEGER DEFAULT 20,
+    crafted_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- ==================== ZADANIA DOMOWE I WYPRACOWANIA ====================
+  CREATE TABLE IF NOT EXISTS homework_submissions (
+    id TEXT PRIMARY KEY,
+    student_id TEXT NOT NULL,
+    student_name TEXT NOT NULL,
+    house TEXT NOT NULL,
+    subject_id TEXT NOT NULL,
+    subject_name TEXT NOT NULL,
+    lesson_id TEXT DEFAULT '',
+    lesson_title TEXT DEFAULT '',
+    content TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'submitted', -- 'submitted', 'graded', 'rejected'
+    grade TEXT,
+    feedback TEXT,
+    graded_by TEXT,
+    graded_at TEXT,
+    submitted_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- ==================== KRUCZA POCZTA I WIADOMOŚCI ====================
+  CREATE TABLE IF NOT EXISTS raven_messages (
+    id TEXT PRIMARY KEY,
+    sender_id TEXT DEFAULT '',
+    sender_name TEXT NOT NULL,
+    sender_role TEXT DEFAULT 'Adept',
+    sender_avatar TEXT DEFAULT '',
+    recipient TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    read INTEGER DEFAULT 0,
+    starred INTEGER DEFAULT 0,
+    tag TEXT DEFAULT 'posłaniec',
+    date TEXT DEFAULT (datetime('now'))
+  );
+
+  -- ==================== ŻELAZNE PIÓRO — INTERAKTYWNA GAZETKA SZKOLNA ====================
+
+  CREATE TABLE IF NOT EXISTS gazette_sections (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT DEFAULT '📰',
+    sort_order INTEGER DEFAULT 0,
+    editor_id TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_issues (
+    id TEXT PRIMARY KEY,
+    number INTEGER NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    theme TEXT DEFAULT '',
+    school_year TEXT DEFAULT '',
+    publication_date TEXT DEFAULT '',
+    cover_image TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    editor_in_chief_id TEXT DEFAULT '',
+    editorial_team TEXT DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'draft',
+    stats TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_articles (
+    id TEXT PRIMARY KEY,
+    issue_id TEXT DEFAULT '',
+    title TEXT NOT NULL,
+    supertitle TEXT DEFAULT '',
+    subtitle TEXT DEFAULT '',
+    lead TEXT DEFAULT '',
+    content TEXT DEFAULT '',
+    author_id TEXT DEFAULT '',
+    author_name TEXT DEFAULT '',
+    coauthor_id TEXT DEFAULT '',
+    coauthor_name TEXT DEFAULT '',
+    section_id TEXT DEFAULT '',
+    section_name TEXT DEFAULT '',
+    featured_image TEXT DEFAULT '',
+    additional_images TEXT DEFAULT '[]',
+    featured_quote TEXT DEFAULT '',
+    sources TEXT DEFAULT '',
+    editorial_note TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'idea',
+    is_anonymous INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_comments (
+    id TEXT PRIMARY KEY,
+    article_id TEXT NOT NULL,
+    author_id TEXT DEFAULT '',
+    author_name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_editorial INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (article_id) REFERENCES gazette_articles(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_pages (
+    id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    page_number INTEGER NOT NULL DEFAULT 1,
+    template TEXT NOT NULL DEFAULT 'article-single',
+    content TEXT DEFAULT '{}',
+    background_image TEXT DEFAULT '',
+    background_color TEXT DEFAULT '',
+    article_id TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (issue_id) REFERENCES gazette_issues(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_staff (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_name TEXT DEFAULT '',
+    gazette_role TEXT NOT NULL DEFAULT 'editor',
+    issue_id TEXT DEFAULT '',
+    is_permanent INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_quizzes (
+    id TEXT PRIMARY KEY,
+    page_id TEXT DEFAULT '',
+    issue_id TEXT DEFAULT '',
+    title TEXT NOT NULL DEFAULT 'Quiz',
+    questions TEXT DEFAULT '[]',
+    results_messages TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_crosswords (
+    id TEXT PRIMARY KEY,
+    page_id TEXT DEFAULT '',
+    issue_id TEXT DEFAULT '',
+    title TEXT NOT NULL DEFAULT 'Krzyżówka',
+    words TEXT DEFAULT '[]',
+    grid_width INTEGER DEFAULT 10,
+    grid_height INTEGER DEFAULT 10,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_submissions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'article',
+    title TEXT NOT NULL DEFAULT '',
+    content TEXT DEFAULT '',
+    attachments TEXT DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'pending',
+    reviewer_id TEXT DEFAULT '',
+    reviewer_note TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_analytics (
+    id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    user_id TEXT DEFAULT '',
+    action TEXT NOT NULL DEFAULT 'view',
+    page_number INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS gazette_secrets (
+    id TEXT PRIMARY KEY,
+    page_id TEXT DEFAULT '',
+    issue_id TEXT DEFAULT '',
+    trigger_type TEXT DEFAULT 'click',
+    trigger_target TEXT DEFAULT '',
+    secret_content TEXT DEFAULT '',
+    secret_type TEXT DEFAULT 'message',
+    created_at TEXT DEFAULT (datetime('now'))
   );
 `);
 
@@ -599,6 +903,42 @@ if (botConfigCount === 0) {
     1,
     'https://discord.com/api/webhooks/lessons-archive'
   );
+}
+
+// Seed default discord role mappings
+const roleMappingsCount = db.prepare('SELECT COUNT(*) as count FROM discord_role_mappings').get().count;
+if (roleMappingsCount === 0) {
+  const insertRoleMapping = db.prepare(`
+    INSERT OR IGNORE INTO discord_role_mappings (id, category, internal_key, role_label, discord_role_id, discord_role_name, color, auto_assign)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const defaultRoleMappings = [
+    // Houses
+    ['map-house-reinhall', 'house', 'reinhall', 'Zakon Reinhall (Jeleń)', '', '🦌 Reinhall', '#c59f4e', 1],
+    ['map-house-bjornhall', 'house', 'bjornhall', 'Zakon Björnhall (Niedźwiedź)', '', '🐻 Björnhall', '#2ec4b6', 1],
+    ['map-house-ravnheim', 'house', 'ravnheim', 'Zakon Ravnheim (Kruk)', '', '🐦 Ravnheim', '#a855f7', 1],
+    ['map-house-otergard', 'house', 'otergard', 'Zakon Otergard (Wydra)', '', '🦦 Otergard', '#e63946', 1],
+    // Ranks / Roles
+    ['map-role-student', 'role', 'student', 'Adept Cytadeli (Uczeń)', '', '📜 Adept Cytadeli', '#94a3b8', 1],
+    ['map-role-prefect', 'role', 'prefect', 'Prefekt Zakonu', '', '🛡️ Prefekt Zakonu', '#38bdf8', 1],
+    ['map-role-professor', 'role', 'professor', 'Profesor / Mistrz Katedry', '', '🧙‍♂️ Profesor', '#f59e0b', 1],
+    ['map-role-teacher', 'role', 'teacher', 'Profesor Katedry', '', '🧙‍♂️ Profesor', '#f59e0b', 1],
+    ['map-role-headmaster', 'role', 'headmaster', 'Dyrekcja Cytadeli', '', '👑 Dyrekcja Cytadeli', '#fcd34d', 1],
+    ['map-role-deputy', 'role', 'deputy_headmaster', 'Wicedyrektor Cytadeli', '', '👑 Dyrekcja Cytadeli', '#fcd34d', 1],
+    ['map-role-admin', 'role', 'admin', 'Rada Arcymistrzów', '', '⚡ Rada Arcymistrzów', '#ef4444', 1],
+    // Class Years
+    ['map-class-1', 'class_year', 'klasa_1', 'Klasa I (I Rok Adeptów)', '', 'I Rok', '#64748b', 1],
+    ['map-class-2', 'class_year', 'klasa_2', 'Klasa II (II Rok Adeptów)', '', 'II Rok', '#64748b', 1],
+    ['map-class-3', 'class_year', 'klasa_3', 'Klasa III (III Rok Adeptów)', '', 'III Rok', '#64748b', 1],
+    ['map-class-4', 'class_year', 'klasa_4', 'Klasa IV (IV Rok Adeptów)', '', 'IV Rok', '#64748b', 1],
+    // General
+    ['map-gen-verified', 'general', 'verified', 'Zweryfikowany Adept', '', '✨ Zweryfikowany', '#10b981', 1]
+  ];
+
+  for (const m of defaultRoleMappings) {
+    insertRoleMapping.run(...m);
+  }
 }
 
 // Seed initial lessons and point transactions
@@ -1147,6 +1487,11 @@ export function dbUserToFrontend(row) {
     taughtSubjectIds: JSON.parse(row.taught_subject_ids || '[]'),
     grades: JSON.parse(row.grades || '[]'),
     inventory: JSON.parse(row.inventory || '[]'),
+    discordId: row.discord_id || '',
+    discordUsername: row.discord_username || '',
+    discordAvatar: row.discord_avatar || '',
+    discordRoles: JSON.parse(row.discord_roles || '[]'),
+    discordVerifiedAt: row.discord_verified_at || '',
     createdAt: row.created_at
   };
 }
@@ -1489,7 +1834,7 @@ export function calculateHouseRankings(period = 'overall') {
     {
       houseKey: 'reinhall',
       name: 'Reinhall',
-      crestIcon: '🦌',
+      crestIcon: 'ᚦ',
       color: '#7a1818',
       secondaryColor: '#c59f4e',
       basePoints: includeBase ? baseReinhall : 0,
@@ -1501,7 +1846,7 @@ export function calculateHouseRankings(period = 'overall') {
     {
       houseKey: 'bjornhall',
       name: 'Björnhall',
-      crestIcon: '🐻',
+      crestIcon: 'ᛉ',
       color: '#202530',
       secondaryColor: '#c02b2b',
       basePoints: includeBase ? baseBjornhall : 0,
@@ -1513,7 +1858,7 @@ export function calculateHouseRankings(period = 'overall') {
     {
       houseKey: 'ravnheim',
       name: 'Ravnheim',
-      crestIcon: '🐦',
+      crestIcon: 'ᚱ',
       color: '#1c132e',
       secondaryColor: '#a77de0',
       basePoints: includeBase ? baseRavnheim : 0,
@@ -1525,7 +1870,7 @@ export function calculateHouseRankings(period = 'overall') {
     {
       houseKey: 'otergard',
       name: 'Otergard',
-      crestIcon: '🦦',
+      crestIcon: 'ᛞ',
       color: '#0d2d33',
       secondaryColor: '#2ec4b6',
       basePoints: includeBase ? baseOtergard : 0,
@@ -1625,6 +1970,8 @@ export function dbStoreItemToFrontend(row) {
     description: row.description || '',
     lore: row.lore || '',
     placeholderType: row.placeholder_type || 'artifact_pendant',
+    imageUrl: row.image_url || '',
+    image: row.image_url || '',
     createdAt: row.created_at
   };
 }
@@ -1793,8 +2140,867 @@ if (lotteryRoundsCount === 0) {
   insertTicket.run('ticket-valdemar-2', 'round-current', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', JSON.stringify(['fehu', 'sowilo', 'dagaz']), '2026-08-22 10:15', 0, 0, 0);
 }
 
+// ===================== SEEDING FOR DOCUMENTS, CMS, EVENTS, ETC. =====================
+
+const documentsCount = db.prepare('SELECT COUNT(*) as count FROM documents').get().count;
+if (documentsCount === 0) {
+  console.log('[DB] Seeding official documents & edicts...');
+  const insertDoc = db.prepare(`
+    INSERT INTO documents (id, slug, category, category_label, number, title, subtitle, author, author_role, date, seal_type, icon_name, severity, summary, content, tags, is_official, is_pinned, cover_image, rune)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertDoc.run(
+    'decree-1',
+    'dekret-zakaz-magii-cienia-dormitoria',
+    'dekrety',
+    'Dekret Dyrekcji',
+    'I/XIX',
+    'Dekret nr I/XIX: O Bezwzględnym Zakazie Rzucania Klątw Cienia w Dormitoriach',
+    'Rozporządzenie w sprawie bezpieczeństwa strefy mieszkalnej adeptów',
+    'Najwyższa Rada Mistrzów & Dyrekcja TMD',
+    'Arcymistrz Dyrekcji',
+    '1 września XIX Roku Szkolnego',
+    'gold',
+    'ShieldAlert',
+    'wysoki',
+    'Zakaz praktykowania niewerbalnych uroków niszczących oraz ewokacji cieni poza zabezpieczonymi salami ćwiczebnymi.',
+    JSON.stringify([
+      { type: 'callout', variant: 'danger', title: 'MOC PRAWNA I WYMOGI BEZPIECZEŃSTWA', text: 'Na mocy decyzji Arcymistrza Dyrekcji z dniem 1 września XIX Roku Szkolnego wprowadza się bezwzględny rygor ochronny w skrzydłach mieszkalnych wszystkich czterech Zakonów.' },
+      { type: 'heading', text: '§ 1. Zakres Obostrzenia' },
+      { type: 'paragraph', text: '1. Zabrania się wszelkich prób rzucania uroków z zakresu Magii Cienia, Klątw Tkankowych, Nekromancji Użytkowej oraz manipulacji temperaturą poniżej -30°C w obrębie Komnat Wspólnych oraz sypialni Zakonów Reinhall, Björnhall, Ravnheim oraz Otergard.' },
+      { type: 'paragraph', text: '2. Wszelkie eksperymenty runiczne i transmutacje żywiołów wolno przeprowadzać wyłącznie w Warsztacie Runicznym (Galdrastofa), Laboratoriach Katedry Alchemii lub w obecności uprawnionego Profesora.' },
+      { type: 'heading', text: '§ 2. Sankcje Dyscyplinarne' },
+      { type: 'list', items: ['Pierwsze naruszenie: Utrata 50 punktów dla macierzystego Zakonu oraz tydzień aresztu w Skalnym Bastionie.', 'Drugie naruszenie: Konfiskata różdżki i artefaktów na okres 14 dni oraz chłosta runiczna pod okiem Prefekta.', 'Trzecie naruszenie: Natychmiastowe postawienie przed Trybunałem Krwi i wydalenie z Cytadeli.'] }
+    ]),
+    JSON.stringify(['Dekret', 'Dyscyplina', 'Bezpieczeństwo', 'Dormitoria']),
+    1,
+    1,
+    'https://media.discordapp.net/attachments/1540707859296161804/1540995757992054794/cm.jpg?ex=6a8bfba3&is=6a8aaa23&hm=31e7543b85e23f8b4f36c09796dcf210c189092898e91c0be721fbf28fc395c6&=&format=webp',
+    'ᚦ'
+  );
+
+  insertDoc.run(
+    'decree-2',
+    'inauguracja-xix-roku-szkolnego',
+    'dekrety',
+    'Edykt Inauguracyjny',
+    'II/XIX',
+    'Edykt nr II/XIX: Uroczysta Inauguracja XIX Roku Szkolnego i Otwarcie Kramów Kaupangr',
+    'Powołanie nowych Katedr Magii Północy oraz otwarcie Skarbca Odyna',
+    'Arcymistrzyni Valgerda Storm',
+    'Dyrektor Cytadeli Durmstrang',
+    '1 września XIX Roku Szkolnego',
+    'gold',
+    'Scroll',
+    'normalny',
+    'Oficjalne ogłoszenie harmonogramu zajęć, przydziału stypendiów w Skirnirach oraz inauguracji Turnieju Żelaznego Kręgu.',
+    JSON.stringify([
+      { type: 'heading', text: 'Proklamacja Rady Mistrzów' },
+      { type: 'paragraph', text: 'Niechaj mróz hartuje wolę adeptów, a ogień wiedzy płonie w sercach wojowników i mędrców. Niniejszym ogłasza się otwarcie bram Twierdzy dla nowego rocznika adeptów.' }
+    ]),
+    JSON.stringify(['Inauguracja', 'Edykt', 'Dyrekcja', 'XIX Rok']),
+    1,
+    1,
+    'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp',
+    'ᛟ'
+  );
+
+  insertDoc.run(
+    'statut-1',
+    'statut-cytadeli-durmstrang',
+    'statut',
+    'Statut Główny',
+    'STATUT-1294',
+    'Statut i Wieczny Pakt Cytadeli Durmstrang z Roku 1294',
+    'Zbiór fundamentalnych praw, struktura Zakonów i hierarchia Mistrzów',
+    'Wielka Rada Założycieli',
+    'Rada Założycielska',
+    'Pakt 1294 (z nowelizacją 2026)',
+    'gold',
+    'BookOpen',
+    'krytyczny',
+    'Fundamentalny kodeks prawny określający prawa i obowiązki każdego mieszkańca Twierdzy Durmstrang.',
+    JSON.stringify([
+      { type: 'heading', text: 'Rozdział I: Tożsamość i Suwerenność Twierdzy' },
+      { type: 'paragraph', text: 'Cytadela Durmstrang jest niezależną twierdzą sztuk magicznych, chronioną przez pradawne pieczęcie lodowe i przysięgę czterech Zakonów: Reinhall, Björnhall, Ravnheim oraz Otergard.' }
+    ]),
+    JSON.stringify(['Statut', 'Pakt 1294', 'Konstytucja', 'Prawo']),
+    1,
+    1,
+    '',
+    'ᛗ'
+  );
+
+  insertDoc.run(
+    'discord-rules-1',
+    'kodeks-serwera-discord',
+    'regulamin-dc',
+    'Regulamin Discorda',
+    'DC-RULES',
+    'Kodeks i Regulamin Oficjalnego Węzła Discord Twierdzy',
+    'Zasady panujące na serwerze społeczności, kanałach RPG i strefach głosowych',
+    'Naczelna Administracja TMD',
+    'Administrator Techniczny',
+    '2026-08-20',
+    'silver',
+    'MessageSquare',
+    'wysoki',
+    'Wytyczne dotyczące netykiety, pisania w wątkach lekcyjnych, komend bota oraz zasad Roleplay.',
+    JSON.stringify([
+      { type: 'heading', text: '1. Zasady Ogólne i Szacunek' },
+      { type: 'paragraph', text: 'Na wszystkich kanałach obowiązuje kultura wypowiedzi i poszanowanie innych uczestników społeczności.' },
+      { type: 'heading', text: '2. Wątki Lekcyjne i Komendy Bota' },
+      { type: 'paragraph', text: 'Podczas trwania oficjalnych lekcji na kanałach katedr obowiązuje bezwzględne podporządkowanie prowadzącemu Profesorowi.' }
+    ]),
+    JSON.stringify(['Discord', 'Regulamin', 'RPG', 'Zasady']),
+    1,
+    1,
+    '',
+    'ᛋ'
+  );
+
+  insertDoc.run(
+    'games-desc-1',
+    'przewodnik-po-zabawach-i-turniejach',
+    'zabawy',
+    'Księga Gier i Zabaw',
+    'GAMES-XIX',
+    'Kodeks Gier, Turniejów Bojowych i Wyzwań Cytadeli',
+    'Opis mechanik: Hólmgang, Ołtarz Runiczny, Kocioł Alchemiczny i Loteria Odyna',
+    'Mistrz Gry & Prefekci Zakonów',
+    'Rada Zabaw i Turniejów',
+    'XIX Rok Szkolny',
+    'bronze',
+    'Gamepad2',
+    'normalny',
+    'Szczegółowy podręcznik zasad zdobywania punktów w minigrach, rzutów kośćmi k20 i nagród w Skirnirach.',
+    JSON.stringify([
+      { type: 'heading', text: 'I. Pojedynki Hólmgang' },
+      { type: 'paragraph', text: 'Pojedynki odbywają się na lodowym ringu. Każdy adept ma prawo wyzwać rywala na ubitej ziemi pod nadzorem Profesora.' }
+    ]),
+    JSON.stringify(['Gry', 'Zabawy', 'Hólmgang', 'Turnieje']),
+    1,
+    0,
+    '',
+    'ᛏ'
+  );
+}
+
+const bannersCount = db.prepare('SELECT COUNT(*) as count FROM cms_banners').get().count;
+if (bannersCount === 0) {
+  console.log('[DB] Seeding CMS category banners...');
+  const insertBanner = db.prepare(`
+    INSERT INTO cms_banners (id, category_name, default_script, theme_color, description, bg_gradient, bg_type, bg_image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const SEED_BANNERS = [
+    ['eliksiry', 'Eliksiry & Alchemia', 'eliksiry', '#4cc9f0', 'Katedra Eliksirów, destylacja wywarów i alchemia mroźna', 'radial-gradient(circle at 50% 60%, rgba(14, 28, 48, 0.95) 0%, rgba(4, 8, 14, 0.98) 100%)', 'potions', 'https://media.discordapp.net/attachments/1540707859296161804/1541001474392203304/An82NrY.png?ex=6a8c00f5&is=6a8aaf75&hm=9ec70e4e7fd7c7072e45480c16c17962b8f6df5827ce5dd63c971579ac7b124e&=&format=webp&quality=lossless'],
+    ['edykty', 'Edykty Dyrekcji', 'edykty dyrekcji', 'var(--gold-ancient)', 'Oficjalne dekrety, inauguracje i zarządzenia Rady Mistrzów', 'radial-gradient(circle at 50% 60%, rgba(38, 28, 12, 0.95) 0%, rgba(6, 6, 8, 0.98) 100%)', 'citadel', 'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp'],
+    ['czarna-magia', 'Czarna Magia & Klątwy', 'czarna magia', '#b18cfe', 'Klątwy, pętanie cieni, nekromancja i rytuały północy', 'radial-gradient(circle at 50% 60%, rgba(28, 14, 46, 0.95) 0%, rgba(4, 3, 8, 0.98) 100%)', 'shadow', 'https://media.discordapp.net/attachments/1540707859296161804/1540995757992054794/cm.jpg?ex=6a8bfba3&is=6a8aaa23&hm=31e7543b85e23f8b4f36c09796dcf210c189092898e91c0be721fbf28fc395c6&=&format=webp&width=3072&height=1445'],
+    ['liga-bojowa', 'Liga Bojowa & Hólmganga', 'liga bojowa', '#ff5c5c', 'Pojedynki na lodzie, turnieje szermierki i magia defensywna', 'radial-gradient(circle at 50% 60%, rgba(44, 14, 14, 0.95) 0%, rgba(8, 3, 3, 0.98) 100%)', 'duel', 'https://media.discordapp.net/attachments/1540707859296161804/1540995756603867166/B4C34M1Z2_The_Golden_Thread.jpg?ex=6a8bfba2&is=6a8aaa22&hm=e83c10d24847e06a8a473b087794dfc1aa3752fdc9c9b9fa2d2334312baabad4&=&format=webp'],
+    ['starozytne-runy', 'Starożytne Runy', 'starozytne runy', '#2ec4b6', 'Wykucie formuł runicznych (Galdr), inskrypcje i monolity', 'radial-gradient(circle at 50% 60%, rgba(10, 36, 34, 0.95) 0%, rgba(3, 8, 8, 0.98) 100%)', 'runes', 'https://media.discordapp.net/attachments/1540707859296161804/1541000968911589447/IMG_0914.jpg?ex=6a8c007d&is=6a8aaefd&hm=95b03e770a59ed2b328d39b07802e7312ec857bbb7acde2adc5980897eb4fda8&=&format=webp'],
+    ['astronomia', 'Astronomia & Astromagia', 'astronomia', '#a4c8e1', 'Pomiary zorzy polarnej, pływy eteryczne i przesilenia', 'radial-gradient(circle at 50% 60%, rgba(16, 26, 44, 0.95) 0%, rgba(4, 6, 12, 0.98) 100%)', 'aurora', ''],
+    ['oceny', 'Wyniki Ocen & Egzaminy', 'oceny', '#eecf82', 'Wykazy semestralne, certyfikaty biegłości i traktaty', 'radial-gradient(circle at 50% 60%, rgba(32, 26, 16, 0.95) 0%, rgba(6, 6, 6, 0.98) 100%)', 'scrolls', ''],
+    ['wieści-zakonne', 'Wieści Zakonne', 'wiesci zakonne', '#c59f4e', 'Komunikaty Zakonów: Reinhall, Björnhall, Ravnheim, Otergard', 'radial-gradient(circle at 50% 60%, rgba(24, 20, 28, 0.95) 0%, rgba(5, 5, 8, 0.98) 100%)', 'houses', ''],
+    ['zielarstwo', 'Zielarstwo & Flora Mroźna', 'zielarstwo', '#52b788', 'Krioflora, korzenie mandragory polarnej i szklarnie', 'radial-gradient(circle at 50% 60%, rgba(14, 34, 22, 0.95) 0%, rgba(3, 8, 5, 0.98) 100%)', 'herbs', '']
+  ];
+
+  for (const b of SEED_BANNERS) {
+    insertBanner.run(...b);
+  }
+}
+
+const blockGraphicsCount = db.prepare('SELECT COUNT(*) as count FROM cms_block_graphics').get().count;
+if (blockGraphicsCount === 0) {
+  console.log('[DB] Seeding CMS block graphics...');
+  const insertBlock = db.prepare(`
+    INSERT INTO cms_block_graphics (id, title, location, rune, default_icon, color, bg_image, description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const SEED_BLOCKS = [
+    ['identity', 'Karta Tożsamości / Kancelaria', 'Lewy Panel (Góra)', 'ᛟ', 'Shield', 'var(--gold-ancient)', 'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp', 'Nagłówek profilu adepta, logowania i statusu'],
+    ['activities', 'Gry & Aktywności RPG', 'Lewy Panel', 'ᛏ', 'Zap', 'var(--gold-ancient)', 'https://media.discordapp.net/attachments/1540707859296161804/1541000126305411072/some-of-my-favorite-pottermore-art-v0-u8isy9ap2hoa1.png?ex=6a8bffb4&is=6a8aae34&hm=d308bdc0d55aeb24dfaf67a2e69d6ecd8474f07d4ef61ff5da75a0f38375d4ca&=&format=webp&quality=lossless', 'Nagłówek sekcji minigier, wyroczni i pojedynków'],
+    ['admissions', 'Komisja Rekrutacyjna', 'Lewy Panel', 'ᛉ', 'Sparkles', '#a4c8e1', 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80', 'Nagłówek panelu podań i rekrutacji do Cytadeli'],
+    ['curriculum', 'Dziś w Cytadeli / Plan Lekcji', 'Lewy Panel', 'ᛇ', 'BookOpen', 'var(--gold-ancient)', 'https://media.discordapp.net/attachments/1540707859296161804/1541001194430795876/iNaw1jc.png?ex=6a8c00b3&is=6a8aaf33&hm=a9f237e182ec99604cc5c7c1c70d4ecc72b7062b4767087a94f1ed8a154ab9a2&=&format=webp&quality=lossless', 'Nagłówek dziennego rozkładu katedr i zajęć'],
+    ['ceremony', 'Kamień Przysięgi (Ceremonia)', 'Lewy Panel (Dół)', 'ᛗ', 'Flame', '#ff9e9e', '', 'Nagłówek przydziału do Zakonu i rytuału krwi'],
+    ['atmosphere', 'Aura & Atmosfera Cytadeli', 'Prawy Panel (Góra)', 'ᛋ', 'Sparkles', 'var(--gold-ancient)', 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&auto=format&fit=crop&q=80', 'Nagłówek panelu dźwięków ASMR, zorzy i lumos'],
+    ['bulletin', 'Edykty & Kronika Twierdzy', 'Prawy Panel', 'ᚱ', 'Radio', '#eecf82', 'https://media.discordapp.net/attachments/1540707859296161804/1541001474392203304/An82NrY.png?ex=6a8c00f5&is=6a8aaf75&hm=9ec70e4e7fd7c7072e45480c16c17962b8f6df5827ce5dd63c971579ac7b124e&=&format=webp&quality=lossless', 'Nagłówek biuletynu informacyjnego i edyktów'],
+    ['house_cup', 'Puchar Czterech Zakonów', 'Prawy Panel', 'ᚦ', 'Award', 'var(--gold-ancient)', 'https://media.discordapp.net/attachments/1540707859296161804/1540995756603867166/B4C34M1Z2_The_Golden_Thread.jpg?ex=6a8bfba2&is=6a8aaa22&hm=e83c10d24847e06a8a473b087794dfc1aa3752fdc9c9b9fa2d2334312baabad4&=&format=webp', 'Nagłówek rankingu punktowego domów']
+  ];
+
+  for (const blk of SEED_BLOCKS) {
+    insertBlock.run(...blk);
+  }
+}
+
+const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
+if (eventsCount === 0) {
+  console.log('[DB] Seeding calendar events...');
+  const insertEvent = db.prepare(`
+    INSERT INTO events (id, title, date, type, description)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  insertEvent.run('event-yule', 'Święto Przesilenia Zimowego (Yule-Blót)', '21 Grudnia 2026', 'Święto Tradycyjne', 'Najważniejsze święto północy. Rozpalenie Nowego Ognia, uczta dziczyzny z fiordów, śpiewanie pieśni założycieli i całonocne tańce z pochodniami.');
+  insertEvent.run('event-duel-cup', 'Wielki Turniej Żelaznego Pazura (Pojedynki)', '10 Października 2026', 'Turniej Bojowy', 'Oficjalne mistrzostwa Cytadeli w szermierce różdżkowej i magii bojowej. Zwycięzca otrzymuje tytuł Mistrza Żelaznego Kręgu.');
+  insertEvent.run('event-alch-exp', 'Sympozjum Nocnych Destylacji (Alchemia)', '28 Października 2026', 'Konkurs Naukowy', 'Prezentacja nowatorskich mikstur i trucizn. Nagroda za najstabilniejszy ekstrakt arktyczny.');
+  insertEvent.run('event-necromancy-night', 'Czuwanie pod Karmazynową Zorzą', '15 Listopada 2026', 'Rytuał Wiedzy', 'Wspólna medytacja astralna, odczytywanie proroctw z rzutów kośćmi völvy i badanie przepowiedni nadejścia Wiecznej Zimy.');
+}
+
+const ravenMsgCount = db.prepare('SELECT COUNT(*) as count FROM raven_messages').get().count;
+if (ravenMsgCount === 0) {
+  console.log('[DB] Seeding initial raven messages...');
+  const insertRaven = db.prepare(`
+    INSERT INTO raven_messages (id, sender_id, sender_name, sender_role, sender_avatar, recipient, subject, body, read, starred, tag, date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertRaven.run(
+    'msg-1',
+    'usr-valgerda',
+    'Arcymistrzyni Valgerda Storm',
+    'Dyrekcja',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+    'Wszyscy Kadeci',
+    'Witaj w murach Cytadeli Durmstrang',
+    'Niech mróz hartuje twoją wolę, a płomień wiedzy rozświetla najciemniejsze noce. Pamiętaj: w tych murach nie ma miejsca na przeciętność. Odwiedź Katedry i zgłoś się na pierwszą lekcję.',
+    0,
+    1,
+    'edykt',
+    '2026-09-01 09:00'
+  );
+
+  insertRaven.run(
+    'msg-2',
+    'usr-morana',
+    'Prof. Morana Vane',
+    'Profesor',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+    'Valdemar Krag-Hansen',
+    'Zbadanie anomalii w Krypcie Szeptów',
+    'Valdemarze, twój ostatni esej o barierach cienia był zadowalający. Oczekuję cię dziś po gaszeniu zniczy w Krypcie Szeptów — omówimy manuskrypt Eirika.',
+    1,
+    0,
+    'zadanie',
+    '2026-09-08 18:30'
+  );
+}
+
+// ===================== FRONTEND MAPPERS =====================
+
+export function dbDocumentToFrontend(row) {
+  if (!row) return null;
+  let parsedContent = row.content;
+  let parsedTags = [];
+  try {
+    parsedContent = JSON.parse(row.content);
+  } catch (_) {}
+  try {
+    parsedTags = JSON.parse(row.tags || '[]');
+  } catch (_) {}
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    category: row.category,
+    categoryLabel: row.category_label || row.category,
+    number: row.number || '',
+    title: row.title,
+    subtitle: row.subtitle || '',
+    author: row.author || '',
+    authorRole: row.author_role || 'Dyrekcja Cytadeli',
+    date: row.date || '',
+    sealType: row.seal_type || 'gold',
+    iconName: row.icon_name || 'ShieldAlert',
+    severity: row.severity || 'normalny',
+    summary: row.summary || '',
+    content: parsedContent,
+    tags: parsedTags,
+    isOfficial: Boolean(row.is_official),
+    isPinned: Boolean(row.is_pinned),
+    coverImage: row.cover_image || '',
+    rune: row.rune || 'ᛟ',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function dbCmsBannerToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    categoryName: row.category_name,
+    defaultScript: row.default_script || row.category_name.toLowerCase(),
+    themeColor: row.theme_color || 'var(--gold-ancient)',
+    description: row.description || '',
+    bgGradient: row.bg_gradient || '',
+    bgType: row.bg_type || 'citadel',
+    bgImage: row.bg_image || ''
+  };
+}
+
+export function dbCmsBlockGraphicToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    location: row.location || 'Panel Boczny',
+    rune: row.rune || 'ᛟ',
+    defaultIcon: row.default_icon || 'Shield',
+    color: row.color || 'var(--gold-ancient)',
+    bgImage: row.bg_image || '',
+    description: row.description || ''
+  };
+}
+
+export function dbEventToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    type: row.type || 'ceremony',
+    description: row.description || ''
+  };
+}
+
+export function dbHomeworkToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    studentName: row.student_name,
+    house: row.house,
+    subjectId: row.subject_id,
+    subjectName: row.subject_name,
+    lessonId: row.lesson_id,
+    lessonTitle: row.lesson_title,
+    content: row.content,
+    status: row.status,
+    grade: row.grade,
+    feedback: row.feedback,
+    gradedBy: row.graded_by,
+    gradedAt: row.graded_at,
+    submittedAt: row.submitted_at
+  };
+}
+
+export function dbCraftedFormulaToFrontend(row) {
+  if (!row) return null;
+  let parsedRunes = [];
+  try {
+    parsedRunes = JSON.parse(row.runes || '[]');
+  } catch (_) {}
+  return {
+    id: row.id,
+    userId: row.user_id,
+    formulaId: row.formula_id,
+    name: row.name,
+    type: row.type,
+    catalyst: row.catalyst,
+    runes: parsedRunes,
+    rewardPoints: row.reward_points,
+    rewardCurrency: row.reward_currency,
+    craftedAt: row.crafted_at
+  };
+}
+
+export function dbSecretToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    secretId: row.secret_id,
+    discoveredAt: row.discovered_at
+  };
+}
+
+export function dbCompletedQuestToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    questId: row.quest_id,
+    questTitle: row.quest_title,
+    locationId: row.location_id,
+    locationName: row.location_name,
+    rewardPoints: row.reward_points,
+    rewardXp: row.reward_xp,
+    rewardGalleons: row.reward_galleons,
+    rewardItem: row.reward_item,
+    completedAt: row.completed_at
+  };
+}
+
+export function dbRavenMessageToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    senderId: row.sender_id,
+    sender: row.sender_name,
+    senderRole: row.sender_role,
+    senderAvatar: row.sender_avatar,
+    recipient: row.recipient,
+    to: row.recipient,
+    subject: row.subject,
+    body: row.body,
+    read: Boolean(row.read),
+    starred: Boolean(row.starred),
+    tag: row.tag || 'posłaniec',
+    date: row.date
+  };
+}
+
 try {
   db.exec("ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'czarodziej'");
 } catch (_) {}
 
+try {
+  db.exec("ALTER TABLE users ADD COLUMN discord_id TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE users ADD COLUMN discord_roles TEXT DEFAULT '[]'");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE users ADD COLUMN discord_verified_at TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE store_items ADD COLUMN image_url TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE discord_bot_config ADD COLUMN welcome_channel_id TEXT DEFAULT ''");
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE discord_bot_config ADD COLUMN welcome_enabled INTEGER DEFAULT 1");
+} catch (_) {}
+
+export function dbRoleMappingToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    category: row.category,
+    internalKey: row.internal_key,
+    roleLabel: row.role_label,
+    discordRoleId: row.discord_role_id || '',
+    discordRoleName: row.discord_role_name || '',
+    color: row.color || '#c59f4e',
+    autoAssign: Boolean(row.auto_assign),
+    createdAt: row.created_at
+  };
+}
+
+export function dbVerificationToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    code: row.code,
+    userId: row.user_id,
+    username: row.username,
+    fullName: row.full_name,
+    role: row.role,
+    house: row.house,
+    classYear: row.class_year,
+    status: row.status,
+    discordUserId: row.discord_user_id || '',
+    discordUsername: row.discord_username || '',
+    assignedRoles: JSON.parse(row.assigned_roles || '[]'),
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    verifiedAt: row.verified_at
+  };
+}
+
+// ==================== ŻELAZNE PIÓRO — KONWERTERY ====================
+
+export function dbGazetteIssueToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    number: row.number,
+    title: row.title || '',
+    theme: row.theme || '',
+    schoolYear: row.school_year || '',
+    publicationDate: row.publication_date || '',
+    coverImage: row.cover_image || '',
+    description: row.description || '',
+    editorInChiefId: row.editor_in_chief_id || '',
+    editorialTeam: JSON.parse(row.editorial_team || '[]'),
+    status: row.status || 'draft',
+    stats: JSON.parse(row.stats || '{}'),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function dbGazetteArticleToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    issueId: row.issue_id || '',
+    title: row.title,
+    supertitle: row.supertitle || '',
+    subtitle: row.subtitle || '',
+    lead: row.lead || '',
+    content: row.content || '',
+    authorId: row.author_id || '',
+    authorName: row.author_name || '',
+    coauthorId: row.coauthor_id || '',
+    coauthorName: row.coauthor_name || '',
+    sectionId: row.section_id || '',
+    sectionName: row.section_name || '',
+    featuredImage: row.featured_image || '',
+    additionalImages: JSON.parse(row.additional_images || '[]'),
+    featuredQuote: row.featured_quote || '',
+    sources: row.sources || '',
+    editorialNote: row.editorial_note || '',
+    status: row.status || 'idea',
+    isAnonymous: Boolean(row.is_anonymous),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function dbGazettePageToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    issueId: row.issue_id,
+    pageNumber: row.page_number,
+    template: row.template || 'article-single',
+    content: JSON.parse(row.content || '{}'),
+    backgroundImage: row.background_image || '',
+    backgroundColor: row.background_color || '',
+    articleId: row.article_id || '',
+    sortOrder: row.sort_order || 0,
+    createdAt: row.created_at
+  };
+}
+
+export function dbGazetteSectionToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon || '📰',
+    sortOrder: row.sort_order || 0,
+    editorId: row.editor_id || '',
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at
+  };
+}
+
+export function dbGazetteStaffToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name || '',
+    gazetteRole: row.gazette_role || 'editor',
+    issueId: row.issue_id || '',
+    isPermanent: Boolean(row.is_permanent),
+    createdAt: row.created_at
+  };
+}
+
+export function dbGazetteSubmissionToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    type: row.type || 'article',
+    title: row.title || '',
+    content: row.content || '',
+    attachments: JSON.parse(row.attachments || '[]'),
+    status: row.status || 'pending',
+    reviewerId: row.reviewer_id || '',
+    reviewerNote: row.reviewer_note || '',
+    createdAt: row.created_at
+  };
+}
+
+// ==================== ŻELAZNE PIÓRO — SEED DOMYŚLNYCH DZIAŁÓW ====================
+
+const gazetteSectionCount = db.prepare('SELECT COUNT(*) as count FROM gazette_sections').get().count;
+if (gazetteSectionCount === 0) {
+  console.log('[DB] Seeding gazette sections...');
+  const insertSection = db.prepare(`
+    INSERT INTO gazette_sections (id, name, icon, sort_order, is_active)
+    VALUES (?, ?, ?, ?, 1)
+  `);
+  const defaultSections = [
+    ['sec-aktualnosci', 'Aktualności', '📢', 1],
+    ['sec-zycie-twierdzy', 'Życie Twierdzy', '🏰', 2],
+    ['sec-zakony', 'Zakony', '🛡️', 3],
+    ['sec-z-lekcji', 'Z Lekcji', '📚', 4],
+    ['sec-wywiady', 'Wywiady', '🎤', 5],
+    ['sec-kroniki', 'Kroniki', '📜', 6],
+    ['sec-mity', 'Mity i Legendy Północy', '🐉', 7],
+    ['sec-sport', 'Sport i Pojedynki', '⚔️', 8],
+    ['sec-kultura', 'Kultura', '🎭', 9],
+    ['sec-tworczosc', 'Twórczość Uczniów', '✍️', 10],
+    ['sec-plotki', 'Plotki i Sekrety', '🤫', 11],
+    ['sec-humor', 'Humor', '😄', 12],
+    ['sec-gry', 'Gry i Zabawy', '🎲', 13],
+    ['sec-konkursy', 'Konkursy', '🏆', 14],
+    ['sec-ogloszenia', 'Ogłoszenia', '📋', 15],
+    ['sec-reklamy', 'Reklamy', '🪧', 16],
+    ['sec-redakcyjna', 'Od Redakcji', '🖋️', 17]
+  ];
+  for (const s of defaultSections) {
+    insertSection.run(...s);
+  }
+  console.log('[DB] Seeded 17 gazette sections.');
+}
+
+// Seed inaugural gazette issue #1 if no issues exist
+const gazetteIssueCount = db.prepare('SELECT COUNT(*) as count FROM gazette_issues').get().count;
+if (gazetteIssueCount === 0) {
+  console.log('[DB] Seeding inaugural gazette issue #1...');
+  const issueId = 'issue-inaugural-01';
+  
+  // 1. Issue
+  db.prepare(`
+    INSERT INTO gazette_issues (id, number, title, theme, school_year, publication_date, cover_image, description, editor_in_chief_id, editorial_team, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')
+  `).run(
+    issueId,
+    1,
+    'Przebudzenie Północnych Wichrów',
+    'Inauguracja Nowego Roku Magicznego w Cytadeli',
+    '2025/2026',
+    new Date().toISOString().slice(0, 10),
+    '/banner-durmstrang.png',
+    'Premierowe wydanie oficjalnego periodyku Twierdzy Durmstrang. Kroniki czterech zakonów, sekrety Galdrastofy, wywiad z Arcymistrzem oraz zagadki runiczne.',
+    'usr-director-01',
+    JSON.stringify(['Igor Karkarow', 'Viktor Krum', 'Astrid Lindholm', 'Gellert Grindelwald'])
+  );
+
+  // 2. Staff
+  const insertStaff = db.prepare(`
+    INSERT INTO gazette_staff (id, user_id, user_name, gazette_role, issue_id, is_permanent)
+    VALUES (?, ?, ?, ?, ?, 1)
+  `);
+  insertStaff.run('staff-01', 'usr-director-01', 'Igor Karkarow', 'editor_in_chief', issueId);
+  insertStaff.run('staff-02', 'usr-krum-01', 'Viktor Krum', 'editor', issueId);
+  insertStaff.run('staff-03', 'usr-astrid-01', 'Astrid Lindholm', 'illustrator', issueId);
+  insertStaff.run('staff-04', 'usr-grindel-01', 'Gellert Grindelwald', 'editor', issueId);
+
+  // 3. Articles
+  const insertArticle = db.prepare(`
+    INSERT INTO gazette_articles (id, issue_id, title, supertitle, subtitle, lead, content, author_id, author_name, section_id, section_name, featured_quote, status, is_anonymous)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', 0)
+  `);
+
+  insertArticle.run(
+    'art-01',
+    issueId,
+    'Przysięga Północy: Jak Zakony Durmstrangu Kształtują Przyszłych Mistrzów',
+    'Z ŻYCIA TWIERDZY',
+    'Reinhall, Björnhall, Ravnheim i Otergard w nowym semestrze',
+    'W murach skutej lodem Cytadeli zabrzmiał Róg Przeznaczenia. Nowe pokolenie adeptów stanęło przed Kamieniem Przysięgi, by wybrać ścieżkę chwały, lojalności, mądrości lub woli przetrwania.',
+    `# Przysięga w Cieniu Północnego Fiordu\n\nKażdego roku, gdy zorza polarna przecina niebo nad Skandynawią, bramy Twierdzy Durmstrang otwierają się dla tych, którzy nie lękają się przekraczać granic poznania. Tutaj nie uczy się magii teoretycznej z bezpiecznych odległości — tu każdy rzucony urok niesie ze sobą ciężar odpowiedzialności i siły charakteru.\n\n## Cztery Filary Durmstrangu\n\nPodział na zakony to nie tylko przynależność do dormitoriów. To odwieczna rywalizacja o dominację w Pucharze Twierdzy:\n\n* **Reinhall** — Strażnicy dumy i nieprzejednanej odwagi, gotowi walczyć w pierwszej linii.\n* **Björnhall** — Niezłomni adepci siły i honoru, których więź braterstwa nie pęka nawet pod najcięższym ciosem.\n* **Ravnheim** — Mistrzowie cienia, kalkulacji i nieznanych arkanów, szukający wiedzy w starożytnych manuskryptach.\n* **Otergard** — Zwinni stratedzy i odkrywcy, mistrzowie alchemii oraz sekretnych ścieżek tundry.\n\nNadchodzące miesiące przyniosą pojedynki, ekspedycje do Lodowych Jaskiń oraz rywalizację o punkty w Dziennikach Lekcyjnych. Niech zwycięży najgodniejszy!`,
+    'usr-krum-01',
+    'Viktor Krum',
+    'sec-zakony',
+    'Zakony',
+    'Nie każda magia powinna zostać poznana, lecz ten, kto ją opanuje, włada własnym przeznaczeniem.'
+  );
+
+  insertArticle.run(
+    'art-02',
+    issueId,
+    'Echa Galdrastofy: Zapomniane Formuły Runiczne Odkryte w Podziemiach',
+    'KRONIKI & BADANIA',
+    'Przełomowe znalezisko w Dolnych Kryptach Futharku',
+    'Podczas prac renowacyjnych w zachodnim skrzydle Twierdzy natrafiono na zamurowaną komnatę runiczną sprzed siedmiu stuleci. Odkryte inskrypcje rzucają nowe światło na dawne techniki kucia ochronnych glifów.',
+    `# Tajemnice Starszego Futharku\n\nProfesorowie Katedry Runologii i Magii Północy potwierdzili autentyczność odnalezionych tablic bazaltowych. Zawierają one złożone kombinacje znaków **Thurisaz**, **Algiz** oraz **Sowilo**, splecione w formuły defensywne zdolne odbijać klątwy żywiołów.\n\n## Formuła Tarczy Mroźnego Wichru\n\nWedług wstępnych analiz, pradawni mistrzowie używali kombinacji run do hartowania kling i różdżek w lodowatej wodzie fiordu. Warsztat Runiczny (Galdrastofa) wkrótce udostępni adeptom wyższych roczników możliwość odtworzenia tych potężnych matryc.\n\n> „Moc run nie leży w ich wyryciu, lecz w woli, która tchnie w nie iskrę prawdy” — podkreśla Mistrz Runiczny Cytadeli.`,
+    'usr-grindel-01',
+    'Gellert Grindelwald',
+    'sec-kroniki',
+    'Kroniki',
+    'Kamień pamięta każde zaklęcie, które w nim uwięziono.'
+  );
+
+  insertArticle.run(
+    'art-03',
+    issueId,
+    'Rozmowa z Dyrekcją: Czego Wymaga Durmstrang w Nadchodzącym Semestrze?',
+    'WYWIAD NUMERU',
+    'Ekskluzywny wywiad z Arcymistrzem Cytadeli',
+    'W zaciszu gabinetu na najwyższej wieży Dyrekcja dzieli się wizją dyscypliny, nowych reguł w pojedynkach i planowanych turniejów międzyzakonnych.',
+    `# Wywiad z Gabinetu na Szczycie Baszty\n\n**Żelazne Pióro:** Panie Dyrektorze, co będzie priorytetem w bieżącym roku akademickim?\n\n**Dyrekcja:** Przede wszystkim bezwzględna dyscyplina i wysoki poziom w Dziennikach Lekcyjnych. Zwiększyliśmy rygor punktowy, a każdy adept jest oceniany zarówno za biegłość w zaklęciach bojowych, jak i za wkład w życie swojego Zakonu.\n\n**ŻP:** Jak ocenia Pan zaangażowanie uczniów w Galdrastofę i Puchar Zakonów?\n\n**Dyrekcja:** Z satysfakcją obserwuję powrót do korzeni. Durmstrang nigdy nie był szkołą dla słabych duchowo. Kto szuka łatwej drogi, pomylił twierdze. Tutaj hartujemy charaktery, a Żelazne Pióro ma być zwierciadłem tej niestrudzonej pracy.`,
+    'usr-director-01',
+    'Igor Karkarow',
+    'sec-wywiady',
+    'Wywiady',
+    'Dyscyplina to fundament, na którym wznosi się potęga.'
+  );
+
+  // 4. Pages
+  const insertPage = db.prepare(`
+    INSERT INTO gazette_pages (id, issue_id, page_number, template, content, sort_order, article_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // Page 1: Cover
+  insertPage.run('page-01', issueId, 1, 'cover', JSON.stringify({
+    title: 'ŻELAZNE PIÓRO',
+    subtitle: 'Nr 1 / 2026',
+    mainHeadline: 'PRZEBUDZENIE PÓŁNOCNYCH WICHRÓW',
+    coverImage: '/banner-durmstrang.png',
+    headlines: [
+      '✦ Przysięga Północy: Raport z Zakonów',
+      '✦ Zapomniane Formuły Runiczne w Galdrastofie',
+      '✦ Wywiad z Dyrekcją Twierdzy',
+      '✦ Wielka Krzyżówka & Sprawdzian Runiczny'
+    ]
+  }), 1, '');
+
+  // Page 2: Editorial / Masthead
+  insertPage.run('page-02', issueId, 2, 'editorial', JSON.stringify({
+    title: 'Stopka Redakcyjna',
+    body: 'Żelazne Pióro jest oficjalnym organem prasowym Twierdzy Durmstrang, tworzonym przez adeptów i kadrę profesorską pod patronatem Dyrekcji. Wszystkie teksty podlegają rygorowi rzetelności magicznej.'
+  }), 2, '');
+
+  // Page 3: Table of Contents
+  insertPage.run('page-03', issueId, 3, 'toc', JSON.stringify({
+    title: 'Spis Treści',
+    entries: [
+      { page: 1, title: 'Okładka Główna' },
+      { page: 2, title: 'Od Redakcji & Stopka' },
+      { page: 3, title: 'Spis Treści' },
+      { page: 4, title: 'Przysięga Północy: Zakony Durmstrangu' },
+      { page: 5, title: 'Echa Galdrastofy: Pradawne Runy' },
+      { page: 6, title: 'Wywiad z Arcymistrzem Dyrekcji' },
+      { page: 7, title: 'Gry, Quiz & Krzyżówka Runiczna' },
+      { page: 8, title: 'Ogłoszenia Twierdzy & Kaupangr' }
+    ]
+  }), 3, '');
+
+  // Page 4: Article 1 (Spread)
+  insertPage.run('page-04', issueId, 4, 'article-spread', JSON.stringify({}), 4, 'art-01');
+
+  // Page 5: Article 2 (Photo article)
+  insertPage.run('page-05', issueId, 5, 'article-photo', JSON.stringify({
+    image: '/banner-durmstrang.png',
+    imageCaption: 'Tablica runiczna odkryta w zachodnich kryptach Cytadeli'
+  }), 5, 'art-02');
+
+  // Page 6: Article 3 (Interview)
+  insertPage.run('page-06', issueId, 6, 'interview', JSON.stringify({
+    intervieweeName: 'Arcymistrz Dyrekcji',
+    intervieweeImage: ''
+  }), 6, 'art-03');
+
+  // Page 7: Games (Quiz & Crossword)
+  insertPage.run('page-07', issueId, 7, 'games', JSON.stringify({
+    title: 'Wyzwania Umysłu: Quiz i Krzyżówka',
+    quizId: 'quiz-inaugural-01',
+    crosswordId: 'cw-inaugural-01'
+  }), 7, '');
+
+  // Page 8: Announcements & Back cover
+  insertPage.run('page-08', issueId, 8, 'announcements', JSON.stringify({
+    title: 'EDYKTY I OGŁOSZENIA CYTADELI',
+    items: [
+      { title: 'Nabór do Redakcji Żelaznego Pióra', text: 'Poszukiwani kronikarze, ilustratorzy i reporterzy terenowi z każdego Zakonu. Zgłoszenia przez formularz na dole strony gazetki.' },
+      { title: 'Targowisko Kaupangr Otwarte', text: 'Kupcy z północy uzupełnili zapasy składników alchemicznych, pergaminów oraz runicznych szat ochronnych.' },
+      { title: 'Zakaz Wstępu do Lodowego Kanionu po Zmroku', text: 'Edykt Dyrekcji: Naruszenie kordonu ochronnego grozi natychmiastowym odebraniem punktów zakonnych.' }
+    ]
+  }), 8, '');
+
+  // 5. Quiz
+  db.prepare(`
+    INSERT INTO gazette_quizzes (id, page_id, issue_id, title, questions, results_messages)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    'quiz-inaugural-01',
+    'page-07',
+    issueId,
+    'Sprawdzian Wiedzy o Durmstrangu i Runicznym Futharku',
+    JSON.stringify([
+      {
+        question: 'Który Zakon Durmstrangu słynie z nieugiętej siły, honoru i braterstwa?',
+        options: ['Reinhall', 'Björnhall', 'Ravnheim', 'Otergard'],
+        correct: 1
+      },
+      {
+        question: 'Jak nazywa się mistyczny warsztat wykuwania run w podziemiach Twierdzy?',
+        options: ['Galdrastofa', 'Kaupangr', 'Skirnir', 'Futhark-Hall'],
+        correct: 0
+      },
+      {
+        question: 'Jaka runa symbolizuje słońce, triumf i czystą energię magiczną?',
+        options: ['Thurisaz', 'Algiz', 'Sowilo', 'Hagalaz'],
+        correct: 2
+      }
+    ]),
+    JSON.stringify([
+      { minScore: 0, maxScore: 1, message: 'Wymagana pilna lektura Kodeksu w Archiwum Lore!' },
+      { minScore: 2, maxScore: 2, message: 'Dobra znajomość Twierdzy! Godny adept Durmstrangu.' },
+      { minScore: 3, maxScore: 3, message: 'Arcymistrzowska wiedza! Zasłużyłeś na uznanie swojego Zakonu.' }
+    ])
+  );
+
+  // 6. Crossword
+  db.prepare(`
+    INSERT INTO gazette_crosswords (id, page_id, issue_id, title, words, grid_width, grid_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'cw-inaugural-01',
+    'page-07',
+    issueId,
+    'Mini-Krzyżówka Cytadeli',
+    JSON.stringify([
+      { number: 1, clue: 'Nazwa Twierdzy Magii na Północy', answer: 'DURMSTRANG', direction: 'across', row: 0, col: 0 },
+      { number: 2, clue: 'Zakon cienia i kruków', answer: 'RAVNHEIM', direction: 'down', row: 0, col: 2 },
+      { number: 3, clue: 'Magiczny warsztat runiczny', answer: 'GALDRA', direction: 'across', row: 3, col: 1 }
+    ]),
+    8,
+    8
+  );
+
+  console.log('[DB] Seeded inaugural issue #1 with 8 pages, 3 articles, staff, quiz, and crossword.');
+}
+
+const gazetteCwCount = db.prepare('SELECT COUNT(*) as count FROM gazette_crosswords').get().count;
+if (gazetteCwCount === 0) {
+  db.prepare(`
+    INSERT INTO gazette_crosswords (id, page_id, issue_id, title, words, grid_width, grid_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'cw-inaugural-01',
+    'page-07',
+    'issue-inaugural-01',
+    'Mini-Krzyżówka Cytadeli',
+    JSON.stringify([
+      { number: 1, clue: 'Nazwa Twierdzy Magii na Północy', answer: 'DURMSTRANG', direction: 'across', row: 0, col: 0 },
+      { number: 2, clue: 'Zakon cienia i kruków', answer: 'RAVNHEIM', direction: 'down', row: 0, col: 2 },
+      { number: 3, clue: 'Magiczny warsztat runiczny', answer: 'GALDRA', direction: 'across', row: 3, col: 1 }
+    ]),
+    8,
+    8
+  );
+  console.log('[DB] Seeded gazette crossword.');
+}
+
 export default db;
+
+

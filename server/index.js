@@ -18,6 +18,15 @@ import timetableRoutes from './routes/timetable.js';
 import bankRoutes from './routes/bank.js';
 import marketRoutes from './routes/market.js';
 import lotteryRoutes from './routes/lottery.js';
+import documentsRoutes from './routes/documents.js';
+import cmsRoutes from './routes/cms.js';
+import eventsRoutes from './routes/events.js';
+import questsRoutes from './routes/quests.js';
+import secretsRoutes from './routes/secrets.js';
+import workshopRoutes from './routes/workshop.js';
+import homeworkRoutes from './routes/homework.js';
+import ravenRoutes from './routes/raven.js';
+import gazetteRoutes from './routes/gazette.js';
 import { discordBot } from './discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,6 +76,15 @@ app.use('/api/timetable', timetableRoutes);
 app.use('/api/bank', bankRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/lottery', lotteryRoutes);
+app.use('/api/documents', documentsRoutes);
+app.use('/api/cms', cmsRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/quests', questsRoutes);
+app.use('/api/secrets', secretsRoutes);
+app.use('/api/workshop', workshopRoutes);
+app.use('/api/homework', homeworkRoutes);
+app.use('/api/raven', ravenRoutes);
+app.use('/api/gazette', gazetteRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

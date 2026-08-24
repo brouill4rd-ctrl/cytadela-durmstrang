@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
+import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
 import {
   X,
   Flame,
@@ -13,11 +14,13 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  Compass
+  Compass,
+  AlertOctagon,
+  KeyRound
 } from 'lucide-react';
 
 export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
-  const { houses, currentUser, userHouse } = useSchool();
+  const { houses, currentUser, setAuthModalOpen } = useSchool();
   const { playGateThud, playRuneChime, playQuillScratch, setAmbientTrack, ambientTrack } = useSound();
 
   const [passwordInput, setPasswordInput] = useState('');
@@ -43,59 +46,68 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const currentHouse = (houses && houseId && houses[houseId])
-    || (Array.isArray(houses) ? houses.find(h => h.id === houseId) : null)
+  const targetKey = normalizeHouseKey(houseId);
+  const currentHouse = (houses && houses[targetKey])
+    || (houses && houseId && houses[houseId])
+    || (Array.isArray(houses) ? houses.find(h => normalizeHouseKey(h.id) === targetKey) : null)
     || (houses && typeof houses === 'object' ? Object.values(houses)[0] : null)
-    || { name: 'Reinhall', crestIcon: '🦌', colors: { primary: '#7a1818', secondary: '#c59f4e' } };
+    || { name: 'Reinhall', colors: { primary: '#7a1818', secondary: '#c59f4e' } };
+
+  // Authorization check: User must be logged in and assigned to this house (or staff)
+  const userHouseRaw = currentUser?.house || currentUser?.house_id || currentUser?.houseId || currentUser?.house_name;
+  const userHouseKey = userHouseRaw ? normalizeHouseKey(userHouseRaw) : null;
+  const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'headmaster';
+  const hasAccess = Boolean(currentUser && (isStaff || (userHouseKey && userHouseKey === targetKey)));
+  const userAssignedHouse = userHouseKey ? (houses[userHouseKey] || { name: HOUSE_RUNIC_DATA[userHouseKey]?.animal || userHouseKey }) : null;
 
   const houseConfigs = {
-    renifer: {
-      name: 'Dormitorium Reinhall (Złoty Rogacz)',
-      symbol: '🦌',
+    reinhall: {
+      name: 'Dormitorium Reinhall (Sala Skandzy)',
+      rune: 'ᚦ',
       color: '#d4af37',
       bgDark: '#1c1308',
       riddle: '„Biegnie przez zamieć, a jego poroże rozcina ciemność nocy polarnej. Jaka to runa?”',
       correctRune: 'Fehu',
       runes: ['Fehu', 'Thurisaz', 'Kenaz', 'Wunjo'],
       atmosphere: 'Ciepło wielkiego kominka z bazaltu, zapach sosnowego igliwia, skórzane fotele i złote proporce.',
-      relic: 'Złoty Róg Założyciela Thorvalda'
+      relic: 'Kielich Przymierza Krwi (Blóðkálkr)'
     },
-    niedzwiedz: {
-      name: 'Dormitorium Björnhall (Kamienny Bastion)',
-      symbol: '🐻',
+    bjornhall: {
+      name: 'Dormitorium Björnhall (Bastion Żelaza)',
+      rune: 'ᛉ',
       color: '#c02b2b',
       bgDark: '#1a0909',
       riddle: '„Niezłomny jak granitowa grań, uderza z furią północnego sztormu. Jaka runa otwiera wrota?”',
       correctRune: 'Uruz',
       runes: ['Uruz', 'Raidho', 'Hagalaz', 'Isa'],
       atmosphere: 'Kamienne sklepienia, skrzyżowane topory rytualne, niedźwiedzie futra i żarzący się paleniskowy koks.',
-      relic: 'Bazaltowa Tarcza Krwawego Przymierza'
+      relic: 'Puklerz Pękniętego Żelaza (Járnskjöldr)'
     },
-    kruk: {
-      name: 'Dormitorium Ravnheim (Wieża Cieni)',
-      symbol: '🐦',
-      color: '#29b6f6',
+    ravnheim: {
+      name: 'Dormitorium Ravnheim (Wieża Nocnych Szeptów)',
+      rune: 'ᚱ',
+      color: '#a77de0',
       bgDark: '#071524',
       riddle: '„Dwa ptaki szybują nad światem, przynosząc myśl i pamięć. Którą runę wyryto w kamieniu?”',
       correctRune: 'Ansuz',
       runes: ['Ansuz', 'Gebo', 'Eihwaz', 'Perthro'],
       atmosphere: 'Wysoka wieża z widokiem na lodowy fiord, tysiące zwojów, mosiężne astrolabia i szept wiatru.',
-      relic: 'Srebrne Pióro Wszystkowiedzącego Kruka'
+      relic: 'Astrolabium Siedmiu Gwiazd (Himinúrfang)'
     },
-    wydra: {
-      name: 'Dormitorium Otergard (Głębinowa Przystań)',
-      symbol: '🦦',
-      color: '#26a69a',
+    otergard: {
+      name: 'Dormitorium Otergard (Ogrody Lodowych Cieplic)',
+      rune: 'ᛞ',
+      color: '#2ec4b6',
       bgDark: '#061a17',
       riddle: '„Przenika przez najgłębsze szczeliny lodu, płynąc wprost ku sercu oceanu. Wskaż runę wody.”',
       correctRune: 'Laguz',
       runes: ['Laguz', 'Sowilo', 'Tiwaz', 'Berkano'],
       atmosphere: 'Podwodna komnata z widokiem na dno zamarzniętego fiordu, szmaragdowe lampy i szum prądów morskich.',
-      relic: 'Głębinowy Kryształ Prądów Morskich'
+      relic: 'Alembik Nieskończonej Destylacji (Algildi)'
     }
   };
 
-  const config = houseConfigs[houseId] || houseConfigs.renifer;
+  const config = houseConfigs[targetKey] || houseConfigs.reinhall;
 
   const handleRuneSubmit = (selectedRune) => {
     if (selectedRune === config.correctRune) {
@@ -115,8 +127,8 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
     setHouseNotes([
       {
         id: Date.now(),
-        author: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'Nieznany Nowicjusz',
-        role: currentUser?.role || 'Uczeń',
+        author: currentUser ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username : 'Uczeń Północy',
+        role: currentUser?.role || 'Adept Zakonu',
         text: newNote,
         date: 'Przed chwilą'
       },
@@ -165,14 +177,14 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
             background: 'rgba(0, 0, 0, 0.4)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.8rem' }}>{config.symbol}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+            <OrderCrest houseKey={targetKey} size={38} />
             <div>
               <h3 style={{ margin: 0, color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.25rem' }}>
                 {config.name}
               </h3>
-              <span style={{ fontSize: '0.78rem', color: config.color, letterSpacing: '0.05em' }}>
-                ŚWIĘTE SANKTUARIUM ZAKONU
+              <span style={{ fontSize: '0.78rem', color: config.color, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                ŚWIĘTE SANKTUARIUM ZAKONU {currentHouse.name} • {config.rune}
               </span>
             </div>
           </div>
@@ -193,8 +205,102 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
 
         {/* Content */}
         <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {!isUnlocked ? (
-            /* Locked Gate with Riddle */
+          {/* ACCESS DENIED WARD IF USER IS NOT IN THIS HOUSE */}
+          {!hasAccess ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem' }}>
+              <div
+                style={{
+                  width: '74px',
+                  height: '74px',
+                  borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '2px solid #ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ef4444',
+                  boxShadow: '0 0 25px rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                <Lock size={36} />
+              </div>
+
+              <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
+                Strażnik Runiczny Odrzuca Dostęp
+              </h4>
+
+              <p style={{ color: '#d1d5db', maxWidth: '540px', fontSize: '1rem', lineHeight: 1.6 }}>
+                Pradawna pieczęć dormitorium <strong>Zakonu {currentHouse.name}</strong> rozpoznaje krew i duszę wyłącznie swoich współbraci.
+              </p>
+
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  borderRadius: '8px',
+                  padding: '1rem 1.5rem',
+                  maxWidth: '520px',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+                  Stan Twojego profilu:
+                </div>
+                <div style={{ color: '#ffffff', fontWeight: 700, marginTop: '0.3rem' }}>
+                  {currentUser ? (
+                    <>
+                      Uczeń: <span style={{ color: '#fca5a5' }}>{currentUser.fullName || currentUser.username}</span>
+                      <br />
+                      Przypisany Zakon:{' '}
+                      <span style={{ color: config.color }}>
+                        {userAssignedHouse?.name ? `Zakon ${userAssignedHouse.name}` : 'Brak przydziału (wymagana Ceremonia Przydziału)'}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ color: '#fca5a5' }}>Brak aktywnej sesji logowania w portalu TMD</span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                {!currentUser && setAuthModalOpen && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      setAuthModalOpen(true);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, var(--gold-ancient) 0%, #9a7629 100%)',
+                      color: '#000000',
+                      border: 'none',
+                      padding: '0.7rem 1.4rem',
+                      borderRadius: '6px',
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Zaloguj się na konto ucznia
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    padding: '0.7rem 1.4rem',
+                    borderRadius: '6px',
+                    fontFamily: 'var(--font-heading)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Odejdź od Wrót
+                </button>
+              </div>
+            </div>
+          ) : !isUnlocked ? (
+            /* Locked Gate with Riddle for Authorized Students */
             <div style={{ textAlign: 'center', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem' }}>
               <div
                 style={{
@@ -206,14 +312,15 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: config.color
+                  color: config.color,
+                  boxShadow: `0 0 20px ${config.color}44`
                 }}
               >
-                <Lock size={32} />
+                <KeyRound size={30} />
               </div>
 
               <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1.3rem', fontFamily: 'var(--font-heading)' }}>
-                Kamienne Wrota Zakonu są zaryglowane
+                Hasło Runiczne Wrót Zakonu {currentHouse.name}
               </h4>
 
               <p style={{ color: '#d1d5db', maxWidth: '520px', fontStyle: 'italic', fontSize: '1rem', lineHeight: 1.6 }}>
@@ -314,14 +421,14 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
               >
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Święta Relikwia Zakonu</div>
-                  <div style={{ fontSize: '1rem', color: config.color, fontWeight: 700, marginTop: '0.2rem', fontFamily: 'var(--font-heading)' }}>
-                    🏆 {config.relic}
+                  <div style={{ fontSize: '0.98rem', color: config.color, fontWeight: 700, marginTop: '0.2rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Shield size={16} color={config.color} /> {config.relic}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Punkty Pucharu Północy</div>
-                  <div style={{ fontSize: '1.2rem', color: '#ffffff', fontWeight: 700, marginTop: '0.2rem', fontFamily: 'var(--font-heading)' }}>
-                    ✨ {currentHouse?.points || 0} pkt
+                  <div style={{ fontSize: '1.2rem', color: '#ffffff', fontWeight: 700, marginTop: '0.2rem', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Sparkles size={16} color={config.color} /> {currentHouse?.startingPoints || currentHouse?.points || 0} pkt
                   </div>
                 </div>
               </div>
@@ -402,3 +509,4 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
     </div>
   );
 };
+

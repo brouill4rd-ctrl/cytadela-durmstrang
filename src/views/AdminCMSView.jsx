@@ -5,6 +5,7 @@ import { api } from '../api';
 import { NewsEditorModal } from '../components/NewsEditorModal';
 import { NewsDetailModal } from '../components/NewsDetailModal';
 import { CategoryBanner } from '../components/CategoryBanner';
+import { ItemPlaceholder } from '../components/ItemPlaceholder';
 import {
   Settings,
   Users,
@@ -47,7 +48,12 @@ import {
   Copy,
   ExternalLink,
   HelpCircle,
-  Maximize2
+  Maximize2,
+  ShoppingBag,
+  Store,
+  Coins,
+  Upload,
+  Wand2
 } from 'lucide-react';
 
 export const AdminCMSView = () => {
@@ -96,17 +102,49 @@ export const AdminCMSView = () => {
     resetCategoryBanners,
     resetBlockGraphics,
     durmstrangPresets,
-    imageDimensionsGuide
+    imageDimensionsGuide,
+    storeItems,
+    shops,
+    createStoreItem,
+    updateStoreItem,
+    deleteStoreItem,
+    resetStoreItems
   } = useSchool();
 
-  const { playWandSwoosh, playRuneChime } = useSound();
+  const { playWandSwoosh, playRuneChime, playCoinSound } = useSound();
 
-  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'graphics' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
+  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'store' | 'graphics' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
   const [graphicsSubTab, setGraphicsSubTab] = useState('banners'); // 'banners' | 'blocks' | 'guide'
   const [selectedCatId, setSelectedCatId] = useState('edykty');
   const [selectedBlockId, setSelectedBlockId] = useState('identity');
   const [customBannerUrlInput, setCustomBannerUrlInput] = useState('');
   const [customBlockUrlInput, setCustomBlockUrlInput] = useState('');
+
+  // ==================== STORE & MARKET CMS STATE ====================
+  const [storeSearchQuery, setStoreSearchQuery] = useState('');
+  const [storeSelectedShop, setStoreSelectedShop] = useState('all');
+  const [storeSelectedCat, setStoreSelectedCat] = useState('all');
+  const [storeSelectedRarity, setStoreSelectedRarity] = useState('all');
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  // Store Item Form State
+  const [formName, setFormName] = useState('');
+  const [formShopId, setFormShopId] = useState('wands-brokkur');
+  const [formCategorySlug, setFormCategorySlug] = useState('wands');
+  const [formPrice, setFormPrice] = useState(150);
+  const [formIcon, setFormIcon] = useState('🪄');
+  const [formHouseExclusive, setFormHouseExclusive] = useState('');
+  const [formRarity, setFormRarity] = useState('Zwykły');
+  const [formPlaceholderType, setFormPlaceholderType] = useState('wand_dark');
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formLore, setFormLore] = useState('');
+
+  // Quick Image Modal State
+  const [quickImageModalOpen, setQuickImageModalOpen] = useState(false);
+  const [quickImageTargetItem, setQuickImageTargetItem] = useState(null);
+  const [quickImageUrlInput, setQuickImageUrlInput] = useState('');
 
   // Category creation modal
   const [showCreateCatModal, setShowCreateCatModal] = useState(false);
@@ -191,6 +229,45 @@ export const AdminCMSView = () => {
     setExportingBackup(false);
   };
 
+  const [importingBackup, setImportingBackup] = useState(false);
+
+  const handleImportBackupFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const backupJson = JSON.parse(event.target.result);
+        if (!backupJson || !backupJson.database) {
+          showNotification('Błąd Pliku', 'Wybrany plik nie zawiera poprawnej struktury bazy danych Cytadeli.', 'error');
+          return;
+        }
+
+        if (!window.confirm(`⚠️ OSTRZEŻENIE: Czy na pewno chcesz NADPISAĆ całą bazę danych SQLite danymi z kopii zapasowej (${backupJson.system || 'Durmstrang'}) wyeksportowanej: ${backupJson.exportedAt || 'nieznany termin'} przez: ${backupJson.exportedBy || 'Admin'}? Wszystkie tabele zostaną zsynchronizowane.`)) {
+          return;
+        }
+
+        setImportingBackup(true);
+        const res = await api.importDatabaseBackup(backupJson);
+        if (res.ok) {
+          showNotification('Baza Przywrócona!', 'Pomyślnie i bezstratnie przywrócono stan bazy SQLite z pliku JSON! Trwa przeładowanie...', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+        } else {
+          showNotification('Błąd Przywracania', res.error || 'Nie udało się wgrać kopii.', 'error');
+        }
+      } catch (err) {
+        showNotification('Błąd Odczytu Pliku', 'Nieprawidłowy plik JSON: ' + err.message, 'error');
+      } finally {
+        setImportingBackup(false);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleOptimizeDb = async () => {
     if (!window.confirm('Czy chcesz uruchomić procedurę optymalizacji bazy danych SQLite (VACUUM & ANALYZE)?')) return;
     setOptimizingDb(true);
@@ -251,6 +328,140 @@ export const AdminCMSView = () => {
     setCorrectionModalOpen(false);
   };
 
+  // ==================== STORE & MARKET CMS HANDLERS ====================
+  const STORE_ITEM_PRESETS = [
+    { label: '🪄 Różdżka Hebanowa', url: 'https://images.unsplash.com/photo-1590422749897-47b19a16f2c2?auto=format&fit=crop&w=600&q=80' },
+    { label: '🪄 Różdżka Cisu & Kelpie', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80' },
+    { label: '🧥 Opończa z Wilczego Futra', url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80' },
+    { label: '🛡️ Pancerz Runiczny', url: 'https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=600&q=80' },
+    { label: '📖 Grimuar Cieni', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80' },
+    { label: '📜 Kodeks Futharku', url: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80' },
+    { label: '🧪 Kociołek Alchemiczny', url: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?auto=format&fit=crop&w=600&q=80' },
+    { label: '🍷 Mikstura Szału', url: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80' },
+    { label: '🦅 Kruk Hrafn', url: 'https://images.unsplash.com/photo-1555169062-013468b47731?auto=format&fit=crop&w=600&q=80' },
+    { label: '🦊 Lis Polarny', url: 'https://images.unsplash.com/photo-1516934024742-b461fba47600?auto=format&fit=crop&w=600&q=80' },
+    { label: '💍 Amulet Odyna', url: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80' },
+    { label: '💎 Pierścień Runiczny', url: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=600&q=80' },
+    { label: '⚔️ Rękawice Pojedynkowe', url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80' }
+  ];
+
+  const filteredStoreItems = (storeItems || []).filter(item => {
+    const matchesShop = storeSelectedShop === 'all' || item.shopId === storeSelectedShop;
+    const matchesCat = storeSelectedCat === 'all' || item.categorySlug === storeSelectedCat;
+    const matchesRarity = storeSelectedRarity === 'all' || item.rarity === storeSelectedRarity;
+    const matchesSearch = (item.name || '').toLowerCase().includes(storeSearchQuery.toLowerCase()) ||
+                          (item.description || '').toLowerCase().includes(storeSearchQuery.toLowerCase()) ||
+                          (item.shopName || '').toLowerCase().includes(storeSearchQuery.toLowerCase());
+    return matchesShop && matchesCat && matchesRarity && matchesSearch;
+  });
+
+  const handleOpenCreateItem = () => {
+    playWandSwoosh();
+    setEditingItem(null);
+    setFormName('');
+    setFormShopId('wands-brokkur');
+    setFormCategorySlug('wands');
+    setFormPrice(150);
+    setFormIcon('🪄');
+    setFormHouseExclusive('');
+    setFormRarity('Zwykły');
+    setFormPlaceholderType('wand_dark');
+    setFormImageUrl('');
+    setFormDescription('');
+    setFormLore('');
+    setItemModalOpen(true);
+  };
+
+  const handleOpenEditItem = (item) => {
+    playWandSwoosh();
+    setEditingItem(item);
+    setFormName(item.name || '');
+    setFormShopId(item.shopId || 'wands-brokkur');
+    setFormCategorySlug(item.categorySlug || 'wands');
+    setFormPrice(item.price || 100);
+    setFormIcon(item.icon || '📦');
+    setFormHouseExclusive(item.houseExclusive || '');
+    setFormRarity(item.rarity || 'Zwykły');
+    setFormPlaceholderType(item.placeholderType || 'artifact_pendant');
+    setFormImageUrl(item.imageUrl || item.image || '');
+    setFormDescription(item.description || '');
+    setFormLore(item.lore || '');
+    setItemModalOpen(true);
+  };
+
+  const handleSaveItem = async (e) => {
+    e.preventDefault();
+    if (!formName.trim()) {
+      alert('Podaj nazwę przedmiotu.');
+      return;
+    }
+    const matchedShop = (shops || []).find(s => s.id === formShopId);
+    const itemData = {
+      name: formName.trim(),
+      shopId: formShopId,
+      shopName: matchedShop ? matchedShop.name : 'Kram Kaupangr',
+      categorySlug: formCategorySlug,
+      category: formCategorySlug === 'wands' ? 'Różdżki' :
+                formCategorySlug === 'robes' ? 'Szaty & Opończe' :
+                formCategorySlug === 'books' ? 'Grimuary & Księgi' :
+                formCategorySlug === 'potions' ? 'Eliksiry & Toksyny' :
+                formCategorySlug === 'equipment' ? 'Wyposażenie Bojowe' :
+                formCategorySlug === 'companions' ? 'Magiczni Towarzysze' : 'Artefakty & Talizmany',
+      price: parseInt(formPrice, 10) || 50,
+      icon: formIcon || '📦',
+      houseExclusive: formHouseExclusive || null,
+      rarity: formRarity || 'Zwykły',
+      placeholderType: formPlaceholderType || 'artifact_pendant',
+      imageUrl: formImageUrl.trim(),
+      description: formDescription.trim(),
+      lore: formLore.trim()
+    };
+
+    if (editingItem) {
+      await updateStoreItem(editingItem.id, itemData);
+    } else {
+      await createStoreItem(itemData);
+    }
+    setItemModalOpen(false);
+  };
+
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`Czy na pewno chcesz usunąć przedmiot "${item.name}" z rynku?`)) return;
+    playWandSwoosh();
+    await deleteStoreItem(item.id);
+  };
+
+  const handleOpenQuickImage = (item) => {
+    playRuneChime();
+    setQuickImageTargetItem(item);
+    setQuickImageUrlInput(item.imageUrl || item.image || '');
+    setQuickImageModalOpen(true);
+  };
+
+  const handleSaveQuickImage = async () => {
+    if (!quickImageTargetItem) return;
+    playWandSwoosh();
+    await updateStoreItem(quickImageTargetItem.id, {
+      imageUrl: quickImageUrlInput.trim()
+    });
+    setQuickImageModalOpen(false);
+  };
+
+  const handleImageFileUpload = (e, callback) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Maksymalny rozmiar pliku wynosi 3MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const dataUrl = loadEvent.target.result;
+      callback(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
       {/* Header */}
@@ -263,7 +474,7 @@ export const AdminCMSView = () => {
             Panel Administracyjny & Dzienniki
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '0.92rem', marginTop: '0.3rem' }}>
-            Zarządzanie dziennikami lekcyjnymi, księgą punktów Zakonów, edyktami oraz kandydatami.
+            Zarządzanie dziennikami lekcyjnymi, księgą punktów Zakonów, asortymentem rynku, edyktami oraz kandydatami.
           </p>
         </div>
 
@@ -308,6 +519,30 @@ export const AdminCMSView = () => {
           <span>Dzienniki Lekcji</span>
           <span style={{ background: '#2ec4b6', color: '#090d14', fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
             {lessons.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => { playWandSwoosh(); setActiveTab('store'); }}
+          style={{
+            padding: '0.65rem 1.2rem',
+            background: activeTab === 'store' ? 'rgba(234, 179, 8, 0.22)' : 'rgba(234, 179, 8, 0.06)',
+            border: activeTab === 'store' ? '1px solid #eab308' : '1px solid rgba(234, 179, 8, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'store' ? '#fde047' : '#cbd5e1',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <ShoppingBag size={14} color="#fde047" />
+          <span>Rynek & Sklepy (Kaupangr)</span>
+          <span style={{ background: '#eab308', color: '#090d14', fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+            {storeItems.length}
           </span>
         </button>
 
@@ -629,6 +864,289 @@ export const AdminCMSView = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB: 🏪 RYNEK KAUPANGR & ZARZĄDZANIE PRZEDMIOTAMI
+          ========================================================================= */}
+      {activeTab === 'store' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
+          {/* Header Controls Bar */}
+          <div
+            style={{
+              background: 'rgba(15, 20, 30, 0.95)',
+              border: '1px solid rgba(234, 179, 8, 0.4)',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.2rem',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.6)'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                <ShoppingBag size={20} color="#fde047" />
+                <h2 style={{ margin: 0, color: '#ffffff', fontSize: '1.35rem', fontFamily: 'var(--font-heading)' }}>
+                  Magazyn Rynku Kaupangr ({storeItems.length} Przedmiotów)
+                </h2>
+              </div>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.86rem', maxWidth: '700px' }}>
+                Kompletny rejestr asortymentu kramów Cytadeli. Dodawaj nowe artefakty, ustalaj ceny, przypisuj zdjęcia i grafiki oraz konfiguruj ograniczenia dla Zakonów.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleOpenCreateItem}
+                className="btn-durmstrang"
+                style={{
+                  padding: '0.65rem 1.3rem',
+                  fontSize: '0.85rem',
+                  background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                  color: '#090d14',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <Plus size={16} /> Dodaj Nowy Przedmiot
+              </button>
+
+              <button
+                onClick={() => {
+                  if (window.confirm('Czy na pewno chcesz przywrócić domyślny katalog sklepu Kaupangr? Własne zmiany zostaną zresetowane.')) {
+                    resetStoreItems();
+                  }
+                }}
+                className="btn-durmstrang-secondary"
+                style={{ padding: '0.65rem 1.1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <RefreshCw size={14} /> Przywróć Domyślny Katalog
+              </button>
+            </div>
+          </div>
+
+          {/* Filter & Search Toolbar */}
+          <div
+            className="gothic-card"
+            style={{
+              padding: '1.2rem 1.5rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(12, 16, 24, 0.9)'
+            }}
+          >
+            <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', alignItems: 'center', flex: '1' }}>
+              {/* Shop Selector */}
+              <select
+                value={storeSelectedShop}
+                onChange={(e) => setStoreSelectedShop(e.target.value)}
+                className="gothic-input"
+                style={{ padding: '0.5rem 0.8rem', fontSize: '0.82rem', minWidth: '180px' }}
+              >
+                <option value="all">Wszystkie Kramy ({shops.length})</option>
+                {shops.filter(s => s.id !== 'all').map(s => (
+                  <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                ))}
+              </select>
+
+              {/* Category Selector */}
+              <select
+                value={storeSelectedCat}
+                onChange={(e) => setStoreSelectedCat(e.target.value)}
+                className="gothic-input"
+                style={{ padding: '0.5rem 0.8rem', fontSize: '0.82rem', minWidth: '160px' }}
+              >
+                <option value="all">Wszystkie Kategorie</option>
+                <option value="wands">Różdżki</option>
+                <option value="robes">Szaty & Opończe</option>
+                <option value="books">Grimuary & Księgi</option>
+                <option value="potions">Eliksiry & Toksyny</option>
+                <option value="equipment">Wyposażenie Bojowe</option>
+                <option value="companions">Magiczni Towarzysze</option>
+                <option value="artifacts">Artefakty & Talizmany</option>
+              </select>
+
+              {/* Rarity Selector */}
+              <select
+                value={storeSelectedRarity}
+                onChange={(e) => setStoreSelectedRarity(e.target.value)}
+                className="gothic-input"
+                style={{ padding: '0.5rem 0.8rem', fontSize: '0.82rem', minWidth: '140px' }}
+              >
+                <option value="all">Wszystkie Rzadkości</option>
+                <option value="Niezbędny">Niezbędny</option>
+                <option value="Zwykły">Zwykły</option>
+                <option value="Rzadki">Rzadki</option>
+                <option value="Epicki">Epicki</option>
+                <option value="Legendarne">Legendarne</option>
+              </select>
+            </div>
+
+            {/* Search Bar */}
+            <div style={{ position: 'relative', width: '280px' }}>
+              <Search size={15} color="var(--gold-ancient)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Szukaj przedmiotu..."
+                value={storeSearchQuery}
+                onChange={(e) => setStoreSearchQuery(e.target.value)}
+                className="gothic-input"
+                style={{ width: '100%', paddingLeft: '2.2rem', fontSize: '0.82rem' }}
+              />
+            </div>
+          </div>
+
+          {/* Results Counter */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#94a3b8', fontSize: '0.84rem' }}>
+            <div>
+              Znaleziono: <strong style={{ color: '#ffffff' }}>{filteredStoreItems.length}</strong> z <strong style={{ color: '#ffffff' }}>{storeItems.length}</strong> artefaktów
+            </div>
+            {storeSearchQuery && (
+              <button
+                onClick={() => setStoreSearchQuery('')}
+                style={{ background: 'none', border: 'none', color: 'var(--gold-ancient)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+              >
+                Wyczyść szukanie
+              </button>
+            )}
+          </div>
+
+          {/* Store Items Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {filteredStoreItems.map(item => {
+              const hasCustomImg = Boolean(item.imageUrl || item.image);
+              return (
+                <div
+                  key={item.id}
+                  className="gothic-card runic-corners"
+                  style={{
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                    background: 'rgba(12, 16, 24, 0.95)',
+                    border: '1px solid rgba(197, 159, 78, 0.3)',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  <div>
+                    {/* Visual Art / Photo Preview */}
+                    <div
+                      style={{ cursor: 'pointer', marginBottom: '0.8rem', position: 'relative' }}
+                      onClick={() => handleOpenQuickImage(item)}
+                      title="Kliknij, aby szybko zmienić grafikę/zdjęcie"
+                    >
+                      <ItemPlaceholder item={item} size="normal" />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: 'rgba(4,7,12,0.85)',
+                          backdropFilter: 'blur(4px)',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          fontSize: '0.68rem',
+                          color: hasCustomImg ? '#34d399' : '#cbd5e1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          zIndex: 5
+                        }}
+                      >
+                        <ImageIcon size={11} /> {hasCustomImg ? 'Własne zdjęcie' : 'Rycina SVG'}
+                      </div>
+                    </div>
+
+                    {/* Metadata Pill Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Store size={12} color="var(--gold-ancient)" /> {item.shopName}
+                      </span>
+                      {item.houseExclusive && (
+                        <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 700, background: 'rgba(239, 68, 68, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '3px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                          Zakon: {item.houseExclusive.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 style={{ fontSize: '1.1rem', color: '#ffffff', marginBottom: '0.35rem', lineHeight: 1.3, fontFamily: 'var(--font-heading)' }}>
+                      {item.name}
+                    </h3>
+
+                    <p style={{ color: '#b0b7c3', fontSize: '0.82rem', lineHeight: 1.45, marginBottom: '0.6rem' }}>
+                      {item.description}
+                    </p>
+
+                    {item.lore && (
+                      <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.4rem 0.65rem', borderRadius: '4px', borderLeft: '2px solid var(--gold-ancient)', fontSize: '0.75rem', color: '#cbd5e1', fontStyle: 'italic', marginBottom: '0.6rem' }}>
+                        „{item.lore}”
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions & Price Footer */}
+                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', color: '#8c95a6', textTransform: 'uppercase' }}>Cena:</div>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--gold-glow)' }}>
+                        {item.price} ᛋ
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <button
+                        onClick={() => handleOpenQuickImage(item)}
+                        className="btn-durmstrang-secondary"
+                        style={{ padding: '0.4rem 0.7rem', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                        title="Zmień grafikę / wgraj zdjęcie"
+                      >
+                        <ImageIcon size={13} /> Zdjęcie
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenEditItem(item)}
+                        className="btn-durmstrang-secondary"
+                        style={{ padding: '0.4rem 0.7rem', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                        title="Edytuj szczegóły przedmiotu"
+                      >
+                        <Edit size={13} /> Edytuj
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteItem(item)}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          borderRadius: '4px',
+                          color: '#f87171',
+                          padding: '0.4rem 0.6rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Usuń przedmiot"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2181,6 +2699,755 @@ export const AdminCMSView = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB: ⚙️ SYSTEM, BAZA DANYCH & KOPIA ZAPASOWA (DIAGNOSTYKA)
+          ========================================================================= */}
+      {activeTab === 'system' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Server size={22} color="#10b981" />
+                Stan Silnika Bazy Danych & Diagnostyka Serwera
+              </h2>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                Relacyjny silnik SQLite (better-sqlite3 w trybie WAL) — gwarancja 100% trwałości i odporności na awarie.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={loadSystemStats}
+                disabled={loadingStats}
+                className="btn-durmstrang-secondary"
+                style={{ padding: '0.5rem 0.9rem', fontSize: '0.8rem', gap: '0.4rem' }}
+              >
+                <RefreshCw size={14} className={loadingStats ? 'spin' : ''} />
+                <span>Odśwież Telemetrię</span>
+              </button>
+
+              <button
+                onClick={handleOptimizeDb}
+                disabled={optimizingDb}
+                className="btn-durmstrang-secondary"
+                style={{ padding: '0.5rem 0.9rem', fontSize: '0.8rem', gap: '0.4rem', borderColor: '#10b981', color: '#6ee7b7' }}
+              >
+                <Database size={14} />
+                <span>{optimizingDb ? 'Optymalizowanie...' : 'Optymalizuj SQLite (VACUUM)'}</span>
+              </button>
+
+              <button
+                onClick={handleExportBackup}
+                disabled={exportingBackup}
+                className="btn-durmstrang"
+                style={{ padding: '0.5rem 1.1rem', fontSize: '0.82rem', gap: '0.4rem', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)' }}
+              >
+                <Download size={14} />
+                <span>{exportingBackup ? 'Eksportowanie...' : 'Pobierz Kopię Zapasową (JSON)'}</span>
+              </button>
+
+              <label
+                className="btn-durmstrang"
+                style={{ padding: '0.5rem 1.1rem', fontSize: '0.82rem', gap: '0.4rem', background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)', cursor: 'pointer', display: 'flex', alignItems: 'center', margin: 0 }}
+              >
+                <Upload size={14} />
+                <span>{importingBackup ? 'Przywracanie...' : 'Przywróć Bazę z Pliku (JSON)'}</span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  style={{ display: 'none' }}
+                  onChange={handleImportBackupFile}
+                  disabled={importingBackup}
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Engine & Resources Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+            <div className="gothic-card runic-corners" style={{ padding: '1.25rem', background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <Database size={15} /> Silnik Relacyjny
+              </div>
+              <div style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: 800, fontFamily: 'monospace' }}>
+                SQLite (better-sqlite3)
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                Tryb zapisu: <strong style={{ color: '#34d399' }}>WAL (Write-Ahead Logging)</strong> • Transakcje ACID
+              </div>
+            </div>
+
+            <div className="gothic-card runic-corners" style={{ padding: '1.25rem', background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <Activity size={15} /> Czas Działania Serwera
+              </div>
+              <div style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: 800, fontFamily: 'monospace' }}>
+                {systemStats?.uptimeFormatted || 'Wczytywanie...'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                Node: <strong style={{ color: '#7dd3fc' }}>{systemStats?.nodeVersion || process.version || 'v20+'}</strong> • Platforma: <strong>{systemStats?.platform || 'windows'}</strong>
+              </div>
+            </div>
+
+            <div className="gothic-card runic-corners" style={{ padding: '1.25rem', background: 'rgba(10, 14, 22, 0.85)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#eab308', fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem' }}>
+                <Cpu size={15} /> Zużycie Pamięci RAM
+              </div>
+              <div style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: 800, fontFamily: 'monospace' }}>
+                {systemStats?.memory?.rssMB ? `${systemStats.memory.rssMB} MB` : 'Brak danych'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                Heap: <strong>{systemStats?.memory?.heapUsedMB || 0} MB</strong> / {systemStats?.memory?.heapTotalMB || 0} MB
+              </div>
+            </div>
+          </div>
+
+          {/* Database Tables Census / Records Count */}
+          <div className="gothic-card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', color: 'var(--gold-ancient)', margin: '0 0 1rem 0', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <HardDrive size={18} /> Spis Rekordów we Wszystkich Tabelach Bazy Danych
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.85rem' }}>
+              {[
+                { label: 'Użytkownicy i Profile', count: systemStats?.counts?.users ?? users.length, icon: '🧙‍♂️', key: 'users' },
+                { label: 'Protokoły Lekcyjne', count: systemStats?.counts?.lessons ?? lessons.length, icon: '📖', key: 'lessons' },
+                { label: 'Transakcje Punktowe', count: systemStats?.counts?.pointTransactions ?? pointLedger.length, icon: '🏆', key: 'point_transactions' },
+                { label: 'Wpisy w Kronice (News)', count: systemStats?.counts?.news ?? news.length, icon: '📜', key: 'news' },
+                { label: 'Katedry Naukowe', count: systemStats?.counts?.subjects ?? (subjects || []).length, icon: '🏛️', key: 'subjects' },
+                { label: 'Plan Lekcji & Zastępstwa', count: systemStats?.counts?.timetable ?? 0, icon: '📅', key: 'timetable_entries' },
+                { label: 'Konta Bankowe', count: systemStats?.counts?.bankAccounts ?? 0, icon: '🏦', key: 'bank_accounts' },
+                { label: 'Transakcje Skirnirów', count: systemStats?.counts?.bankTransactions ?? 0, icon: '💰', key: 'bank_transactions' },
+                { label: 'Losy Loterii Odyna', count: systemStats?.counts?.lotteryTickets ?? 0, icon: 'ᛟ', key: 'lottery_tickets' },
+                { label: 'Dokumenty & Dekrety', count: systemStats?.counts?.documents ?? 0, icon: '📑', key: 'documents' },
+                { label: 'Banery CMS Kategorii', count: systemStats?.counts?.cmsBanners ?? (categoryBanners || []).length, icon: '🖼️', key: 'cms_banners' },
+                { label: 'Grafiki Bloków Bocznych', count: systemStats?.counts?.cmsBlocks ?? (blockGraphics || []).length, icon: '🛡️', key: 'cms_block_graphics' },
+                { label: 'Ukończone Questy Mapy', count: systemStats?.counts?.completedQuests ?? 0, icon: '🧭', key: 'completed_quests' },
+                { label: 'Odkryte Sekrety & Lore', count: systemStats?.counts?.secrets ?? 0, icon: '🗝️', key: 'discovered_secrets' },
+                { label: 'Wykute Formuły Runiczne', count: systemStats?.counts?.formulas ?? 0, icon: '⚡', key: 'crafted_formulas' },
+                { label: 'Zadania Domowe', count: systemStats?.counts?.homework ?? 0, icon: '📝', key: 'homework_submissions' },
+                { label: 'Wiadomości Kruczej Poczty', count: systemStats?.counts?.ravenMessages ?? 0, icon: '✉️', key: 'raven_messages' },
+                { label: 'Wydarzenia w Kalendarzu', count: systemStats?.counts?.events ?? 0, icon: '📆', key: 'events' },
+                { label: 'Logi Audytu Administracji', count: systemStats?.counts?.auditLogs ?? auditLogs.length, icon: '🛡️', key: 'audit_logs' }
+              ].map((tbl, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.07)',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '1.25rem' }}>{tbl.icon}</span>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>{tbl.label}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#9ca3af', fontFamily: 'monospace' }}>{tbl.key}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 800, color: 'var(--gold-glow)' }}>
+                    {tbl.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Backup & Disaster Recovery Guide */}
+          <div className="gothic-card" style={{ padding: '1.5rem', background: 'rgba(15, 23, 42, 0.65)', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Info size={16} /> Instrukcja Bezpieczeństwa & Kopia Zapasowa
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+              Plik zrzutu JSON zawiera pełną kopię wszystkich 20 relacji w bazie SQLite (konta, hasła, przedmioty, postępy z mapy huncwotów, dzienniki lekcyjne, bank, krucza poczta, dekrety). Możesz go pobrać na dysk w dowolnym momencie jako kopię bezpieczeństwa oraz zaimportować z powrotem jednym kliknięciem.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: 🪄 DODAWANIE & EDYCJA PRZEDMIOTU W SKLEPIE
+          ========================================================================= */}
+      {itemModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(3, 6, 11, 0.88)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            animation: 'fadeIn 0.2s ease'
+          }}
+          onClick={() => setItemModalOpen(false)}
+        >
+          <div
+            className="gothic-card runic-corners"
+            style={{
+              width: '100%',
+              maxWidth: '920px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: 'linear-gradient(135deg, rgba(14, 18, 28, 0.98) 0%, rgba(9, 12, 18, 0.99) 100%)',
+              border: '1px solid var(--gold-ancient)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(197, 159, 78, 0.25)',
+              padding: '2rem',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(197, 159, 78, 0.2)', paddingBottom: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <ShoppingBag size={22} color="var(--gold-ancient)" />
+                <h3 style={{ fontSize: '1.4rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: 0 }}>
+                  {editingItem ? `Edycja Artefaktu: ${editingItem.name}` : 'Dodaj Nowy Przedmiot do Rynku Kaupangr'}
+                </h3>
+              </div>
+
+              <button
+                onClick={() => setItemModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.4rem' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content: Form Left, Live Preview Right */}
+            <form onSubmit={handleSaveItem} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '2rem' }}>
+              {/* Form Fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>
+                    Nazwa Przedmiotu *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="np. Różdżka z Cisu i Włosa Kelpie"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="gothic-input"
+                    style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.88rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Kram / Sklep *
+                    </label>
+                    <select
+                      value={formShopId}
+                      onChange={(e) => setFormShopId(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      {shops.filter(s => s.id !== 'all').map(s => (
+                        <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Kategoria *
+                    </label>
+                    <select
+                      value={formCategorySlug}
+                      onChange={(e) => setFormCategorySlug(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      <option value="wands">Różdżki</option>
+                      <option value="robes">Szaty & Opończe</option>
+                      <option value="books">Grimuary & Księgi</option>
+                      <option value="potions">Eliksiry & Toksyny</option>
+                      <option value="equipment">Wyposażenie Bojowe</option>
+                      <option value="companions">Magiczni Towarzysze</option>
+                      <option value="artifacts">Artefakty & Talizmany</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Cena (Skirniry ᛋ) *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      required
+                      value={formPrice}
+                      onChange={(e) => setFormPrice(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.88rem', fontWeight: 700, color: 'var(--gold-glow)' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Rzadkość
+                    </label>
+                    <select
+                      value={formRarity}
+                      onChange={(e) => setFormRarity(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      <option value="Niezbędny">Niezbędny</option>
+                      <option value="Zwykły">Zwykły</option>
+                      <option value="Rzadki">Rzadki</option>
+                      <option value="Epicki">Epicki</option>
+                      <option value="Legendarne">Legendarne</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Zakon (Ograniczenie)
+                    </label>
+                    <select
+                      value={formHouseExclusive}
+                      onChange={(e) => setFormHouseExclusive(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem' }}
+                    >
+                      <option value="">Wszystkie Zakony</option>
+                      <option value="reinhall">Tylko Reinhall</option>
+                      <option value="bjornhall">Tylko Björnhall</option>
+                      <option value="ravnheim">Tylko Ravnheim</option>
+                      <option value="otergard">Tylko Otergard</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Image / Graphic section */}
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.2)' }}>
+                  <label style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                    <ImageIcon size={14} /> Zdjęcie / Grafika Przedmiotu (URL lub Wgranie z Dysku)
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                    <input
+                      type="text"
+                      placeholder="https://images.unsplash.com/... lub wklej bezpośredni link"
+                      value={formImageUrl}
+                      onChange={(e) => setFormImageUrl(e.target.value)}
+                      className="gothic-input"
+                      style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+                    />
+                    {formImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormImageUrl('')}
+                        style={{ padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                      >
+                        Wyczyść
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <label
+                      style={{
+                        padding: '0.45rem 0.9rem',
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        borderRadius: '4px',
+                        color: '#7dd3fc',
+                        fontSize: '0.76rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      <Upload size={13} /> Wgraj Plik z Dysku
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleImageFileUpload(e, (url) => setFormImageUrl(url))}
+                      />
+                    </label>
+
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                      Rekomendowane proporcje: 1:1 lub 4:3 (JPG / WebP / PNG)
+                    </div>
+                  </div>
+
+                  {/* Preset Quick Chips */}
+                  <div style={{ marginTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.6rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
+                      Szybkie presety klimatycznych fotografii:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                      {STORE_ITEM_PRESETS.slice(0, 7).map((p, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setFormImageUrl(p.url)}
+                          style={{
+                            padding: '0.2rem 0.5rem',
+                            background: formImageUrl === p.url ? 'rgba(197, 159, 78, 0.3)' : 'rgba(255,255,255,0.04)',
+                            border: formImageUrl === p.url ? '1px solid var(--gold-ancient)' : '1px solid rgba(255,255,255,0.08)',
+                            color: formImageUrl === p.url ? '#ffe8aa' : '#cbd5e1',
+                            borderRadius: '3px',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Ikona Emoji
+                    </label>
+                    <input
+                      type="text"
+                      value={formIcon}
+                      onChange={(e) => setFormIcon(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.5rem 0.8rem', fontSize: '1.1rem', textAlign: 'center' }}
+                      maxLength={4}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                      Styl Ryciny Wektorowej SVG (Fallback)
+                    </label>
+                    <select
+                      value={formPlaceholderType}
+                      onChange={(e) => setFormPlaceholderType(e.target.value)}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.8rem' }}
+                    >
+                      <option value="wand_dark">Różdżka Mroku (wand_dark)</option>
+                      <option value="wand_ancient">Różdżka Pradawna (wand_ancient)</option>
+                      <option value="wand_runic">Różdżka Runiczna (wand_runic)</option>
+                      <option value="wand_bone">Różdżka Kościana (wand_bone)</option>
+                      <option value="robe_fur">Szata / Opończa Futrzana (robe_fur)</option>
+                      <option value="robe_reindeer">Szata Renifera (robe_reindeer)</option>
+                      <option value="robe_armor">Pancerz Bojowy (robe_armor)</option>
+                      <option value="book_shadow">Grimuar Cieni (book_shadow)</option>
+                      <option value="book_runic">Kodeks Runiczny (book_runic)</option>
+                      <option value="potion_cauldron">Kociołek Alchemiczny (potion_cauldron)</option>
+                      <option value="potion_phials">Fiolki Eliksirów (potion_phials)</option>
+                      <option value="equipment_gauntlets">Rękawice Bojowe (equipment_gauntlets)</option>
+                      <option value="pet_raven">Chowaniec / Kruk (pet_raven)</option>
+                      <option value="artifact_pendant">Amulet / Talizman (artifact_pendant)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                    Krótki Opis Właściwości
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Opis magicznych właściwości, wymiarów i materiałów..."
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    className="gothic-input"
+                    style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.84rem', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                    Lore / Cytat z Kronik Północy (Opcjonalnie)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="np. Wykuta w piecach Brokkura podczas koniunkcji planet."
+                    value={formLore}
+                    onChange={(e) => setFormLore(e.target.value)}
+                    className="gothic-input"
+                    style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem', fontStyle: 'italic' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="submit"
+                    className="btn-durmstrang"
+                    style={{ flex: 1, padding: '0.75rem', fontSize: '0.9rem', fontWeight: 800 }}
+                  >
+                    {editingItem ? 'Zapisz Zmiany w Artefakcie' : 'Dodaj Artefakt do Oferty Rynku'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setItemModalOpen(false)}
+                    className="btn-durmstrang-secondary"
+                    style={{ padding: '0.75rem 1.4rem', fontSize: '0.85rem' }}
+                  >
+                    Anuluj
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Preview Column */}
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Sparkles size={13} /> Podgląd na Żywo Karty w Sklepie
+                </div>
+
+                <div
+                  className="gothic-card runic-corners"
+                  style={{
+                    padding: '1.5rem',
+                    background: 'rgba(13, 16, 23, 0.95)',
+                    border: '1px solid var(--gold-ancient)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.8)'
+                  }}
+                >
+                  <div style={{ marginBottom: '1rem' }}>
+                    <ItemPlaceholder
+                      item={{
+                        name: formName || 'Przykładowy Artefakt',
+                        rarity: formRarity,
+                        icon: formIcon,
+                        placeholderType: formPlaceholderType,
+                        imageUrl: formImageUrl,
+                        image: formImageUrl
+                      }}
+                      size="normal"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Store size={11} color="var(--gold-ancient)" />
+                      {shops.find(s => s.id === formShopId)?.name || 'Kram Kaupangr'}
+                    </span>
+                    {formHouseExclusive && (
+                      <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: 600 }}>
+                        Tylko: {formHouseExclusive.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.4rem', lineHeight: 1.3, fontFamily: 'var(--font-heading)' }}>
+                    {formName || 'Nazwa Artefaktu'}
+                  </h3>
+
+                  <p style={{ color: '#b0b7c3', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '0.8rem', minHeight: '40px' }}>
+                    {formDescription || 'Tutaj pojawi się opis właściwości i zastosowania artefaktu...'}
+                  </p>
+
+                  {formLore && (
+                    <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '2px solid var(--gold-ancient)', fontSize: '0.78rem', color: '#cbd5e1', fontStyle: 'italic', marginBottom: '0.8rem' }}>
+                      „{formLore}”
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: '#8c95a6', textTransform: 'uppercase' }}>Cena:</div>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--gold-glow)' }}>
+                        {formPrice || 0} ᛋ
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled
+                      className="btn-durmstrang"
+                      style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', opacity: 0.8 }}
+                    >
+                      <Coins size={12} /> Kup
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: 📸 SZYBKA ZMIANA ZDJĘCIA / GRAFIKI PRZEDMIOTU
+          ========================================================================= */}
+      {quickImageModalOpen && quickImageTargetItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(4, 7, 12, 0.88)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            animation: 'fadeIn 0.2s ease'
+          }}
+          onClick={() => setQuickImageModalOpen(false)}
+        >
+          <div
+            className="gothic-card runic-corners"
+            style={{
+              width: '100%',
+              maxWidth: '620px',
+              background: 'linear-gradient(135deg, rgba(14, 18, 28, 0.98) 0%, rgba(9, 12, 18, 0.99) 100%)',
+              border: '1px solid var(--gold-ancient)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(197, 159, 78, 0.25)',
+              padding: '2rem',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid rgba(197, 159, 78, 0.2)', paddingBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ImageIcon size={20} color="var(--gold-ancient)" />
+                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', fontFamily: 'var(--font-heading)', margin: 0 }}>
+                  Zmień Zdjęcie: {quickImageTargetItem.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setQuickImageModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Live Visual Preview */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <ItemPlaceholder
+                item={{
+                  ...quickImageTargetItem,
+                  imageUrl: quickImageUrlInput,
+                  image: quickImageUrlInput
+                }}
+                size="large"
+              />
+            </div>
+
+            {/* Input URL */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                Adres URL Zdjęcia (lub bezpośredni link):
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  placeholder="https://..."
+                  value={quickImageUrlInput}
+                  onChange={(e) => setQuickImageUrlInput(e.target.value)}
+                  className="gothic-input"
+                  style={{ flex: 1, padding: '0.55rem 0.8rem', fontSize: '0.84rem' }}
+                />
+                {quickImageUrlInput && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickImageUrlInput('')}
+                    style={{ padding: '0.4rem 0.7rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.78rem' }}
+                  >
+                    Wyczyść
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* File Upload Button */}
+            <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  borderRadius: '4px',
+                  color: '#7dd3fc',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontWeight: 600
+                }}
+              >
+                <Upload size={14} /> Wgraj Zdjęcie z Dysku
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => handleImageFileUpload(e, (url) => setQuickImageUrlInput(url))}
+                />
+              </label>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                Obsługiwane: JPG, PNG, WebP do 3MB
+              </span>
+            </div>
+
+            {/* Presets Gallery */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.74rem', color: 'var(--gold-ancient)', fontWeight: 700, marginBottom: '0.5rem' }}>
+                Wybierz z gotowej galerii unikatowych fotografii:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {STORE_ITEM_PRESETS.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setQuickImageUrlInput(preset.url)}
+                    style={{
+                      padding: '0.3rem 0.6rem',
+                      background: quickImageUrlInput === preset.url ? 'rgba(197, 159, 78, 0.3)' : 'rgba(255,255,255,0.04)',
+                      border: quickImageUrlInput === preset.url ? '1px solid var(--gold-ancient)' : '1px solid rgba(255,255,255,0.08)',
+                      color: quickImageUrlInput === preset.url ? '#ffe8aa' : '#cbd5e1',
+                      borderRadius: '4px',
+                      fontSize: '0.74rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+              <button
+                onClick={handleSaveQuickImage}
+                className="btn-durmstrang"
+                style={{ flex: 1, padding: '0.75rem', fontSize: '0.88rem', fontWeight: 800 }}
+              >
+                Zapisz Grafikę Przedmiotu
+              </button>
+              <button
+                onClick={() => setQuickImageModalOpen(false)}
+                className="btn-durmstrang-secondary"
+                style={{ padding: '0.75rem 1.4rem', fontSize: '0.85rem' }}
+              >
+                Anuluj
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

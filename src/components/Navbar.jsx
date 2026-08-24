@@ -24,7 +24,9 @@ import {
   LogIn,
   Calendar,
   Building,
-  Search
+  Search,
+  Newspaper,
+  Feather
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -597,6 +599,31 @@ export const Navbar = () => {
                   }}
                 >
                   <Scroll size={14} color="var(--gold-ancient)" /> Kroniki i Bestiariusz
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('gazette')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: ['gazette', 'gazette-reader', 'gazette-archive', 'gazette-panel'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                    borderRadius: '4px',
+                    border: ['gazette', 'gazette-reader', 'gazette-archive', 'gazette-panel'].includes(activeView) ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Newspaper size={14} color="var(--gold-glow)" /> Żelazne Pióro (Gazeta)
+                  </span>
+                  <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090c12', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 800 }}>
+                    NOWOŚĆ
+                  </span>
                 </button>
               </div>
             )}
@@ -1171,6 +1198,21 @@ export const Navbar = () => {
               ✉️ Krucza Poczta
             </button>
           )}
+          <button
+            onClick={() => handleNavClick('gazette')}
+            style={{
+              padding: '0.65rem 0.8rem',
+              background: 'transparent',
+              border: 'none',
+              color: '#c59f4e',
+              textAlign: 'left',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.9rem',
+              cursor: 'pointer'
+            }}
+          >
+            📰 Żelazne Pióro
+          </button>
         </div>
       )}
 

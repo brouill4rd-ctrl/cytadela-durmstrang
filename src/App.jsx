@@ -39,6 +39,10 @@ import { BankView } from './views/BankView';
 import { RulesGuideView } from './views/RulesGuideView';
 import { DocumentsCodexView } from './views/DocumentsCodexView';
 import { RestrictedAccessView } from './views/RestrictedAccessView';
+import { GazetteView } from './views/GazetteView';
+import { GazetteFlipbook } from './views/GazetteFlipbook';
+import { GazettePanelView } from './views/GazettePanelView';
+import { GazetteArchiveView } from './views/GazetteArchiveView';
 
 import { Sparkles, Info, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
 
@@ -64,6 +68,7 @@ export const App = () => {
     setActiveHouseTab,
     authModalOpen,
     setAuthModalOpen,
+    openAuthModal,
     passwordRecoveryModalOpen,
     setPasswordRecoveryModalOpen,
     emailInboxOpen,
@@ -115,7 +120,7 @@ export const App = () => {
   const renderActiveView = () => {
     // Widoki wymagające logowania (Dzienniki, Gry i Warsztaty, Bank, Rynek, Profil, Poczta, CMS)
     // PUBLICZNE: home, houses, map, lore, academic, subject-detail, timetable
-    const isRestricted = ['journals', 'lesson-detail', 'professor-journal-editor', 'ceremony', 'rune-workshop', 'markethall', 'bank', 'profile', 'raven-post', 'admin'].includes(activeView);
+    const isRestricted = ['journals', 'lesson-detail', 'professor-journal-editor', 'ceremony', 'rune-workshop', 'markethall', 'bank', 'profile', 'raven-post', 'admin', 'gazette-panel'].includes(activeView);
     if (!currentUser && isRestricted) {
       return <RestrictedAccessView targetName={RESTRICTED_VIEW_LABELS[activeView] || 'tych komnat'} />;
     }
@@ -167,6 +172,14 @@ export const App = () => {
         return <RavenPostView />;
       case 'admin':
         return <AdminCMSView />;
+      case 'gazette':
+        return <GazetteView />;
+      case 'gazette-reader':
+        return <GazetteFlipbook />;
+      case 'gazette-archive':
+        return <GazetteArchiveView />;
+      case 'gazette-panel':
+        return <GazettePanelView />;
       default:
         return <HomeView />;
     }
@@ -191,7 +204,7 @@ export const App = () => {
         {/* =========================================================================
             1. MONUMENTAL HERO SECTION
             ========================================================================= */}
-        <MonumentalHero onOpenCreationModal={() => setCreationModalOpen(true)} />
+        <MonumentalHero onOpenCreationModal={() => openAuthModal('register')} />
 
         {/* Sticky Streamlined Navigation Bar */}
         <Navbar />
@@ -216,7 +229,7 @@ export const App = () => {
             ========================================================================= */}
         <div className="portal-main-grid">
           {/* Left Column Sidebar */}
-          <PortalLeftSidebar onOpenCreationModal={() => setCreationModalOpen(true)} />
+          <PortalLeftSidebar onOpenCreationModal={() => openAuthModal('register')} />
 
           {/* Center Column (Active View / Scrolls) */}
           <main style={{ minWidth: 0 }}>

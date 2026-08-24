@@ -17,12 +17,10 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   Zap,
   Users,
   Compass,
-  Lock,
-  ArrowRight
+  Lock
 } from 'lucide-react';
 
 export const RulesGuideView = () => {
@@ -618,6 +616,56 @@ export const RulesGuideView = () => {
                 </div>
               ))}
             </div>
+
+            <div
+              style={{
+                marginTop: '2rem',
+                padding: '1.5rem',
+                background: 'linear-gradient(135deg, rgba(197, 159, 78, 0.15) 0%, rgba(14, 18, 26, 0.8) 100%)',
+                border: '1px solid var(--gold-ancient)',
+                borderRadius: '8px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}
+            >
+              <div>
+                <h4 style={{ margin: '0 0 0.3rem 0', color: '#ffffff', fontSize: '1.1rem', fontFamily: 'var(--font-heading)' }}>
+                  Szczegółowy Podział Obowiązków & Rejestr Kompetencji
+                </h4>
+                <p style={{ margin: 0, color: '#d1d5db', fontSize: '0.9rem' }}>
+                  Sprawdź pełny kodeks odpowiedzialności: za co odpowiada Arcymistrz, Mistrz Straży, Dziekanat, Opiekunowie Zakonów oraz Skarbnik.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  playWandSwoosh();
+                  setActiveView('documents');
+                  window.location.hash = '#/wladze';
+                }}
+                style={{
+                  padding: '0.7rem 1.4rem',
+                  background: 'var(--gold-ancient)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#000000',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  fontFamily: 'var(--font-heading)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 15px rgba(197, 159, 78, 0.35)'
+                }}
+              >
+                <span>Otwórz Obowiązki Władz</span>
+                <ExternalLink size={15} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -711,51 +759,6 @@ export const RulesGuideView = () => {
         </div>
       )}
 
-      {/* =========================================================================
-          QUICK ROUTE ALIASES FOOTNOTE / HELPER BANNER
-          ========================================================================= */}
-      <div
-        style={{
-          background: 'rgba(8, 11, 16, 0.9)',
-          border: '1px dashed rgba(197, 159, 78, 0.3)',
-          borderRadius: '8px',
-          padding: '1.4rem 1.8rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <Sparkles size={20} color="var(--gold-ancient)" />
-          <div>
-            <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.95rem' }}>Bezpośrednie Adresy URL & Aliasy Podstron</div>
-            <div style={{ color: '#8c95a6', fontSize: '0.85rem' }}>
-              Możesz w każdej chwili wpisać w pasku przeglądarki: <code style={{ color: 'var(--gold-ancient)' }}>#/zasady</code>, <code style={{ color: 'var(--gold-ancient)' }}>#/plan</code>, <code style={{ color: 'var(--gold-ancient)' }}>#/dzienniki</code>, <code style={{ color: 'var(--gold-ancient)' }}>#/domy</code>, <code style={{ color: 'var(--gold-ancient)' }}>#/bank</code> lub <code style={{ color: 'var(--gold-ancient)' }}>#/rynek</code>.
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setActiveView('home')}
-          style={{
-            padding: '0.55rem 1.1rem',
-            background: 'transparent',
-            border: '1px solid var(--gold-ancient)',
-            borderRadius: '4px',
-            color: 'var(--gold-ancient)',
-            fontSize: '0.84rem',
-            fontFamily: 'var(--font-heading)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
-        >
-          Powrót do Portalu Głównego <ArrowRight size={14} />
-        </button>
-      </div>
     </div>
   );
 };

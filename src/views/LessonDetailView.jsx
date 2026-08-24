@@ -347,6 +347,42 @@ export const LessonDetailView = () => {
   }
 
   const isDraft = lesson.status === 'draft';
+  const canManage = hasPermission('canManageLessons');
+
+  // Uczniowie i goście nie mają dostępu do szkiców
+  if (isDraft && !canManage) {
+    return (
+      <div className="view-container animate-fade-in" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+        <div
+          style={{
+            maxWidth: '540px',
+            margin: '0 auto',
+            background: 'rgba(15, 20, 30, 0.95)',
+            border: '1px solid var(--gold-ancient)',
+            borderRadius: '12px',
+            padding: '2.5rem',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)'
+          }}
+        >
+          <Clock size={48} color="#eab308" style={{ marginBottom: '1rem' }} />
+          <h2 style={{ color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.4rem', marginBottom: '0.8rem' }}>
+            Dziennik w Fazie Szkicu (DRAFT)
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            Ten protokół lekcyjny oczekuje na oficjalną weryfikację i publikację przez Katedrę Dydaktyczną. Zapisy oraz punkty staną się widoczne w Kronice po zatwierdzeniu przez Profesora.
+          </p>
+          <button
+            onClick={() => setActiveView('journals')}
+            className="btn-durmstrang"
+            style={{ padding: '0.6rem 1.4rem' }}
+          >
+            ← Wróć do Listy Dzienników
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const participants = lesson.participants || [];
   const messages = lesson.messages || [];
 

@@ -4,6 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { StudentPassportModal } from './StudentPassportModal';
 import { ProfileEditorModal } from './ProfileEditorModal';
 import { GrimoireBook } from './GrimoireBook';
+import { RuneCalligraphyModal } from './RuneCalligraphyModal';
 import { RunicDuelModal } from './RunicDuelModal';
 import { OracleModal } from './OracleModal';
 import { ExpeditionsModal } from './ExpeditionsModal';
@@ -70,6 +71,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     loginUser,
     logoutUser,
     setAuthModalOpen,
+    openAuthModal,
     setPasswordRecoveryModalOpen,
     pendingApplications,
     emails,
@@ -94,6 +96,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
   const [profileEditorModalOpen, setProfileEditorModalOpen] = useState(false);
   const [passportModalOpen, setPassportModalOpen] = useState(false);
   const [grimoireModalOpen, setGrimoireModalOpen] = useState(false);
+  const [runeCalligraphyModalOpen, setRuneCalligraphyModalOpen] = useState(false);
   const [duelModalOpen, setDuelModalOpen] = useState(false);
   const [oracleModalOpen, setOracleModalOpen] = useState(false);
   const [expeditionsModalOpen, setExpeditionsModalOpen] = useState(false);
@@ -296,7 +299,11 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { playWandSwoosh(); setAuthModalOpen(true); }}
+                    onClick={() => {
+                      playWandSwoosh();
+                      if (openAuthModal) openAuthModal('register');
+                      else setAuthModalOpen(true);
+                    }}
                     style={{ background: 'none', border: 'none', color: 'var(--gold-ancient)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Stwórz konto →
@@ -482,6 +489,20 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
+
+            <li>
+              <button
+                onClick={() => openActivity(setRuneCalligraphyModalOpen, 'Kaligrafia Run')}
+                style={{ color: '#fed7aa' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <span style={{ fontSize: '1rem', color: '#f59e0b' }}>ᚠ</span> Akademia Kaligrafii Run
+                </span>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(245, 158, 11, 0.25)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.4)', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                  ᚠ 5 ALFABETÓW
+                </span>
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -618,19 +639,27 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <div className="menuBlock" style={{ border: '1px solid rgba(239, 68, 68, 0.45)' }}>
         <div
           className="menuBlockHeaderImage"
+          onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
           style={{
             backgroundImage: `linear-gradient(rgba(20, 5, 5, 0.65), rgba(8, 12, 18, 0.85)), url("/tmd_herb.png")`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            cursor: 'pointer'
           }}
+          title="Otwórz Obowiązki Władz Twierdzy"
         >
           <div className="frost-overlay" />
           <div className="runic-watermark">ᛏ</div>
           <ShieldAlert size={36} color="#ef4444" style={{ position: 'relative', zIndex: 2, opacity: 0.9 }} />
         </div>
 
-        <div className="menuBlockTitle" style={{ color: '#fca5a5' }}>
+        <div
+          className="menuBlockTitle"
+          onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
+          style={{ color: '#fca5a5', cursor: 'pointer' }}
+          title="Otwórz Obowiązki Władz Twierdzy"
+        >
           <span className="rune-bracket">ᚦ</span>
           <span>Inkwizycja & Dekrety</span>
           <span className="rune-bracket">ᚦ</span>
@@ -638,6 +667,23 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
         <div className="menuBlockContent">
           <ul>
+            <li>
+              <button
+                onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
+                style={{
+                  color: 'var(--gold-ancient)',
+                  background: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 800 : 600
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Crown size={14} color="var(--gold-ancient)" /> Obowiązki Władz Twierdzy
+                </span>
+                <span style={{ fontSize: '0.6rem', background: '#b45309', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  WŁADZE
+                </span>
+              </button>
+            </li>
             <li>
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('dekrety'); }}
@@ -1040,6 +1086,21 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 </button>
               </li>
             )}
+            <li>
+              <button
+                onClick={() => handleNav('gazette')}
+                style={{
+                  color: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
+                  border: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? '1px solid rgba(197, 159, 78, 0.3)' : '1px solid transparent'
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Scroll size={14} color="var(--gold-ancient)" /> Żelazne Pióro
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -1048,6 +1109,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <ProfileEditorModal isOpen={profileEditorModalOpen} onClose={() => setProfileEditorModalOpen(false)} />
       <StudentPassportModal isOpen={passportModalOpen} onClose={() => setPassportModalOpen(false)} />
       <GrimoireBook isOpen={grimoireModalOpen} onClose={() => setGrimoireModalOpen(false)} />
+      <RuneCalligraphyModal isOpen={runeCalligraphyModalOpen} onClose={() => setRuneCalligraphyModalOpen(false)} />
       <RunicDuelModal isOpen={duelModalOpen} onClose={() => setDuelModalOpen(false)} />
       <OracleModal isOpen={oracleModalOpen} onClose={() => setOracleModalOpen(false)} />
       <ExpeditionsModal isOpen={expeditionsModalOpen} onClose={() => setExpeditionsModalOpen(false)} />
