@@ -331,13 +331,27 @@ export const api = {
     return apiFetch(`/gazette/search?${params.toString()}`);
   },
 
-  // Admin & System Diagnostics
+  // Admin & System Diagnostics & Interactive Database Explorer
   createAdminAccount: (adminData) => apiFetch('/admin/create-account', { method: 'POST', body: JSON.stringify(adminData) }),
   getAuditLogs: () => apiFetch('/admin/audit-logs'),
   getSystemStats: () => apiFetch('/admin/system-stats'),
   getDatabaseBackup: () => apiFetch('/admin/backup-export'),
   importDatabaseBackup: (backup) => apiFetch('/admin/backup-import', { method: 'POST', body: JSON.stringify({ backup }) }),
   optimizeDatabase: () => apiFetch('/admin/optimize-db', { method: 'POST' }),
+
+  // Database Explorer (CRUD for Dyrekcja)
+  getDbTables: () => apiFetch('/admin/db/tables'),
+  getDbTableRows: (tableName, params = {}) => {
+    const q = new URLSearchParams();
+    if (params.search) q.append('search', params.search);
+    if (params.limit) q.append('limit', params.limit);
+    if (params.offset) q.append('offset', params.offset);
+    const query = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch(`/admin/db/table/${encodeURIComponent(tableName)}${query}`);
+  },
+  createDbTableRow: (tableName, data) => apiFetch(`/admin/db/table/${encodeURIComponent(tableName)}`, { method: 'POST', body: JSON.stringify(data) }),
+  updateDbTableRow: (tableName, id, data) => apiFetch(`/admin/db/table/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDbTableRow: (tableName, id) => apiFetch(`/admin/db/table/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Health
   health: () => apiFetch('/health')

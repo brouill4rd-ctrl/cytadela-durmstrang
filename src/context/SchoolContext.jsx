@@ -232,15 +232,24 @@ export const SchoolProvider = ({ children }) => {
 
   // Users Database & Active Account
   const [users, setUsers] = useState(() => {
+    const sanitizeUsers = (list) => {
+      return (list || []).map(u => {
+        if (u.role === 'professor' || u.role === 'teacher' || u.role === 'admin' || u.role === 'headmaster') {
+          return { ...u, house: null };
+        }
+        return u;
+      });
+    };
+
     const saved = localStorage.getItem('durmstrang_users_db');
-    if (!saved) return SEED_USERS;
+    if (!saved) return sanitizeUsers(SEED_USERS);
     try {
       const parsed = JSON.parse(saved);
       const existingIds = new Set(parsed.map(u => u.id));
       const missing = SEED_USERS.filter(s => !existingIds.has(s.id));
-      return [...parsed, ...missing];
+      return sanitizeUsers([...parsed, ...missing]);
     } catch {
-      return SEED_USERS;
+      return sanitizeUsers(SEED_USERS);
     }
   });
 

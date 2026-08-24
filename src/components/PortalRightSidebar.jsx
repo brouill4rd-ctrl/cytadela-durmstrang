@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { RunicDuelModal } from './RunicDuelModal';
+import { AccountsRosterBlock } from './AccountsRosterBlock';
 import {
   Calendar,
   Compass,
@@ -388,18 +389,18 @@ export const PortalRightSidebar = ({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Opiekunka Zakonu Kruka</div>
-                <strong style={{ color: '#ffffff' }}>Prof. Morana Vane</strong>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Katedra Czarnej Magii & Klątw</div>
+                <strong style={{ color: '#a4c8e1' }}>Prof. Morana Vane</strong>
               </div>
-              <Eye size={15} color="#a77de0" />
+              <Eye size={15} color="#a4c8e1" />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0' }}>
               <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Opiekun Zakonu Niedźwiedzia</div>
-                <strong style={{ color: '#ffffff' }}>Prof. Gunnar Vargson</strong>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Katedra Ligi Bojowej & Szermierki</div>
+                <strong style={{ color: '#a4c8e1' }}>Prof. Gunnar Vargson</strong>
               </div>
-              <Shield size={15} color="#c02b2b" />
+              <Shield size={15} color="#ff7b72" />
             </div>
           </div>
           <hr />
@@ -408,6 +409,11 @@ export const PortalRightSidebar = ({
           </div>
         </div>
       </div>
+
+      {/* =========================================================================
+          3.5. BLOK: SPIS KONT & ZAKONY (REJESTR ADEPTÓW I MISTRZÓW)
+          ========================================================================= */}
+      <AccountsRosterBlock />
 
       {/* =========================================================================
           4. BLOK: TABLICA SŁAWY & RANKING (ADEPTOWIE ORAZ NAUCZYCIELE & DYREKCJA)
@@ -596,7 +602,7 @@ export const PortalRightSidebar = ({
                           <div
                             title={fullName}
                             style={{
-                              color: isDirector ? 'var(--gold-glow)' : h ? h.colors?.secondary : '#ffffff',
+                              color: isDirector ? 'var(--gold-glow)' : '#a4c8e1',
                               fontWeight: 700,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -608,10 +614,11 @@ export const PortalRightSidebar = ({
                             }}
                           >
                             {isDirector && <Crown size={12} color="var(--gold-ancient)" style={{ flexShrink: 0 }} />}
+                            {!isDirector && <BookOpen size={11} color="#a4c8e1" style={{ flexShrink: 0 }} />}
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{fullName}</span>
                           </div>
-                          <div style={{ fontSize: '0.66rem', color: isDirector ? '#e2c56a' : '#8c95a6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {isDirector ? 'Rada Dyrekcji Cytadeli' : staff.roleLabel || staff.department || (h ? `Opiekun ${h.name}` : 'Katedra')}
+                          <div style={{ fontSize: '0.66rem', color: isDirector ? '#e2c56a' : '#93c5fd', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {isDirector ? 'Rada Dyrekcji Cytadeli' : staff.roleLabel || staff.department || 'Katedra Magii • Grono Pedagogiczne'}
                           </div>
                         </div>
                       </div>

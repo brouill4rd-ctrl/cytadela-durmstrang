@@ -6,6 +6,7 @@ import { NewsEditorModal } from '../components/NewsEditorModal';
 import { NewsDetailModal } from '../components/NewsDetailModal';
 import { CategoryBanner } from '../components/CategoryBanner';
 import { ItemPlaceholder } from '../components/ItemPlaceholder';
+import { DatabaseExplorerPanel } from '../components/DatabaseExplorerPanel';
 import {
   Settings,
   Users,
@@ -463,7 +464,7 @@ export const AdminCMSView = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -698,6 +699,30 @@ export const AdminCMSView = () => {
         </button>
 
         <button
+          onClick={() => { playWandSwoosh(); setActiveTab('database'); }}
+          style={{
+            padding: '0.65rem 1.2rem',
+            background: activeTab === 'database' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(56, 189, 248, 0.06)',
+            border: activeTab === 'database' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'database' ? '#7dd3fc' : '#cbd5e1',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <Database size={14} color="#38bdf8" />
+          <span>Baza Danych & SQL</span>
+          <span style={{ background: '#38bdf8', color: '#090d14', fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+            CRUD
+          </span>
+        </button>
+
+        <button
           onClick={() => { playWandSwoosh(); setActiveTab('system'); }}
           style={{
             padding: '0.65rem 1.2rem',
@@ -717,6 +742,11 @@ export const AdminCMSView = () => {
           <Server size={14} color="#10b981" /> System & Diagnostyka
         </button>
       </div>
+
+      {/* =========================================================================
+          TAB: 🗄️ BAZA DANYCH & INTERAKTYWNY EKSPLORATOR SQL (CRUD DLA DYREKCJI)
+          ========================================================================= */}
+      {activeTab === 'database' && <DatabaseExplorerPanel />}
 
       {/* =========================================================================
           TAB: 📖 DZIENNIKI LEKCJI & ZARZĄDZANIE

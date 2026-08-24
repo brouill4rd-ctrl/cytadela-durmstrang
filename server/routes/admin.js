@@ -290,11 +290,231 @@ router.post('/optimize-db', (req, res) => {
       'Wykonano PRAGMA optimize, VACUUM oraz ANALYZE.'
     );
 
-    res.json({ ok: true, message: 'Baza danych została zoptymalizowana (VACUUM & ANALYZE).' });
+// ==================== INTERAKTYWNY EKSPLORATOR & EDYTOR BAZY DANYCH ====================
+
+// Helper: Get list of allowed user tables in SQLite
+const getAllowedTables = () => {
+  try {
+    const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+    return rows.map(r => r.name);
+  } catch {
+    return [];
+  }
+};
+
+// GET /api/admin/db/tables — List of tables with row counts and columns
+router.get('/db/tables', (req, res) => {
+  try {
+    const tableNames = getAllowedTables();
+    const result = tableNames.map(name => {
+      let count = 0;
+      let columns = [];
+      try {
+        const countRow = db.prepare(`SELECT count(*) as total FROM "${name}"`).get();
+        count = countRow ? countRow.total : 0;
+        columns = db.prepare(`PRAGMA table_info("${name}")`).all();
+      } catch (err) {
+        console.warn(`[Admin DB] Błąd pobierania info o tabeli ${name}:`, err.message);
+      }
+      return {
+        name,
+        count,
+        columns: columns.map(c => ({
+          cid: c.cid,
+          name: c.name,
+          type: c.type,
+          notnull: Boolean(c.notnull),
+          dflt_value: c.dflt_value,
+          pk: Boolean(c.pk)
+        }))
+      };
+    });
+
+    res.json({ ok: true, tables: result });
   } catch (err) {
-    res.status(500).json({ error: 'Błąd optymalizacji bazy: ' + err.message });
+    res.status(500).json({ error: 'Błąd pobierania spisu tabel: ' + err.message });
+  }
+});
+
+// GET /api/admin/db/table/:tableName — Fetch records with search, limit, offset
+router.get('/db/table/:tableName', (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const allowed = getAllowedTables();
+    if (!allowed.includes(tableName)) {
+      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje w bazie danych.` });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
+    const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
+    const search = (req.query.search || '').trim();
+
+    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
+    const countRow = db.prepare(`SELECT count(*) as total FROM "${tableName}"`).get();
+    const totalCount = countRow ? countRow.total : 0;
+
+    let rows = [];
+    if (search && columns.length > 0) {
+      // Build dynamic search query across text/char columns
+      const textCols = columns.filter(c => ['TEXT', 'VARCHAR', 'CHAR', 'CLOB', ''].includes((c.type || '').toUpperCase()));
+      if (textCols.length > 0) {
+        const whereClauses = textCols.map(c => `CAST("${c.name}" AS TEXT) LIKE ?`).join(' OR ');
+        const searchPattern = `%${search}%`;
+        const searchParams = textCols.map(() => searchPattern);
+        rows = db.prepare(`SELECT * FROM "${tableName}" WHERE ${whereClauses} LIMIT ? OFFSET ?`).all(...searchParams, limit, offset);
+      } else {
+        rows = db.prepare(`SELECT * FROM "${tableName}" LIMIT ? OFFSET ?`).all(limit, offset);
+      }
+    } else {
+      rows = db.prepare(`SELECT * FROM "${tableName}" LIMIT ? OFFSET ?`).all(limit, offset);
+    }
+
+    res.json({
+      ok: true,
+      tableName,
+      totalCount,
+      limit,
+      offset,
+      columns,
+      rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd odczytu tabeli: ' + err.message });
+  }
+});
+
+// POST /api/admin/db/table/:tableName — Insert new row
+router.post('/db/table/:tableName', (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const allowed = getAllowedTables();
+    if (!allowed.includes(tableName)) {
+      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
+    }
+
+    const data = req.body || {};
+    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
+    const colNames = columns.map(c => c.name);
+
+    // If ID is missing and table has an id column, generate one
+    if (colNames.includes('id') && !data.id) {
+      data.id = `${tableName.slice(0, 4)}-${Date.now()}`;
+    }
+
+    // Filter to valid columns only
+    const validCols = Object.keys(data).filter(k => colNames.includes(k));
+    if (validCols.length === 0) {
+      return res.status(400).json({ error: 'Brak poprawnych pól do wstawienia.' });
+    }
+
+    const placeholders = validCols.map(() => '?').join(', ');
+    const values = validCols.map(k => typeof data[k] === 'object' && data[k] !== null ? JSON.stringify(data[k]) : data[k]);
+
+    const stmt = db.prepare(`INSERT INTO "${tableName}" (${validCols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`);
+    stmt.run(...values);
+
+    // Audit log
+    db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `log-${Date.now()}`,
+      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      req.user.fullName || 'Dyrekcja Cytadeli',
+      `Wstawiono rekord do tabeli [${tableName}]`,
+      `Klucz: ${data.id || 'nowy rekord'}`
+    );
+
+    res.status(201).json({ ok: true, message: `Dodano rekord do tabeli ${tableName}`, data });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd dodawania rekordu: ' + err.message });
+  }
+});
+
+// PUT /api/admin/db/table/:tableName/:id — Update row
+router.put('/db/table/:tableName/:id', (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    const allowed = getAllowedTables();
+    if (!allowed.includes(tableName)) {
+      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
+    }
+
+    const data = req.body || {};
+    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
+    const pkCol = (columns.find(c => c.pk) || columns.find(c => c.name === 'id') || { name: 'id' }).name;
+    const colNames = columns.map(c => c.name);
+
+    const validCols = Object.keys(data).filter(k => colNames.includes(k) && k !== pkCol);
+    if (validCols.length === 0) {
+      return res.status(400).json({ error: 'Brak pól do zaktualizowania.' });
+    }
+
+    const setClauses = validCols.map(c => `"${c}" = ?`).join(', ');
+    const values = validCols.map(k => typeof data[k] === 'object' && data[k] !== null ? JSON.stringify(data[k]) : data[k]);
+
+    const stmt = db.prepare(`UPDATE "${tableName}" SET ${setClauses} WHERE "${pkCol}" = ?`);
+    const info = stmt.run(...values, id);
+
+    if (info.changes === 0) {
+      return res.status(404).json({ error: `Nie znaleziono rekordu o identyfikatorze "${id}" w tabeli ${tableName}.` });
+    }
+
+    // Audit log
+    db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `log-${Date.now()}`,
+      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      req.user.fullName || 'Dyrekcja Cytadeli',
+      `Zaktualizowano rekord w tabeli [${tableName}]`,
+      `ID: ${id} • Zmodyfikowane pola: ${validCols.join(', ')}`
+    );
+
+    res.json({ ok: true, message: `Zaktualizowano rekord w tabeli ${tableName}`, changes: info.changes });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd edycji rekordu: ' + err.message });
+  }
+});
+
+// DELETE /api/admin/db/table/:tableName/:id — Delete row
+router.delete('/db/table/:tableName/:id', (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    const allowed = getAllowedTables();
+    if (!allowed.includes(tableName)) {
+      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
+    }
+
+    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
+    const pkCol = (columns.find(c => c.pk) || columns.find(c => c.name === 'id') || { name: 'id' }).name;
+
+    const stmt = db.prepare(`DELETE FROM "${tableName}" WHERE "${pkCol}" = ?`);
+    const info = stmt.run(id);
+
+    if (info.changes === 0) {
+      return res.status(404).json({ error: `Nie znaleziono rekordu o ID "${id}" do usunięcia.` });
+    }
+
+    // Audit log
+    db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `log-${Date.now()}`,
+      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      req.user.fullName || 'Dyrekcja Cytadeli',
+      `Usunięto rekord z tabeli [${tableName}]`,
+      `ID: ${id}`
+    );
+
+    res.json({ ok: true, message: `Pomyślnie usunięto rekord o ID "${id}" z tabeli ${tableName}.` });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd usuwania rekordu: ' + err.message });
   }
 });
 
 export default router;
+
 

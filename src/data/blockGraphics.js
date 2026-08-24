@@ -130,6 +130,16 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     description: 'Nagłówek tablicy sławy i punktacji indywidualnej'
   },
   {
+    id: 'roster',
+    title: 'Spis Kont & Zakony',
+    location: 'Prawy Panel',
+    rune: 'ᛗ',
+    defaultIcon: 'Users',
+    color: 'var(--gold-ancient)',
+    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001472534122507/tPG6xan.png?ex=6a8c00f5&is=6a8aaf75&hm=cba1045a1789284f0ffbcfd53d5f62ac5945fd166e577e673484b39495aac92c&=&format=webp&quality=lossless',
+    description: 'Nagłówek spisu uczniów, nauczycieli i statystyk Zakonów'
+  },
+  {
     id: 'markethall',
     title: 'Rynek Kaupangr (Kramy)',
     location: 'Eksploracja & Sklep',
