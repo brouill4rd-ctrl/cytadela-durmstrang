@@ -143,6 +143,7 @@ export const SubjectDetailView = () => {
           icon: data.icon || '📚',
           classroom: data.classroom || '',
           description: data.description || '',
+          professorId: data.professorId || '',
           professorName: data.professorName || '',
           bannerGradient: data.bannerGradient || 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)',
         });
@@ -347,9 +348,34 @@ export const SubjectDetailView = () => {
                     {subject.name}
                   </h1>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#c5cdd9', fontSize: '0.85rem' }}>
-                      <User size={14} /> {subject.professorName || 'Nie przypisano'}
-                    </span>
+                    {(() => {
+                      const assignedProf = (users || []).find(u => (subject.professorId && u.id === subject.professorId) || (subject.professorName && (u.fullName === subject.professorName || u.name === subject.professorName)));
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '20px', padding: '0.25rem 0.75rem' }}>
+                          {assignedProf?.avatar ? (
+                            <img
+                              src={assignedProf.avatar}
+                              alt={assignedProf.fullName}
+                              style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-ancient)' }}
+                            />
+                          ) : (
+                            <User size={14} color="var(--gold-ancient)" />
+                          )}
+                          <span style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 600 }}>
+                            {subject.professorName || assignedProf?.fullName || 'Nie przypisano'}
+                          </span>
+                          {assignedProf?.role === 'admin' ? (
+                            <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '3px', background: 'rgba(238,207,130,0.2)', border: '1px solid var(--gold-ancient)', color: 'var(--gold-ancient)', fontWeight: 800 }}>
+                              👑 DYREKCJA
+                            </span>
+                          ) : assignedProf?.role === 'professor' ? (
+                            <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '3px', background: 'rgba(164,200,225,0.15)', border: '1px solid #a4c8e1', color: '#a4c8e1', fontWeight: 700 }}>
+                              📜 PROFESOR
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#c5cdd9', fontSize: '0.85rem' }}>
                       <MapPin size={14} /> {subject.classroom || 'Sala nieprzypisana'}
                     </span>
@@ -436,28 +462,125 @@ export const SubjectDetailView = () => {
       ============================================================ */}
       {editingInfo && (
         <div style={{ background: 'rgba(197,159,78,0.07)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '10px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            ✏️ Zarządzanie Katedrą (Admin)
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            {[
-              { key: 'name', label: 'Nazwa Katedry' },
-              { key: 'code', label: 'Kod Przedmiotu' },
-              { key: 'icon', label: 'Ikona (emoji)' },
-              { key: 'classroom', label: 'Sala / Lokacja' },
-              { key: 'professorName', label: 'Prowadzący' },
-            ].map(f => (
-              <div key={f.key}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</label>
-                <input
-                  value={infoForm[f.key] || ''}
-                  onChange={e => setInfoForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid rgba(197,159,78,0.2)', paddingBottom: '0.7rem' }}>
+            <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>✏️</span> Zarządzanie & Przypisanie Katedry (Admin)
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Wybierz konto z listy, aby powiązać profesora i automatycznie uzupełnić dane</span>
+          </div>
+
+          {/* Szybki Selektor Konta Nauczyciela / Dyrekcji */}
+          <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1.2rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--gold-glow)', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <User size={15} /> 🧙‍♂️ Połączone Konto Nauczyciela / Dyrekcji
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+              <div>
+                <select
+                  value={infoForm.professorId || ''}
+                  onChange={e => {
+                    const selectedId = e.target.value;
+                    const foundUser = (users || []).find(u => u.id === selectedId);
+                    if (foundUser) {
+                      setInfoForm(prev => ({
+                        ...prev,
+                        professorId: foundUser.id,
+                        professorName: foundUser.fullName || `${foundUser.name} ${foundUser.surname}`.trim(),
+                        classroom: prev.classroom && prev.classroom !== 'Sala nieprzypisana' ? prev.classroom : (foundUser.office || prev.classroom || '')
+                      }));
+                    } else {
+                      setInfoForm(prev => ({
+                        ...prev,
+                        professorId: '',
+                        professorName: ''
+                      }));
+                    }
+                  }}
+                  style={{ width: '100%', background: 'rgba(10,14,22,0.95)', border: '1px solid rgba(197,159,78,0.5)', borderRadius: '6px', padding: '0.6rem 0.8rem', color: '#fff', fontSize: '0.9rem', boxSizing: 'border-box', outline: 'none' }}
+                >
+                  <option value="">-- Wybierz konto z Cytadeli (Auto-uzupełnianie) --</option>
+                  <optgroup label="👑 Rada Dyrekcji (Arcymistrzowie)">
+                    {(users || []).filter(u => u.role === 'admin').map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName || `${u.name} ${u.surname}`} (@{u.username}) — {u.title || 'Dyrekcja'}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📜 Profesorowie Katedr">
+                    {(users || []).filter(u => u.role === 'professor').map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName || `${u.name} ${u.surname}`} (@{u.username}) — {u.title || u.departmentName || 'Profesor'}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
-            ))}
+
+              {/* Podgląd połączonego profilu */}
+              {(() => {
+                const selectedProf = (users || []).find(u => u.id === infoForm.professorId);
+                if (!selectedProf) return <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Wybierz konto z listy powyżej, aby automatycznie powiązać Katedrę z nauczycielem lub wpisz dane poniżej.</div>;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'rgba(197,159,78,0.1)', border: '1px solid rgba(197,159,78,0.25)', borderRadius: '6px', padding: '0.4rem 0.8rem' }}>
+                    <img src={selectedProf.avatar} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-ancient)' }} />
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ color: 'var(--gold-glow)', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {selectedProf.fullName} ({selectedProf.role === 'admin' ? 'Dyrekcja' : 'Profesor'})
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.72rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {selectedProf.office || selectedProf.title || `@${selectedProf.username}`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nazwa Katedry</label>
+              <input
+                value={infoForm.name || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, name: e.target.value }))}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Kod Przedmiotu</label>
+              <input
+                value={infoForm.code || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, code: e.target.value }))}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ikona (emoji)</label>
+              <input
+                value={infoForm.icon || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, icon: e.target.value }))}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sala / Lokacja</label>
+              <input
+                value={infoForm.classroom || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, classroom: e.target.value }))}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wyświetlana Nazwa Prowadzącego</label>
+              <input
+                value={infoForm.professorName || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, professorName: e.target.value }))}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
+              />
+            </div>
+
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Opis</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Opis Katedry</label>
               <textarea
                 value={infoForm.description || ''}
                 onChange={e => setInfoForm(prev => ({ ...prev, description: e.target.value }))}
