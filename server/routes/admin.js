@@ -290,6 +290,12 @@ router.post('/optimize-db', (req, res) => {
       'Wykonano PRAGMA optimize, VACUUM oraz ANALYZE.'
     );
 
+    res.json({ ok: true, message: 'Baza danych została zoptymalizowana (VACUUM & ANALYZE).' });
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd optymalizacji bazy danych: ' + err.message });
+  }
+});
+
 // ==================== INTERAKTYWNY EKSPLORATOR & EDYTOR BAZY DANYCH ====================
 
 // Helper: Get list of allowed user tables in SQLite
