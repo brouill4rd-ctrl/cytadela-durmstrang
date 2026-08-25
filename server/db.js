@@ -4151,7 +4151,7 @@ if (homeworkCount === 0) {
   console.log('[DB] Seeding initial Homework Assignments & Submissions...');
 
   const insertHw = db.prepare(`
-    INSERT INTO homework_assignments (
+    INSERT OR IGNORE INTO homework_assignments (
       id, title, assignment_number, type, subject_id, subject_name, class_year, school_year,
       lesson_id, lesson_title, professor_id, professor_name, professor_avatar,
       description, instructions, requirements, resources, submission_types,
@@ -4163,7 +4163,7 @@ if (homeworkCount === 0) {
   `);
 
   const insertSub = db.prepare(`
-    INSERT INTO homework_submissions (
+    INSERT OR IGNORE INTO homework_submissions (
       id, homework_id, student_id, student_name, house, subject_id, subject_name,
       lesson_id, lesson_title, status, current_version, content, word_count,
       attachments, links, submitted_at, is_late, late_duration_seconds,
@@ -4175,7 +4175,7 @@ if (homeworkCount === 0) {
   `);
 
   const insertVer = db.prepare(`
-    INSERT INTO homework_submission_versions (
+    INSERT OR IGNORE INTO homework_submission_versions (
       id, submission_id, homework_id, student_id, version_number, content, word_count,
       attachments, links, submitted_at, status, grade_score, grade_label, feedback,
       rubric_scores, inline_annotations, revision_reason, created_at
@@ -4183,12 +4183,12 @@ if (homeworkCount === 0) {
   `);
 
   const insertTpl = db.prepare(`
-    INSERT INTO homework_templates (id, title, category, type, description, instructions, requirements, rubric, submission_types, created_by, created_at)
+    INSERT OR IGNORE INTO homework_templates (id, title, category, type, description, instructions, requirements, rubric, submission_types, created_by, created_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))
   `);
 
   const insertQc = db.prepare(`
-    INSERT INTO homework_quick_comments (id, professor_id, category, text, created_at)
+    INSERT OR IGNORE INTO homework_quick_comments (id, professor_id, category, text, created_at)
     VALUES (?,?,?,?,datetime('now'))
   `);
 

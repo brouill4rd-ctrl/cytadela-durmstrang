@@ -28,6 +28,11 @@ async function apiFetch(path, options = {}) {
 }
 
 export const api = {
+  getOrderRoom: (orderId) => apiFetch(`/orders/${encodeURIComponent(orderId)}`),
+  createOrderProject: (data) => apiFetch('/orders/projects', { method: 'POST', body: JSON.stringify(data) }),
+  contributeToOrderProject: (projectId, data) => apiFetch(`/orders/projects/${encodeURIComponent(projectId)}/contributions`, { method: 'POST', body: JSON.stringify(data) }),
+  createOrderCouncilRole: (data) => apiFetch('/orders/council/roles', { method: 'POST', body: JSON.stringify(data) }),
+  assignOrderCouncilMember: (data) => apiFetch('/orders/council/memberships', { method: 'POST', body: JSON.stringify(data) }),
   getMyPrologue: () => apiFetch('/prologue/me'),
   advancePrologue: (stage, choiceId) => apiFetch('/prologue/advance', { method: 'POST', body: JSON.stringify({ stage, choiceId }) }),
   getPrologueAdmin: () => apiFetch('/prologue/admin'),

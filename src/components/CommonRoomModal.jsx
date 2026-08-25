@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
+import { OrderLifePanel } from './OrderLifePanel';
 import {
   X,
   Flame,
@@ -433,6 +434,8 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
                 </div>
               </div>
 
+              <OrderLifePanel orderId={targetKey} color={config.color} />
+
               {/* Secret House Notice Board */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem' }}>
@@ -509,4 +512,3 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
     </div>
   );
 };
-

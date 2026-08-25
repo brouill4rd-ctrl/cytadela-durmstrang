@@ -1,0 +1,51 @@
+[DB] Synchronizing subjects (katedry)...
+[DB] Synchronized all 21 subjects and categories.
+
+  ╔════════════════════════════════════════════════════════╗
+  ║  🏰 CYTADELA DURMSTRANG — DZIENNIKI LEKCYJNE & API    ║
+  ║                                                        ║
+  ║  API:      http://localhost:3001/api                   ║
+  ║  UPLOADS:  http://localhost:3001/uploads               ║
+  ║  DB:       server/durmstrang.db (SQLite)               ║
+  ║  DISCORD:  Rejestrator Wątków & Slash Commands         ║
+  ║  FRONTEND: Serwowany z dist/ (Produkcja)      ║
+  ╚════════════════════════════════════════════════════════╝
+
+🏰 [Discord Bot] Pomyślnie zalogowano jako: Durmstrang-Test-Bot#7009
+⚡ [Discord Bot] Zarejestrowano slash commands (/lekcja, /quiz, /pytanie, /zaklecie, /losowanie).
+[20:52:35] GET /api/lessons
+[20:52:35] GET /api/lessons/rankings/houses
+[20:52:35] GET /api/lessons/ledger/transactions
+[20:52:35] GET /api/timetable
+[20:52:35] GET /api/bank/transactions
+[20:52:35] GET /api/lottery/current
+[20:52:35] GET /api/raven
+[20:52:35] GET /api/homework
+[20:52:44] GET /api/raven
+[20:52:50] GET /api/world
+[20:53:05] GET /api/lessons
+[20:53:05] GET /api/lessons/rankings/houses
+[20:53:05] GET /api/lessons/ledger/transactions
+[20:53:05] GET /api/timetable
+[20:53:05] GET /api/bank/transactions
+[20:53:05] GET /api/lottery/current
+[20:53:05] GET /api/raven
+[20:53:05] GET /api/homework
+[20:53:36] GET /api/lessons
+[20:53:36] GET /api/lessons/rankings/houses
+[20:53:36] GET /api/lessons/ledger/transactions
+[20:53:36] GET /api/timetable
+[20:53:36] GET /api/bank/transactions
+[20:53:36] GET /api/lottery/current
+[20:53:36] GET /api/raven
+[20:53:36] GET /api/homework
+[20:53:51] GET /api/world
+[20:54:05] GET /api/lessons
+[20:54:05] GET /api/lessons/rankings/houses
+[20:54:05] GET /api/lessons/ledger/transactions
+[20:54:05] GET /api/timetable
+[20:54:05] GET /api/bank/transactions
+[20:54:05] GET /api/lottery/current
+[20:54:05] GET /api/raven
+[20:54:05] GET /api/homework
+[20:54:21] GET /api/health

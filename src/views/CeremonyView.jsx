@@ -313,7 +313,11 @@ export const CeremonyView = () => {
               {assignedHouse.motto}
             </p>
             <p style={{ color: '#c5cdd9', fontSize: '0.92rem', lineHeight: 1.6 }}>
-              {assignedHouse.commonRoom || `Wkrocz do Sali Zakonu ${assignedHouse.name}. Otrzymujesz +25 Punktów Pucharu Północy oraz +150 XP do Twojej Karty Adepta!`}
+              {assignedHouse.commonRoom || `Wkrocz do Sali Zakonu ${assignedHouse.name}.`}
+            </p>
+            <p style={{ color: '#aeb8c7', fontSize: '0.88rem', margin: '.8rem 0 0' }}>
+              Opiekun: {assignedHouse.headOfHouse || 'Opiekun Zakonu'}<br />
+              Od tej chwili twoje czyny zostaną zapisane w kronice Zakonu.
             </p>
           </div>
 

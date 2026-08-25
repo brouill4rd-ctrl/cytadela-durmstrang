@@ -1181,6 +1181,9 @@ Dyrektor Cytadeli Durmstrang`
       if (usersRes.ok && usersRes.data.length > 0) {
         setUsers(usersRes.data);
       }
+      const loadedUsers = (usersRes.ok && usersRes.data) ? usersRes.data : users;
+      const freshCurrentUser = loadedUsers.find(u => u.id === currentUserId) || null;
+      const isAdminSession = freshCurrentUser?.role === 'admin';
 
       // Load emails
       const emailsRes = await api.getEmails();
@@ -1231,10 +1234,12 @@ Dyrektor Cytadeli Durmstrang`
         setPointAuditLogs(auditsRes.data);
       }
 
-      // Load pending applications
-      const appsRes = await api.getPendingApplications();
-      if (appsRes.ok) {
-        setPendingApplications(appsRes.data);
+      // Load pending applications (admin only)
+      if (isAdminSession) {
+        const appsRes = await api.getPendingApplications();
+        if (appsRes.ok) {
+          setPendingApplications(appsRes.data);
+        }
       }
 
       // Load subjects (katedry) z backendu
@@ -1269,8 +1274,10 @@ Dyrektor Cytadeli Durmstrang`
         setBankTransactions(txRes.data);
       }
 
-      const salRes = await api.getTeacherSalaries();
-      if (salRes.ok) setTeacherSalaries(salRes.data);
+      if (isAdminSession) {
+        const salRes = await api.getTeacherSalaries();
+        if (salRes.ok) setTeacherSalaries(salRes.data);
+      }
 
       // Load Store Items & Shopping Lists
       const itemsRes = await api.getStoreItems();
@@ -1318,10 +1325,12 @@ Dyrektor Cytadeli Durmstrang`
         setEvents(eventsRes.data);
       }
 
-      // Load Raven Messages
-      const ravenRes = await api.getRavenMessages();
-      if (ravenRes.ok && ravenRes.data.length > 0) {
-        setRavenMessages(ravenRes.data);
+      // Load Raven Messages (requires auth)
+      if (currentUserId && currentUserId !== 'guest') {
+        const ravenRes = await api.getRavenMessages();
+        if (ravenRes.ok && ravenRes.data.length > 0) {
+          setRavenMessages(ravenRes.data);
+        }
       }
 
       // Load Homework Assignments & Submissions
@@ -1384,9 +1393,11 @@ Dyrektor Cytadeli Durmstrang`
         setCurrentLottery(lotRes.data.round);
         setUserLotteryTickets(lotRes.data.userTickets || []);
       }
-      const ravenRes = await api.getRavenMessages();
-      if (ravenRes.ok && ravenRes.data) {
-        setRavenMessages(ravenRes.data);
+      if (currentUserId && currentUserId !== 'guest') {
+        const ravenRes = await api.getRavenMessages();
+        if (ravenRes.ok && ravenRes.data) {
+          setRavenMessages(ravenRes.data);
+        }
       }
       const hwRes = await api.getHomework();
       if (hwRes.ok && hwRes.data) {

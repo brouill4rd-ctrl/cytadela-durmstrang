@@ -4,24 +4,15 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-// GET /api/raven — List messages for current user or public
-router.get('/', (req, res) => {
+// GET /api/raven — List messages for current user (inbox + sent + broadcast)
+router.get('/', requireAuth, (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    const user = userId ? db.prepare('SELECT * FROM users WHERE id = ?').get(userId) : null;
-    const userName = user ? user.full_name : null;
-
-    let rows;
-    if (userName) {
-      rows = db.prepare(`
-        SELECT * FROM raven_messages
-        WHERE recipient = 'Wszyscy Kadeci' OR recipient = ? OR sender_id = ? OR LOWER(recipient) = LOWER(?)
-        ORDER BY rowid DESC
-      `).all(userName, userId, user.username);
-    } else {
-      rows = db.prepare('SELECT * FROM raven_messages ORDER BY rowid DESC').all();
-    }
-
+    const user = req.user;
+    const rows = db.prepare(`
+      SELECT * FROM raven_messages
+      WHERE recipient = 'Wszyscy Kadeci' OR recipient = ? OR sender_id = ? OR LOWER(recipient) = LOWER(?)
+      ORDER BY rowid DESC
+    `).all(user.fullName, user.id, user.username);
     res.json(rows.map(dbRavenMessageToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania wiadomości kruczych: ' + err.message });
@@ -69,7 +60,7 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // PATCH /api/raven/:id/read — Mark message as read
-router.patch('/:id/read', (req, res) => {
+router.patch('/:id/read', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
     db.prepare('UPDATE raven_messages SET read = 1 WHERE id = ?').run(id);
@@ -80,7 +71,7 @@ router.patch('/:id/read', (req, res) => {
 });
 
 // PATCH /api/raven/:id/star — Toggle star
-router.patch('/:id/star', (req, res) => {
+router.patch('/:id/star', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
     db.prepare('UPDATE raven_messages SET starred = CASE WHEN starred = 1 THEN 0 ELSE 1 END WHERE id = ?').run(id);
@@ -90,10 +81,15 @@ router.patch('/:id/star', (req, res) => {
   }
 });
 
-// DELETE /api/raven/:id — Delete message
+// DELETE /api/raven/:id — Delete message (sender or admin only)
 router.delete('/:id', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
+    const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
+    if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+    if (msg.sender_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Możesz usunąć tylko własne wiadomości.' });
+    }
     db.prepare('DELETE FROM raven_messages WHERE id = ?').run(id);
     res.json({ ok: true, message: 'Wiadomość usunięta.' });
   } catch (err) {
