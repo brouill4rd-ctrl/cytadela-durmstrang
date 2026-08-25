@@ -502,11 +502,10 @@ Dyrektor Cytadeli Durmstrang`
       const updated = CATEGORY_BANNERS.map(def => {
         const custom = parsed.find(p => p.id === def.id);
         if (!custom) return def;
-        return {
-          ...def,
-          ...custom,
-          bgImage: custom.bgImage || def.bgImage
-        };
+        const resolvedBg = def.bgImage?.startsWith('/')
+          ? def.bgImage
+          : (custom.bgImage || def.bgImage);
+        return { ...def, ...custom, bgImage: resolvedBg };
       });
       return updated;
     } catch {
@@ -522,11 +521,10 @@ Dyrektor Cytadeli Durmstrang`
       const updated = DEFAULT_BLOCK_GRAPHICS.map(def => {
         const custom = parsed.find(p => p.id === def.id);
         if (!custom) return def;
-        return {
-          ...def,
-          ...custom,
-          bgImage: custom.bgImage || def.bgImage
-        };
+        const resolvedBg = def.bgImage?.startsWith('/')
+          ? def.bgImage
+          : (custom.bgImage || def.bgImage);
+        return { ...def, ...custom, bgImage: resolvedBg };
       });
       return updated;
     } catch {
