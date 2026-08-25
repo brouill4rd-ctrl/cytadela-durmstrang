@@ -2224,6 +2224,7 @@ export function dbUserToFrontend(row) {
     taughtSubjectIds: JSON.parse(row.taught_subject_ids || '[]'),
     grades: JSON.parse(row.grades || '[]'),
     inventory: JSON.parse(row.inventory || '[]'),
+    signaturePng: row.signature_png || '',
     discordId: row.discord_id || '',
     discordUsername: row.discord_username || '',
     discordAvatar: row.discord_avatar || '',
@@ -2257,8 +2258,16 @@ export function dbNewsToFrontend(row) {
     summary: row.summary,
     content: row.content,
     author: row.author,
+    authorId: row.author_id || '',
     authorRole: row.author_role,
+    authorSignature: row.author_signature || '',
     category: row.category,
+    categoryKey: row.category_key || row.category || 'edykty',
+    bannerCustomText: row.banner_custom_text || '',
+    waxSeal: row.wax_seal || 'gold',
+    house: row.house || '',
+    tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
+    readTime: row.read_time || '',
     pinned: !!row.pinned,
     date: row.date,
     reactions: JSON.parse(row.reactions || '{}'),
@@ -3505,6 +3514,18 @@ try {
 try {
   db.exec("ALTER TABLE discord_bot_config ADD COLUMN welcome_enabled INTEGER DEFAULT 1");
 } catch (_) {}
+
+// News table extended columns
+try { db.exec("ALTER TABLE news ADD COLUMN author_id TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN category_key TEXT DEFAULT 'edykty'"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN banner_custom_text TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN wax_seal TEXT DEFAULT 'gold'"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN house TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN tags TEXT DEFAULT '[]'"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN author_signature TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN read_time TEXT DEFAULT ''"); } catch (_) {}
+// Professor signature image
+try { db.exec("ALTER TABLE users ADD COLUMN signature_png TEXT DEFAULT ''"); } catch (_) {}
 
 export function dbRoleMappingToFrontend(row) {
   if (!row) return null;

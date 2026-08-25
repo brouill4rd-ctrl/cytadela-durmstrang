@@ -5,14 +5,14 @@ import { requireAuth, requireRole, requireSelfOrRole } from '../middleware/auth.
 
 const router = Router();
 
-// GET /api/users — all users (publiczny — do podglądu profili)
-router.get('/', (req, res) => {
+// GET /api/users — all users (zalogowani)
+router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
   res.json(rows.map(dbUserToFrontend));
 });
 
-// GET /api/users/:id — single user (publiczny)
-router.get('/:id', (req, res) => {
+// GET /api/users/:id — single user (zalogowani)
+router.get('/:id', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'User not found' });
   res.json(dbUserToFrontend(row));
@@ -35,7 +35,7 @@ router.patch('/:id', requireAuth, requireSelfOrRole('admin'), (req, res) => {
 
   const PROFESSOR_FIELDS = [
     ...STUDENT_FIELDS,
-    'office', 'specialization'
+    'office', 'specialization', 'signature_png'
   ];
 
   const ADMIN_FIELDS = [
@@ -58,9 +58,12 @@ router.patch('/:id', requireAuth, requireSelfOrRole('admin'), (req, res) => {
   const updates = [];
   const values = [];
 
-  // If fullName is passed as camelCase, map to full_name
+  // camelCase → snake_case mappings
   if (fields.fullName !== undefined && fields.full_name === undefined) {
     fields.full_name = fields.fullName;
+  }
+  if (fields.signaturePng !== undefined && fields.signature_png === undefined) {
+    fields.signature_png = fields.signaturePng;
   }
   // If name and surname are passed, auto-compute full_name if not explicitly set
   if (fields.name && fields.surname && !fields.full_name) {
@@ -149,7 +152,7 @@ Dyrektor Cytadeli Durmstrang`
     VALUES (?, ?, ?, ?, ?)
   `).run(
     `log-${Date.now()}`,
-    now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+    now.toISOString(),
     adminName,
     `Zatwierdzono podanie (${user.role}): ${user.fullName}`,
     `Wysłano oficjalny list przyjęcia na adres: ${userEmail}`
@@ -177,7 +180,7 @@ router.patch('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(
     `log-${Date.now()}`,
-    new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+    new Date().toISOString(),
     adminName,
     `Odrzucono podanie: ${user.fullName}`,
     `Zgłoszenie @${user.username} zostało oddalone.`

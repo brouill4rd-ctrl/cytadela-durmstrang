@@ -1399,9 +1399,11 @@ Dyrektor Cytadeli Durmstrang`
           setRavenMessages(ravenRes.data);
         }
       }
-      const hwRes = await api.getHomework();
-      if (hwRes.ok && hwRes.data) {
-        setHomeworkSubmissions(hwRes.data);
+      if (currentUserId && currentUserId !== 'guest') {
+        const hwRes = await api.getHomework({ studentId: currentUserId });
+        if (hwRes.ok && hwRes.data) {
+          setHomeworkSubmissions(hwRes.data);
+        }
       }
     }, 30000);
 
@@ -3757,6 +3759,7 @@ Dyrektor Cytadeli Durmstrang`
         activeDocumentSlug,
         setActiveDocumentSlug,
         activeDocumentCategory,
+        setActiveDocumentCategory,
         navigateToDocumentModule,
         // Moduł Prac Domowych (TMD)
         homeworkAssignments,

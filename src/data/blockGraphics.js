@@ -6,7 +6,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛟ',
     defaultIcon: 'Shield',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp',
+    bgImage: '/bloki/blok-karta_tozsamosci.png',
     description: 'Nagłówek profilu adepta, logowania i statusu'
   },
   {
@@ -16,7 +16,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛏ',
     defaultIcon: 'Zap',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541000126305411072/some-of-my-favorite-pottermore-art-v0-u8isy9ap2hoa1.png?ex=6a8bffb4&is=6a8aae34&hm=d308bdc0d55aeb24dfaf67a2e69d6ecd8474f07d4ef61ff5da75a0f38375d4ca&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok-gry_aktywnosci.png',
     description: 'Nagłówek sekcji minigier, wyroczni i pojedynków'
   },
   {
@@ -26,7 +26,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛉ',
     defaultIcon: 'Sparkles',
     color: '#a4c8e1',
-    bgImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+    bgImage: '/bloki/blok-inkwizycja_dekrety.png',
     description: 'Nagłówek panelu podań i rekrutacji do Cytadeli'
   },
   {
@@ -36,7 +36,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛇ',
     defaultIcon: 'BookOpen',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001194430795876/iNaw1jc.png?ex=6a8c00b3&is=6a8aaf33&hm=a9f237e182ec99604cc5c7c1c70d4ecc72b7062b4767087a94f1ed8a154ab9a2&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok-plan_lekcji.png',
     description: 'Nagłówek dziennego rozkładu katedr i zajęć'
   },
   {
@@ -66,7 +66,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛟ',
     defaultIcon: 'Calendar',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541000264566177853/some-of-my-favorite-pottermore-art-v0-9uf7j4z33hoa1.png?ex=6a8bffd5&is=6a8aae55&hm=614c97665859a69df44c457418740d934295670070c4f8acf77ec23c5ac3123f&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok_wydarzenia.png',
     description: 'Nagłówek turniejów, świąt przesilenia i zlotów'
   },
   {
@@ -76,7 +76,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚢ',
     defaultIcon: 'Compass',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541068245090705508/hero-citadel.jpg?ex=6a8c3f25&is=6a8aeda5&hm=bae075b4a1fa261a44d3e0d32285cc1bc72fe03b14f90ef11ec469d32f541cf2&=&format=webp',
+    bgImage: '/bloki/blok-sale_komnaty.png',
     description: 'Nagłówek skrótów do komnat i wież Durmstrang'
   },
   {
@@ -86,7 +86,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛏ',
     defaultIcon: 'Flame',
     color: '#ff5c5c',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541000354714361956/some-of-my-favorite-pottermore-art-v0-ah5n7imc3hoa1.png?ex=6a8bffea&is=6a8aae6a&hm=01c2a21ade46d46d90fad9a3b2b29b565c08ab78b78a657fed37f71b550f9866&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok_liga-bojowa.jpg',
     description: 'Nagłówek pojedynków na pylonach lodowych'
   },
   {
@@ -96,7 +96,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚱ',
     defaultIcon: 'Mail',
     color: '#b18cfe',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001129469411368/xZs2w2u.png?ex=6a8c00a3&is=6a8aaf23&hm=145f953b79b0daccac1d702ba689bc2009aed76170c8c7c75a56797d4817617c&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok-poczta_krukow.png',
     description: 'Nagłówek korespondencji i wieści z Północy'
   },
   {
@@ -106,7 +106,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚱ',
     defaultIcon: 'Compass',
     color: '#a4c8e1',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995757606305812/magizoologia.webp?ex=6a8bfba2&is=6a8aaa22&hm=f3b84591a32a8618e5d3b206eb29ac005768a60729643921d988fe262c480d37&=&format=webp',
+    bgImage: '/bloki/blok-eksploracja.png',
     description: 'Nagłówek sekcji mapy, rynku i komnat w lewym pasku'
   },
   {
@@ -116,7 +116,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛖ',
     defaultIcon: 'Crown',
     color: 'var(--gold-glow)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001472534122507/tPG6xan.png?ex=6a8c00f5&is=6a8aaf75&hm=cba1045a1789284f0ffbcfd53d5f62ac5945fd166e577e673484b39495aac92c&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok_wladze_twierdzy.png',
     description: 'Nagłówek panelu dyrekcji, mistrzów i opiekunów'
   },
   {
@@ -126,7 +126,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚠ',
     defaultIcon: 'Trophy',
     color: '#a4c8e1',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001474879000617/cLRvYQT.png?ex=6a8c00f6&is=6a8aaf76&hm=4c48d2b58bdd3befda67002431f14795d448ea775e00c9fc25af68d7237ead33&=&format=webp&quality=lossless',
+    bgImage: '/bloki/zelazne-pioro.png',
     description: 'Nagłówek tablicy sławy i punktacji indywidualnej'
   },
   {
@@ -136,7 +136,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛗ',
     defaultIcon: 'Users',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001472534122507/tPG6xan.png?ex=6a8c00f5&is=6a8aaf75&hm=cba1045a1789284f0ffbcfd53d5f62ac5945fd166e577e673484b39495aac92c&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok_spis-kont.png',
     description: 'Nagłówek spisu uczniów, nauczycieli i statystyk Zakonów'
   },
   {
@@ -146,7 +146,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚲ',
     defaultIcon: 'ShoppingBag',
     color: '#f59e0b',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001473897537626/l9eRx1C.png?ex=6a8c00f5&is=6a8aaf75&hm=27ed1f44e2bd8139ee4cab221ecf1f4a4875e50680671a6415ac62bb22565254&=&format=webp&quality=lossless',
+    bgImage: '/bloki/blok-twierdza_magii.jpg',
     description: 'Nagłówek rynku wyprawek, artefaktów i zwojów'
   },
   {
@@ -166,7 +166,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚦ',
     defaultIcon: 'Scroll',
     color: '#8b5cf6',
-    bgImage: 'https://viking.style/wp-content/uploads/2023/07/Mythical-Viking-Creatures.jpg',
+    bgImage: '/bloki/blok-kroniki_bestariusz.png',
     description: 'Nagłówek manuskryptów, bestii i historii'
   },
   {
@@ -176,7 +176,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚨ',
     defaultIcon: 'BookOpen',
     color: '#ec4899',
-    bgImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS45XU8gABDdxysuTIQe9M7cAVmCrA75xT5nxbU2Q4JSSklaUG-bIY5cr7&s=10',
+    bgImage: '/bloki/blok_grymuar.png',
     description: 'Nagłówek księgi czarów, inkantacji i formuł'
   }
 ];

@@ -78,10 +78,12 @@ export const api = {
 
   // News
   getNews: () => apiFetch('/news'),
+  getNewsAuthors: () => apiFetch('/news/authors'),
   createNews: (newsData) => apiFetch('/news', { method: 'POST', body: JSON.stringify(newsData) }),
   updateNews: (id, newsData) => apiFetch(`/news/${id}`, { method: 'PUT', body: JSON.stringify(newsData) }),
   deleteNews: (id) => apiFetch(`/news/${id}`, { method: 'DELETE' }),
   seedNews: (items) => apiFetch('/news/seed', { method: 'POST', body: JSON.stringify(items) }),
+  updateUserSignature: (userId, signaturePng) => apiFetch(`/users/${userId}`, { method: 'PUT', body: JSON.stringify({ signaturePng }) }),
 
   // ==================== DZIENNIKI LEKCYJNE & RANKINGI ====================
   getLessons: (filters = {}) => {

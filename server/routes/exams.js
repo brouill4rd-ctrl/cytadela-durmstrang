@@ -1045,7 +1045,7 @@ router.post('/grading/answer/:answerId', requireAuth, requireRole('admin', 'prof
   const answer = db.prepare('SELECT * FROM attempt_answers WHERE id = ?').get(req.params.answerId);
   if (!answer) return res.status(404).json({ error: 'Nie znaleziono odpowiedzi.' });
   const { manualScore, professorComment, rubricScores } = req.body;
-  if (manualScore === undefined && manualScore !== 0) return res.status(400).json({ error: 'Podaj liczbę punktów.' });
+  if (manualScore === undefined || manualScore === null) return res.status(400).json({ error: 'Podaj liczbę punktów.' });
   if (manualScore < 0 || manualScore > answer.max_score) return res.status(400).json({ error: `Punkty muszą być między 0 a ${answer.max_score}.` });
 
   const finalScore = answer.is_auto_graded ? answer.auto_score : (manualScore ?? 0);

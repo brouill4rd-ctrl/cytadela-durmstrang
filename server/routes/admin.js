@@ -45,7 +45,7 @@ router.post('/create-account', (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(
     `log-${Date.now()}`,
-    new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+    new Date().toISOString(),
     adminName,
     `Mianowano członka Dyrekcji: ${(data.name || '').trim()} ${(data.surname || '').trim()}`,
     `Nadano uprawnienia Arcymistrzowskie dla @${trimmedUsername}`
@@ -255,7 +255,7 @@ router.post('/backup-import', (req, res) => {
         VALUES (?, ?, ?, ?, ?)
       `).run(
         `log-${Date.now()}`,
-        new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+        new Date().toISOString(),
         req.user.fullName || 'Arcymistrz Dyrekcji',
         'Pełne Przywrócenie Bazy Danych z Kopii Zapasowej JSON',
         `Przywrócono bazę z pliku utworzonego: ${backup.exportedAt || 'nieznana data'}`
@@ -285,7 +285,7 @@ router.post('/optimize-db', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(
       `log-${Date.now()}`,
-      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      new Date().toISOString(),
       req.user.fullName || 'Rada Dyrekcji (System)',
       'Optymalizacja Bazy Danych SQLite',
       'Wykonano PRAGMA optimize, VACUUM oraz ANALYZE.'
@@ -426,7 +426,7 @@ router.post('/db/table/:tableName', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(
       `log-${Date.now()}`,
-      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      new Date().toISOString(),
       req.user.fullName || 'Dyrekcja Cytadeli',
       `Wstawiono rekord do tabeli [${tableName}]`,
       `Klucz: ${data.id || 'nowy rekord'}`
@@ -473,7 +473,7 @@ router.put('/db/table/:tableName/:id', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(
       `log-${Date.now()}`,
-      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      new Date().toISOString(),
       req.user.fullName || 'Dyrekcja Cytadeli',
       `Zaktualizowano rekord w tabeli [${tableName}]`,
       `ID: ${id} • Zmodyfikowane pola: ${validCols.join(', ')}`
@@ -510,7 +510,7 @@ router.delete('/db/table/:tableName/:id', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(
       `log-${Date.now()}`,
-      new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      new Date().toISOString(),
       req.user.fullName || 'Dyrekcja Cytadeli',
       `Usunięto rekord z tabeli [${tableName}]`,
       `ID: ${id}`

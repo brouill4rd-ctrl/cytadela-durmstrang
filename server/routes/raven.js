@@ -63,6 +63,17 @@ router.post('/', requireAuth, (req, res) => {
 router.patch('/:id/read', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
+    const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
+    if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+
+    const isRecipient = msg.recipient === req.user.fullName
+      || msg.recipient === req.user.username
+      || msg.recipient === 'Wszyscy Kadeci';
+    const isSender = msg.sender_id === req.user.id;
+    if (!isRecipient && !isSender && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
+    }
+
     db.prepare('UPDATE raven_messages SET read = 1 WHERE id = ?').run(id);
     res.json({ ok: true });
   } catch (err) {
@@ -74,6 +85,17 @@ router.patch('/:id/read', requireAuth, (req, res) => {
 router.patch('/:id/star', requireAuth, (req, res) => {
   try {
     const { id } = req.params;
+    const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
+    if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+
+    const isRecipient = msg.recipient === req.user.fullName
+      || msg.recipient === req.user.username
+      || msg.recipient === 'Wszyscy Kadeci';
+    const isSender = msg.sender_id === req.user.id;
+    if (!isRecipient && !isSender && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
+    }
+
     db.prepare('UPDATE raven_messages SET starred = CASE WHEN starred = 1 THEN 0 ELSE 1 END WHERE id = ?').run(id);
     res.json({ ok: true });
   } catch (err) {

@@ -205,110 +205,6 @@ export const Navbar = () => {
             Wrota Cytadeli
           </button>
 
-          {/* Dzienniki Lekcyjne Link (Public) */}
-          <button
-            onClick={() => handleNavClick('journals')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.7rem',
-              background: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-              border: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '5px',
-              color: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? '#ffffff' : '#f7dca0',
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Scroll size={13} color="var(--gold-glow)" />
-            <span>Dzienniki</span>
-          </button>
-
-          {/* Plan Lekcji Link (Public) */}
-          <button
-            onClick={() => handleNavClick('timetable')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.7rem',
-              background: activeView === 'timetable' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-              border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '5px',
-              color: activeView === 'timetable' ? '#ffffff' : '#e2e8f0',
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Calendar size={13} color="var(--gold-ancient)" />
-            <span>Plan Lekcji</span>
-          </button>
-
-          {/* Egzaminy Link */}
-          <button
-            onClick={() => handleNavClick('exams')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.7rem',
-              background: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-              border: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '5px',
-              color: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? '#ffffff' : '#e2e8f0',
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Award size={13} color="var(--gold-glow)" />
-            <span>Egzaminy</span>
-          </button>
-
-          {/* Prace Domowe Link */}
-          <button
-            onClick={() => handleNavClick('homework')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.7rem',
-              background: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-              border: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-              borderRadius: '5px',
-              color: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '#ffffff' : '#e2e8f0',
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <BookOpen size={13} color="var(--gold-ancient)" />
-            <span>Prace Domowe</span>
-          </button>
-
           {/* Izba Pamięci Link (Public) */}
           <button
             onClick={() => handleNavClick('memory')}
@@ -344,10 +240,10 @@ export const Navbar = () => {
                 alignItems: 'center',
                 gap: '0.35rem',
                 padding: '0.4rem 0.7rem',
-                background: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? 'rgba(197, 159, 78, 0.18)' : 'transparent',
-                border: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+                background: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide', 'journals', 'lesson-detail', 'professor-journal-editor', 'timetable', 'exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank', 'homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? 'rgba(197, 159, 78, 0.18)' : 'transparent',
+                border: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide', 'journals', 'lesson-detail', 'professor-journal-editor', 'timetable', 'exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank', 'homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
                 borderRadius: '5px',
-                color: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide'].includes(activeView) ? '#ffffff' : '#b0b7c3',
+                color: ['academic', 'houses', 'ceremony', 'rune-workshop', 'rules-guide', 'journals', 'lesson-detail', 'professor-journal-editor', 'timetable', 'exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank', 'homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '#ffffff' : '#b0b7c3',
                 fontFamily: 'var(--font-heading)',
                 fontSize: '0.88rem',
                 fontWeight: 600,
@@ -384,6 +280,74 @@ export const Navbar = () => {
                   animation: 'fadeIn 0.2s ease'
                 }}
               >
+                <button
+                  onClick={() => handleNavClick('journals')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                    borderRadius: '4px',
+                    border: ['journals', 'lesson-detail', 'professor-journal-editor'].includes(activeView) ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#f7dca0',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Scroll size={14} color="var(--gold-glow)" /> Dzienniki Lekcyjne
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('exams')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                    borderRadius: '4px',
+                    border: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Award size={14} color="var(--gold-glow)" /> Egzaminy
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('homework')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.8rem',
+                    background: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                    borderRadius: '4px',
+                    border: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '1px solid var(--gold-ancient)' : 'none',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <BookOpen size={14} color="var(--gold-ancient)" /> Prace Domowe
+                  </span>
+                </button>
+
+                <div style={{ height: '1px', background: 'rgba(197, 159, 78, 0.2)', margin: '0.3rem 0.4rem' }} />
+
                 {currentUser && (
                   <button
                     onClick={() => handleNavClick('academic')}

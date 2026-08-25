@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import db, {
   dbGazetteIssueToFrontend,
   dbGazetteArticleToFrontend,
@@ -116,9 +117,21 @@ router.get('/issues/:id', (req, res) => {
     const issue = db.prepare('SELECT * FROM gazette_issues WHERE id = ?').get(req.params.id);
     if (!issue) return res.status(404).json({ error: 'Nie znaleziono wydania.' });
 
-    // Only allow non-published access for staff
-    const userId = req.headers['x-user-id'];
+    // Only allow non-published access for staff (verified via JWT Authorization header)
     if (issue.status !== 'published') {
+      const authHeader = req.headers['authorization'];
+      let userId = null;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const payload = jwt.verify(
+            authHeader.slice(7),
+            process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294'
+          );
+          userId = payload.id;
+        } catch {
+          // invalid/expired token — treat as unauthenticated
+        }
+      }
       if (!userId) return res.status(403).json({ error: 'Wydanie nie jest jeszcze opublikowane.' });
       const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
       if (!user || user.role !== 'admin') {

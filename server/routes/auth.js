@@ -151,7 +151,7 @@ router.post('/register', (req, res) => {
     VALUES (?, ?, 'Kancelaria Rekrutacji', ?, ?)
   `).run(
     `log-${Date.now()}`,
-    now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+    now.toISOString(),
     `Złożono podanie (${role}): ${fullName}`,
     `Wysłano e-mail potwierdzający na adres: ${userEmail}`
   );

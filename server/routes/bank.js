@@ -117,13 +117,15 @@ router.post('/transfer', requireAuth, (req, res) => {
 
     // 4. Send notification email to recipient if user
     if (!isSpecialTarget) {
+      const recipientUserRow = db.prepare('SELECT username FROM users WHERE id = ?').get(recipientId);
+      const recipientUsername = recipientUserRow ? recipientUserRow.username : recipientId;
       const emailId = `mail-bank-${Date.now()}`;
       db.prepare(`
         INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'bank', ?)
       `).run(
         emailId,
-        `${recipientId}@durmstrang.edu`,
+        `${recipientUsername}@durmstrang.edu`,
         recipientName,
         'bank@kaupangr.durmstrang.edu',
         'Kaupangr Skírnisbanki',

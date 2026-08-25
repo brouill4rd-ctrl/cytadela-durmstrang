@@ -86,7 +86,7 @@ router.get('/rankings/houses', (req, res) => {
 });
 
 // GET /api/lessons/ledger/transactions - Historia transakcji punktowych
-router.get('/ledger/transactions', (req, res) => {
+router.get('/ledger/transactions', requireAuth, (req, res) => {
   try {
     const { house, studentId, lessonId, limit = 100 } = req.query;
     let query = 'SELECT * FROM point_transactions WHERE 1=1';
@@ -117,7 +117,7 @@ router.get('/ledger/transactions', (req, res) => {
 });
 
 // GET /api/lessons/audit-logs - Audyt modyfikacji punktów
-router.get('/audit-logs', (req, res) => {
+router.get('/audit-logs', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const rows = db.prepare('SELECT * FROM point_audit_logs ORDER BY timestamp DESC LIMIT 100').all();
     res.json(rows);
@@ -128,7 +128,7 @@ router.get('/audit-logs', (req, res) => {
 });
 
 // GET /api/lessons/stats/overview - Statystyki ogólne
-router.get('/stats/overview', (req, res) => {
+router.get('/stats/overview', requireAuth, (req, res) => {
   try {
     const totalLessons = db.prepare('SELECT COUNT(*) as c FROM lessons WHERE status = "published"').get().c;
     const totalDrafts = db.prepare('SELECT COUNT(*) as c FROM lessons WHERE status = "draft"').get().c;
@@ -407,7 +407,7 @@ router.post('/:id/publish', requireAuth, requireRole('admin', 'professor'), (req
         VALUES (?, ?, ?, ?, ?)
       `).run(
         `log-${Date.now()}`,
-        new Date().toLocaleString('pl-PL'),
+        new Date().toISOString(),
         lesson.professor_name,
         `Publikacja Dziennika: ${lesson.topic}`,
         `Przyznano łącznie +${totalCalculatedPoints} pkt dla Zakonów (${participants.length} uczestników).`
@@ -518,6 +518,16 @@ router.post('/points/award', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Wymagany dom i punkty.' });
     }
 
+    // Studenci mogą przyznawać punkty tylko sobie (gry i aktywności)
+    if (req.user.role === 'student') {
+      if (studentId && studentId !== req.user.id) {
+        return res.status(403).json({ error: 'Nie możesz przyznawać punktów imieniem innego użytkownika.' });
+      }
+      if (points > 100) {
+        return res.status(400).json({ error: 'Maksymalna wartość punktów per akcja wynosi 100.' });
+      }
+    }
+
     const txId = `tx-act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     db.prepare(`
       INSERT INTO point_transactions (id, student_id, student_name, house, points, source, lesson_id, professor_id, professor_name, date, comment, is_revoked, created_at)
@@ -570,7 +580,7 @@ router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
         VALUES (?, ?, ?, ?, ?)
       `).run(
         `log-${Date.now()}`,
-        new Date().toLocaleString('pl-PL'),
+        new Date().toISOString(),
         'Dyrekcja Cytadeli',
         `Usunięcie Dziennika ID: ${id}`,
         `Wycofano dziennik „${lesson.topic}” oraz anulowano wszystkie powiązane rekordy punktowe.`

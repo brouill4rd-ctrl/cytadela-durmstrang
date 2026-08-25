@@ -5,7 +5,7 @@ import db, {
   dbUserToFrontend,
   calculateHouseRankings
 } from '../db.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -126,6 +126,10 @@ router.post('/buy', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Wymagane ID użytkownika i przedmiotu.' });
   }
 
+  if (userId !== req.user.id && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Nie możesz dokonywać zakupów imieniem innego użytkownika.' });
+  }
+
   const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
   const user = dbUserToFrontend(userRow);
@@ -243,7 +247,7 @@ router.get('/shopping-lists', (req, res) => {
 });
 
 // POST /api/market/items — create new store item
-router.post('/items', requireAuth, (req, res) => {
+router.post('/items', requireAuth, requireRole('admin'), (req, res) => {
   const {
     id,
     name,
@@ -311,7 +315,7 @@ router.post('/items', requireAuth, (req, res) => {
 });
 
 // PUT /api/market/items/:id — update store item
-router.put('/items/:id', requireAuth, (req, res) => {
+router.put('/items/:id', requireAuth, requireRole('admin'), (req, res) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM store_items WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Przedmiot nie istnieje.' });
@@ -372,7 +376,7 @@ router.put('/items/:id', requireAuth, (req, res) => {
 });
 
 // DELETE /api/market/items/:id — delete store item
-router.delete('/items/:id', requireAuth, (req, res) => {
+router.delete('/items/:id', requireAuth, requireRole('admin'), (req, res) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM store_items WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Przedmiot nie istnieje.' });

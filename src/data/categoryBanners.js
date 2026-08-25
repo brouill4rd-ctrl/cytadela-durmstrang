@@ -7,7 +7,7 @@ export const CATEGORY_BANNERS = [
     description: 'Katedra Eliksirów, destylacja wywarów i alchemia mroźna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 28, 48, 0.95) 0%, rgba(4, 8, 14, 0.98) 100%)',
     bgType: 'potions',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541001474392203304/An82NrY.png?ex=6a8c00f5&is=6a8aaf75&hm=9ec70e4e7fd7c7072e45480c16c17962b8f6df5827ce5dd63c971579ac7b124e&=&format=webp&quality=lossless'
+    bgImage: '/edykty/eliksiry.png'
   },
   {
     id: 'edykty',
@@ -17,7 +17,7 @@ export const CATEGORY_BANNERS = [
     description: 'Oficjalne dekrety, inauguracje i zarządzenia Rady Mistrzów',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(38, 28, 12, 0.95) 0%, rgba(6, 6, 8, 0.98) 100%)',
     bgType: 'citadel',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995756285108254/Harry_Potter_-_Professor_Flitwick_teaches_charms.jpg?ex=6a8bfba2&is=6a8aaa22&hm=2b1a57188e70d57fcae5ffc6d892662319c5d82cabeb42738c7422ca0fa52cbd&=&format=webp'
+    bgImage: '/bloki/blok-inkwizycja_dekrety.png'
   },
   {
     id: 'czarna-magia',
@@ -27,7 +27,7 @@ export const CATEGORY_BANNERS = [
     description: 'Klątwy, pętanie cieni, nekromancja i rytuały północy',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(28, 14, 46, 0.95) 0%, rgba(4, 3, 8, 0.98) 100%)',
     bgType: 'shadow',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995757992054794/cm.jpg?ex=6a8bfba3&is=6a8aaa23&hm=31e7543b85e23f8b4f36c09796dcf210c189092898e91c0be721fbf28fc395c6&=&format=webp&width=3072&height=1445'
+    bgImage: '/edykty/cm.jpg'
   },
   {
     id: 'liga-bojowa',
@@ -37,7 +37,7 @@ export const CATEGORY_BANNERS = [
     description: 'Pojedynki na lodzie, turnieje szermierki i magia defensywna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(44, 14, 14, 0.95) 0%, rgba(8, 3, 3, 0.98) 100%)',
     bgType: 'duel',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1540995756603867166/B4C34M1Z2_The_Golden_Thread.jpg?ex=6a8bfba2&is=6a8aaa22&hm=e83c10d24847e06a8a473b087794dfc1aa3752fdc9c9b9fa2d2334312baabad4&=&format=webp'
+    bgImage: '/bloki/blok_liga-bojowa.jpg'
   },
   {
     id: 'starozytne-runy',
@@ -47,7 +47,7 @@ export const CATEGORY_BANNERS = [
     description: 'Wykucie formuł runicznych (Galdr), inskrypcje i monolity',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(10, 36, 34, 0.95) 0%, rgba(3, 8, 8, 0.98) 100%)',
     bgType: 'runes',
-    bgImage: 'https://media.discordapp.net/attachments/1540707859296161804/1541000968911589447/IMG_0914.jpg?ex=6a8c007d&is=6a8aaefd&hm=95b03e770a59ed2b328d39b07802e7312ec857bbb7acde2adc5980897eb4fda8&=&format=webp'
+    bgImage: '/edykty/runy.jpg'
   },
   {
     id: 'astronomia',
@@ -56,7 +56,8 @@ export const CATEGORY_BANNERS = [
     themeColor: '#a4c8e1',
     description: 'Pomiary zorzy polarnej, pływy eteryczne i przesilenia',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(16, 26, 44, 0.95) 0%, rgba(4, 6, 12, 0.98) 100%)',
-    bgType: 'aurora'
+    bgType: 'aurora',
+    bgImage: '/edykty/astronomia.webp'
   },
   {
     id: 'oceny',
@@ -83,7 +84,138 @@ export const CATEGORY_BANNERS = [
     themeColor: '#52b788',
     description: 'Krioflora, korzenie mandragory polarnej i szklarnie',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 34, 22, 0.95) 0%, rgba(3, 8, 5, 0.98) 100%)',
-    bgType: 'herbs'
+    bgType: 'herbs',
+    bgImage: '/edykty/zielarstwo.jpg'
+  },
+  {
+    id: 'biala-magia',
+    categoryName: 'Biała Magia & Rytuały',
+    defaultScript: 'biala magia',
+    themeColor: '#e0f0ff',
+    description: 'Leczenie ran magicznych, pieczętowanie aury i manipulacja światłem zorzy',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(20, 30, 46, 0.95) 0%, rgba(4, 6, 12, 0.98) 100%)',
+    bgType: 'light',
+    bgImage: '/edykty/biala_magia.png'
+  },
+  {
+    id: 'zaklecia',
+    categoryName: 'Zaklęcia Użytkowe',
+    defaultScript: 'zaklecia',
+    themeColor: '#f59e0b',
+    description: 'Inkantacje manipulacji grawitacją, lód i bezpieczna transgresja',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(38, 28, 8, 0.95) 0%, rgba(8, 6, 2, 0.98) 100%)',
+    bgType: 'spells',
+    bgImage: '/edykty/zaklecia.webp'
+  },
+  {
+    id: 'transmutacja',
+    categoryName: 'Transmutacja & Przemiana',
+    defaultScript: 'transmutacja',
+    themeColor: '#06b6d4',
+    description: 'Przekształcanie substancji, krystalizacja i animacja kamiennych obelisków',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(4, 28, 36, 0.95) 0%, rgba(2, 6, 8, 0.98) 100%)',
+    bgType: 'transmutation',
+    bgImage: '/edykty/transmutacja.webp'
+  },
+  {
+    id: 'magizoologia',
+    categoryName: 'Magizoologia Północy',
+    defaultScript: 'magizoologia',
+    themeColor: '#52b788',
+    description: 'Badanie smoków, wilków mroźnych, kelpie z fiordów i trolli górskich',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(10, 28, 18, 0.95) 0%, rgba(2, 6, 4, 0.98) 100%)',
+    bgType: 'beasts',
+    bgImage: '/edykty/magizoologia.webp'
+  },
+  {
+    id: 'obrona-przed-ciemnymi-mocami',
+    categoryName: 'Obrona Przed Ciemnymi Mocami',
+    defaultScript: 'obrona przed ciemnymi mocami',
+    themeColor: '#f97316',
+    description: 'Neutralizacja klątw, obrona przed istotami cmentarnymi i demonami mrozu',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(36, 18, 6, 0.95) 0%, rgba(8, 4, 2, 0.98) 100%)',
+    bgType: 'defense',
+    bgImage: '/edykty/opcm.jpg'
+  },
+  {
+    id: 'historia-magii',
+    categoryName: 'Historia Magii & Wojen Północy',
+    defaultScript: 'historia magii',
+    themeColor: '#c59f4e',
+    description: 'Wielka schizma z 1294 roku, powstanie Cytadeli i sojusze z klanami olbrzymów',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(30, 22, 10, 0.95) 0%, rgba(6, 5, 2, 0.98) 100%)',
+    bgType: 'history',
+    bgImage: '/edykty/historia_magii.webp'
+  },
+  {
+    id: 'wrozbiarstwo',
+    categoryName: 'Wróżbiarstwo z Kości i Dymu',
+    defaultScript: 'wrozbiarstwo',
+    themeColor: '#a855f7',
+    description: 'Rzuty kośćmi völvy, interpretacja dymu ziół arktycznych i lustra lodowe',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(24, 10, 36, 0.95) 0%, rgba(5, 2, 8, 0.98) 100%)',
+    bgType: 'divination',
+    bgImage: '/edykty/wrozbiarstwo.webp'
+  },
+  {
+    id: 'numerologia',
+    categoryName: 'Numerologia Runiczna',
+    defaultScript: 'numerologia',
+    themeColor: '#2ec4b6',
+    description: 'Matematyczne podstawy zaklęć, wagi liczb 3, 9 i 24 w mitologii nordyckiej',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(8, 30, 28, 0.95) 0%, rgba(2, 7, 6, 0.98) 100%)',
+    bgType: 'numerology',
+    bgImage: '/edykty/numerologia.jpg'
+  },
+  {
+    id: 'latanie',
+    categoryName: 'Latanie Bojowe',
+    defaultScript: 'latanie',
+    themeColor: '#a4c8e1',
+    description: 'Manewry w huraganowym wietrze, loty formacyjne i nawigacja wśród fiordów',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 22, 34, 0.95) 0%, rgba(3, 5, 8, 0.98) 100%)',
+    bgType: 'flying',
+    bgImage: '/edykty/latanie-na-miotle.png'
+  },
+  {
+    id: 'smokologia',
+    categoryName: 'Smokologia & Drakologia Północna',
+    defaultScript: 'smokologia',
+    themeColor: '#ff5c5c',
+    description: 'Studium smoków skandynawskich i rosyjskich: tresura i komunikacja',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(40, 12, 8, 0.95) 0%, rgba(8, 3, 2, 0.98) 100%)',
+    bgType: 'dragons',
+    bgImage: '/edykty/smokologia.png'
+  },
+  {
+    id: 'rytualistyka',
+    categoryName: 'Rytualistyka Północna',
+    defaultScript: 'rytualistyka',
+    themeColor: '#7c3aed',
+    description: 'Wieloosobowe rytuały magiczne: blóty, seiðr i galdr w warunkach ekstremalnych',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(20, 8, 34, 0.95) 0%, rgba(4, 2, 8, 0.98) 100%)',
+    bgType: 'ritual',
+    bgImage: '/edykty/rytualistyka.jpg'
+  },
+  {
+    id: 'psychologia-magiczna',
+    categoryName: 'Psychologia Magiczna',
+    defaultScript: 'psychologia magiczna',
+    themeColor: '#b18cfe',
+    description: 'Legilimencja, Oklumencja, obrona przed manipulacją i mentalne forty',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(22, 14, 36, 0.95) 0%, rgba(5, 3, 8, 0.98) 100%)',
+    bgType: 'psychology',
+    bgImage: '/edykty/psychologia_magiczna.avif'
+  },
+  {
+    id: 'mity-polnocy',
+    categoryName: 'Mity i Legendy Północy',
+    defaultScript: 'mity polnocy',
+    themeColor: '#8b5cf6',
+    description: 'Nordycka mitologia jako realny zapis historii magicznej — od wojen Asów po Ragnarök',
+    bgGradient: 'radial-gradient(circle at 50% 60%, rgba(18, 10, 28, 0.95) 0%, rgba(4, 2, 6, 0.98) 100%)',
+    bgType: 'myths',
+    bgImage: '/edykty/mity_polnocy.jpg'
   }
 ];
 

@@ -45,7 +45,8 @@ function createNotification(recipientId, recipientName, subject, body, type = 'h
     const emailId = genId('mail');
     const now = new Date();
     const dateStr = now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-    const userEmail = `${recipientId}@durmstrang.edu`;
+    const recipientRow = db.prepare('SELECT username FROM users WHERE id = ?').get(recipientId);
+    const userEmail = `${recipientRow ? recipientRow.username : recipientId}@durmstrang.edu`;
 
     db.prepare(`
       INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
@@ -69,7 +70,7 @@ function computeGradeLabel(percentage) {
 // ==================== 1. LIST HOMEWORK ASSIGNMENTS ====================
 
 // GET /api/homework — List assignments with filters & user-specific context
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req, res) => {
   try {
     const {
       subjectId,

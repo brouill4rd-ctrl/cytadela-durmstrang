@@ -91,15 +91,16 @@ export const HomeworkCalendarView = ({ onOpenHomework }) => {
         </div>
       </div>
 
+      <div className="homework-calendar-scroll-wrapper">
       {/* Weekday Header */}
       <div className="calendar-weekdays-grid">
-        <span>Poniedziałek</span>
-        <span>Wtorek</span>
-        <span>Środa</span>
-        <span>Czwartek</span>
-        <span>Piątek</span>
-        <span>Sobota</span>
-        <span>Niedziela</span>
+        <span><span className="weekday-full">Poniedziałek</span><span className="weekday-short">Pon</span></span>
+        <span><span className="weekday-full">Wtorek</span><span className="weekday-short">Wt</span></span>
+        <span><span className="weekday-full">Środa</span><span className="weekday-short">Śr</span></span>
+        <span><span className="weekday-full">Czwartek</span><span className="weekday-short">Czw</span></span>
+        <span><span className="weekday-full">Piątek</span><span className="weekday-short">Pt</span></span>
+        <span><span className="weekday-full">Sobota</span><span className="weekday-short">Sob</span></span>
+        <span><span className="weekday-full">Niedziela</span><span className="weekday-short">Nd</span></span>
       </div>
 
       {/* Days Grid */}
@@ -125,16 +126,17 @@ export const HomeworkCalendarView = ({ onOpenHomework }) => {
                       playRuneChime();
                       onOpenHomework(ev.id);
                     }}
-                    title={`${ev.subjectName}: „${ev.title}” (Termin: ${ev.dueDate})`}
+                    title={`${ev.subjectName}: „${ev.title}" (Termin: ${ev.dueDate})`}
                   >
                     <span className="event-subj">{ev.subjectName}</span>
-                    <span className="event-title">„{ev.title}”</span>
+                    <span className="event-title">„{ev.title}"</span>
                   </div>
                 ))}
               </div>
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

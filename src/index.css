@@ -4761,6 +4761,17 @@ a:hover {
   border: 1px solid rgba(197, 159, 78, 0.3);
   border-radius: 12px;
   padding: 2rem;
+  overflow: hidden;
+}
+
+.homework-calendar-scroll-wrapper {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.homework-calendar-scroll-wrapper .calendar-weekdays-grid,
+.homework-calendar-scroll-wrapper .calendar-days-grid {
+  min-width: 560px;
 }
 
 .calendar-nav-bar {
@@ -4814,6 +4825,14 @@ a:hover {
   font-weight: 800;
   text-transform: uppercase;
   margin-bottom: 0.6rem;
+}
+
+.weekday-short { display: none; }
+.weekday-full { display: inline; }
+
+@media (max-width: 1200px) {
+  .weekday-full { display: none; }
+  .weekday-short { display: inline; }
 }
 
 .calendar-days-grid {

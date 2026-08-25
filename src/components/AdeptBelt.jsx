@@ -68,7 +68,7 @@ export function AdeptBelt({ hidden = false }) {
           })}
           {Array.from({ length: 5 - shortcuts.length }, (_, i) => <div className="belt-empty-slot" key={`empty-${i}`} aria-label="Wolne miejsce przy pasie"><span>᛫</span>{editing && <Plus size={12} />}</div>)}
         </div>
-        {!loading && shortcuts.length === 0 && <p className="belt-empty-copy">Twój pas jest jeszcze pusty. Przypnij miejsca, do których najczęściej powracasz.</p>}
+        {!loading && shortcuts.length === 0 && <p className="belt-empty-copy">Twój pas jest jeszcze pusty. Przejdź do widoku (np. Plan zajęć, Bank) i kliknij <em>Przypnij do pasa</em> w prawym dolnym rogu.</p>}
       </div>
     </section>
 
