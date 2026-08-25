@@ -4145,6 +4145,28 @@ if (sessionCount === 0) {
 
 // ==================== HOMEWORK SEED DATA ====================
 
+// Some persistent databases still enforce the legacy submissions.student_id -> users.id
+// foreign key. Ensure every student referenced by the homework demo data exists even
+// when the main user seed was skipped because the database already contained users.
+const insertHomeworkStudent = db.prepare(`
+  INSERT OR IGNORE INTO users (
+    id, username, password, email, name, surname, full_name, role, status, house,
+    title, class_year, level, xp, next_level_xp, points, currency, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, 'student', 'approved', ?, ?, ?, 1, 0, 500, 0, 150, ?)
+`);
+const homeworkStudentPassword = bcrypt.hashSync('123', 10);
+
+insertHomeworkStudent.run(
+  'usr-astrid-stud', 'seed-homework-astrid', homeworkStudentPassword,
+  'astrid.student@nordic.no', 'Astrid', 'Vinter', 'Astrid Vinter', 'reinhall',
+  'Adeptka Reinhall', 'Rok II • Semestr Zimowy', '2026-08-01'
+);
+insertHomeworkStudent.run(
+  'usr-erik', 'seed-homework-erik', homeworkStudentPassword,
+  'erik@nordic.no', 'Erik', 'Nilsen', 'Erik Nilsen', 'bjornhall',
+  'Adept Björnhall', 'Rok II • Semestr Zimowy', '2026-08-01'
+);
+
 const homeworkCount = db.prepare('SELECT COUNT(*) as count FROM homework_assignments').get().count;
 
 if (homeworkCount === 0) {
