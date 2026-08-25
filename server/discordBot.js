@@ -284,7 +284,40 @@ export class DurmstrangDiscordBot {
 
       new SlashCommandBuilder()
         .setName('odlacz')
-        .setDescription('Odłącza powiązane konto Discord od profilu w Cytadeli')
+        .setDescription('Odłącza powiązane konto Discord od profilu w Cytadeli'),
+
+      new SlashCommandBuilder()
+        .setName('pamiec')
+        .setDescription('Przeglądanie oficjalnej Izby Pamięci i archiwum Twierdzy Magii Durmstrang')
+        .addSubcommand(sub =>
+          sub.setName('osoba')
+            .setDescription('Wyświetla historyczne dossier i osiągnięcia postaci w Izbie Pamięci')
+            .addStringOption(opt => opt.setName('nazwa').setDescription('Imię i nazwisko lub nick postaci').setRequired(true))
+        )
+        .addSubcommand(sub =>
+          sub.setName('zakon')
+            .setDescription('Wyświetla gablotę historyczną, puchary i rekordy danego Zakonu')
+            .addStringOption(opt =>
+              opt.setName('zakon')
+                .setDescription('Wybierz Zakon')
+                .addChoices(
+                  { name: '🦌 Reinhall', value: 'reinhall' },
+                  { name: '🐻 Björnhall', value: 'bjornhall' },
+                  { name: '🐦 Ravnheim', value: 'ravnheim' },
+                  { name: '🦦 Otergard', value: 'otergard' }
+                )
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(sub =>
+          sub.setName('rok')
+            .setDescription('Podsumowanie wybranego historycznego roku szkolnego')
+            .addStringOption(opt => opt.setName('rok').setDescription('Kod roku (np. XVII, XVI, XV)').setRequired(true))
+        )
+        .addSubcommand(sub =>
+          sub.setName('puchar')
+            .setDescription('Wyświetla Salę Pucharów i ostatnich zdobywców Pucharu Twierdzy')
+        )
     ];
   }
 
@@ -953,6 +986,166 @@ export class DurmstrangDiscordBot {
 
           await interaction.editReply(`🔓 Pomyślnie odłączono konto Discord od profilu **${user.full_name}**.`);
         }
+
+        // /pamiec (Izba Pamięci)
+        if (commandName === 'pamiec') {
+          const sub = interaction.options.getSubcommand();
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+          const houseNames = {
+            reinhall: '🦌 Reinhall',
+            bjornhall: '🐻 Björnhall',
+            ravnheim: '🐦 Ravnheim',
+            otergard: '🦦 Otergard'
+          };
+          const houseColors = {
+            reinhall: 0xC59F4E,
+            bjornhall: 0x2EC4B6,
+            ravnheim: 0xA855F7,
+            otergard: 0xE63946
+          };
+
+          if (sub === 'osoba') {
+            const nazwa = interaction.options.getString('nazwa');
+            const clean = nazwa.trim().toLowerCase();
+
+            const person = db.prepare(`
+              SELECT p.*, y.name as year_name, y.year_code
+              FROM memory_person_snapshots p
+              JOIN memory_school_years y ON p.school_year_id = y.id
+              WHERE (LOWER(p.character_name) LIKE ? OR LOWER(p.full_name) LIKE ?) AND y.status = 'published'
+              ORDER BY y.start_date DESC LIMIT 1
+            `).get(`%${clean}%`, `%${clean}%`);
+
+            if (!person) {
+              await interaction.editReply(`⚠️ Nie odnaleziono wpisów w Izbie Pamięci dla postaci: **${nazwa}**.`);
+              return;
+            }
+
+            const certsCount = db.prepare(`SELECT COUNT(*) as count FROM memory_certificates WHERE LOWER(student_name) LIKE ?`).get(`%${clean}%`).count;
+            const diplCount = db.prepare(`SELECT COUNT(*) as count FROM memory_diplomas WHERE LOWER(recipient_name) LIKE ?`).get(`%${clean}%`).count;
+            const awardsCount = db.prepare(`SELECT COUNT(*) as count FROM memory_awards WHERE LOWER(recipient_name) LIKE ?`).get(`%${clean}%`).count;
+
+            const memEmbed = new EmbedBuilder()
+              .setTitle(`🏛️ IZBA PAMIĘCI — ${person.character_name.toUpperCase()}`)
+              .setDescription(`*„To, co zapisano w murach Twierdzy, nie zostaje zapomniane.”*`)
+              .addFields(
+                { name: '🏛️ Ostatni Zakon', value: houseNames[person.house?.toLowerCase()] || person.house, inline: true },
+                { name: '📜 Rola & Klasa', value: `${person.is_graduate ? '🎓 Absolwent' : 'Adept'} • ${person.class_year}`, inline: true },
+                { name: '🏆 Wynik w ${person.year_name}', value: `#${person.ranking_position} (${person.points} pkt)`, inline: true },
+                { name: '📜 Świadectwa & Dyplomy', value: `📜 **${certsCount}** Świadectw | 🎖️ **${diplCount}** Dyplomów | ⭐ **${awardsCount}** Wyróżnień`, inline: false },
+                { name: '⭐ Najlepszy Przedmiot', value: person.best_subject || 'Brak danych', inline: true },
+                { name: '✨ Ocena Końcowa', value: person.final_grade || 'Powyżej Oczekiwań', inline: true }
+              )
+              .setColor(houseColors[person.house?.toLowerCase()] || 0xC59F4E)
+              .setThumbnail(person.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100')
+              .setFooter({ text: 'Cytadela Durmstrang • Izba Pamięci' });
+
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setLabel('Otwórz Dossier w Izbie Pamięci')
+                .setStyle(ButtonStyle.Link)
+                .setURL(`${frontendUrl}/#izba-pamieci/osoba/${encodeURIComponent(person.character_name)}`)
+            );
+
+            await interaction.editReply({ embeds: [memEmbed], components: [row] });
+          }
+
+          if (sub === 'zakon') {
+            const hKey = interaction.options.getString('zakon');
+            const hName = houseNames[hKey] || hKey;
+
+            const trophies = db.prepare(`
+              SELECT t.*, y.name as year_name
+              FROM memory_trophies t
+              JOIN memory_school_years y ON t.school_year_id = y.id
+              WHERE t.house = ? AND y.status = 'published'
+            `).all(hKey);
+
+            const houseCupsCount = trophies.filter(t => t.trophy_type === 'house_cup').length;
+            const bestYear = db.prepare(`SELECT * FROM memory_school_years WHERE winning_house = ? ORDER BY winning_points DESC LIMIT 1`).get(hKey);
+            const latestWin = db.prepare(`SELECT * FROM memory_school_years WHERE winning_house = ? ORDER BY start_date DESC LIMIT 1`).get(hKey);
+
+            const zEmbed = new EmbedBuilder()
+              .setTitle(`🏛️ GABLOTA ZAKONU — ${hName.toUpperCase()}`)
+              .setDescription(`Historyczne osiągnięcia i Puchar Twierdzy Magii w Izbie Pamięci.`)
+              .addFields(
+                { name: '🏆 Zdobyte Puchary Twierdzy', value: `**${houseCupsCount}** Pucharów`, inline: true },
+                { name: '⚡ Rekord Punktowy', value: bestYear ? `**${bestYear.winning_points} pkt** (${bestYear.name})` : 'Brak danych', inline: true },
+                { name: '🌟 Ostatni Triumf', value: latestWin ? `**${latestWin.name}**` : 'Oczekuje na zwycięstwo', inline: true }
+              )
+              .setColor(houseColors[hKey] || 0xC59F4E)
+              .setFooter({ text: 'Cytadela Durmstrang • Sala Pucharów' });
+
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setLabel('Otwórz Gablotę Zakonu')
+                .setStyle(ButtonStyle.Link)
+                .setURL(`${frontendUrl}/#izba-pamieci/zakon/${hKey}`)
+            );
+
+            await interaction.editReply({ embeds: [zEmbed], components: [row] });
+          }
+
+          if (sub === 'rok') {
+            const rCode = interaction.options.getString('rok').trim().toUpperCase();
+            const year = db.prepare(`SELECT * FROM memory_school_years WHERE (UPPER(year_code) = ? OR UPPER(name) LIKE ?) AND status = 'published'`).get(rCode, `%${rCode}%`);
+
+            if (!year) {
+              await interaction.editReply(`⚠️ Nie odnaleziono archiwum dla roku: **${rCode}**.`);
+              return;
+            }
+
+            const yEmbed = new EmbedBuilder()
+              .setTitle(`🏛️ ${year.name.toUpperCase()} (${year.term || year.date_range})`)
+              .setDescription(year.summary || 'Oficjalne roczniki Twierdzy Magii Durmstrang.')
+              .addFields(
+                { name: '👑 Dyrekcja', value: year.headmaster || 'Rada Arcymistrzów', inline: true },
+                { name: '🏆 Zwycięski Zakon', value: `${houseNames[year.winning_house?.toLowerCase()] || year.winning_house} (**${year.winning_points} pkt**)`, inline: true },
+                { name: '🌟 Prymus Roku', value: year.best_student || 'Brak', inline: true },
+                { name: '🧙‍♂️ Profesor Roku', value: year.best_professor || 'Brak', inline: true },
+                { name: '⚔️ Główne Wydarzenie', value: year.highlight_event || 'Ceremonia Paktu', inline: false }
+              )
+              .setColor(houseColors[year.winning_house?.toLowerCase()] || 0xC59F4E)
+              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Lat Szkolnych' });
+
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setLabel('Przeglądaj Cały Rok w Izbie Pamięci')
+                .setStyle(ButtonStyle.Link)
+                .setURL(`${frontendUrl}/#izba-pamieci/${year.id}`)
+            );
+
+            await interaction.editReply({ embeds: [yEmbed], components: [row] });
+          }
+
+          if (sub === 'puchar') {
+            const trophies = db.prepare(`
+              SELECT t.*, y.name as year_name, y.year_code
+              FROM memory_trophies t
+              JOIN memory_school_years y ON t.school_year_id = y.id
+              WHERE t.trophy_type = 'house_cup' AND y.status = 'published'
+              ORDER BY y.start_date DESC LIMIT 5
+            `).all();
+
+            const pDesc = trophies.map(t => `• **${t.year_name}**: ${houseNames[t.house?.toLowerCase()] || t.house} (${t.points} pkt)`).join('\n');
+
+            const cupEmbed = new EmbedBuilder()
+              .setTitle('🏆 SALA PUCHARÓW CYTADELI DURMSTRANG')
+              .setDescription(`Lista ostatnich zdobywców Pucharu Twierdzy Magii:\n\n${pDesc || 'Kroniki są uzupełniane.'}`)
+              .setColor(0xC59F4E)
+              .setFooter({ text: 'Cytadela Durmstrang • Sala Chwały' });
+
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setLabel('Odwiedź Salę Pucharów')
+                .setStyle(ButtonStyle.Link)
+                .setURL(`${frontendUrl}/#izba-pamieci/sala-pucharow`)
+            );
+
+            await interaction.editReply({ embeds: [cupEmbed], components: [row] });
+          }
+        }
       } catch (err) {
         console.warn('[Discord Interaction Error]', err.message);
       }
@@ -1075,6 +1268,108 @@ export class DurmstrangDiscordBot {
         console.error('❌ [Discord Bot] Błąd powitania nowego adepta:', err.message);
       }
     });
+  }
+
+  // ==================== MODUŁ EGZAMINACYJNY — POWIADOMIENIA ====================
+
+  async announceExamOpened(exam) {
+    if (!this.client?.isReady()) return;
+    try {
+      const channel = this.client.channels.cache.find(c =>
+        c.name.includes('ogłoszenia') || c.name.includes('ogloszenia') || c.name.includes('egzaminy') || c.name.includes('sesja')
+      );
+      if (!channel) return;
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📜 SESJA EGZAMINACYJNA • ${exam.subjectName || exam.title}`)
+        .setDescription(
+          `Oficjalny arkusz egzaminacyjny został **OTWARTY** w Centrum Egzaminacyjnym Twierdzy Durmstrang.\n\n` +
+          `**Katedra:** ${exam.subjectName || 'Główna'}\n` +
+          `**Rocznik:** ${exam.classYear || 'Wszystkie klasy'}\n` +
+          `**Limit Czasu:** ${exam.timeLimitMinutes} minut\n` +
+          `**Maks. Punktów:** ${exam.totalPoints || 100} pkt\n\n` +
+          `*Pieczęć zostanie złamana w momencie rozpoczęcia podejścia.*`
+        )
+        .setColor(0xC59F4E)
+        .setFooter({ text: 'Twierdza Magii Durmstrang • Centrum Egzaminacyjne' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Przejdź do Egzaminu')
+          .setStyle(ButtonStyle.Link)
+          .setURL(process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/#/egzaminy` : 'http://localhost:5173/#/egzaminy')
+          .setEmoji('ᛉ')
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      console.log(`📜 [Discord Bot] Wysłano ogłoszenie otwarcia egzaminu: ${exam.title}`);
+    } catch (err) {
+      console.warn('Błąd wysyłania ogłoszenia egzaminu na Discordzie:', err.message);
+    }
+  }
+
+  async announceExamResultsPublished(exam) {
+    if (!this.client?.isReady()) return;
+    try {
+      const channel = this.client.channels.cache.find(c =>
+        c.name.includes('ogłoszenia') || c.name.includes('ogloszenia') || c.name.includes('egzaminy') || c.name.includes('sesja')
+      );
+      if (!channel) return;
+
+      const embed = new EmbedBuilder()
+        .setTitle(`🏆 WYNIKI EGZAMINU • ${exam.subjectName || exam.title}`)
+        .setDescription(
+          `Oficjalne wyniki i protokoły ocen z przedmiotu **${exam.subjectName || exam.title}** (${exam.classYear || ''}) zostały **OPUBLIKOWANE**.\n\n` +
+          `Adeptowie mogą sprawdzić swoje oceny w **Centrum Egzaminacyjnym** oraz na Karcie Tożsamości.\n\n` +
+          `*Szczegółowe oceny indywidualne pozostają dostępne wyłącznie dla uprawnionych adeptów.*`
+        )
+        .setColor(0x10B981)
+        .setFooter({ text: 'Twierdza Magii Durmstrang • Rada Mistrzów' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Zobacz Wyniki')
+          .setStyle(ButtonStyle.Link)
+          .setURL(process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/#/egzaminy` : 'http://localhost:5173/#/egzaminy')
+          .setEmoji('📜')
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      console.log(`🏆 [Discord Bot] Wysłano ogłoszenie publikacji wyników: ${exam.title}`);
+    } catch (err) {
+      console.warn('Błąd wysyłania ogłoszenia wyników na Discordzie:', err.message);
+    }
+  }
+
+  async announceWorldState(worldState, { channelId, actorName } = {}) {
+    if (!this.client?.isReady() || !this.isReady) throw new Error('Bot Discord nie jest aktualnie połączony.');
+    const config = db.prepare('SELECT guild_id, lessons_channel_id FROM discord_bot_config LIMIT 1').get() || {};
+    const guild = (config.guild_id && this.client.guilds.cache.get(config.guild_id)) || this.client.guilds.cache.first();
+    if (!guild) throw new Error('Bot nie znajduje się na skonfigurowanym serwerze Discord.');
+    const target = (channelId && guild.channels.cache.get(channelId))
+      || (config.lessons_channel_id && guild.channels.cache.get(config.lessons_channel_id))
+      || guild.channels.cache.find(c => c.isTextBased?.() && (c.name.includes('ogłoszenia') || c.name.includes('ogloszenia') || c.name.includes('edykty')));
+    if (!target?.isTextBased?.()) throw new Error('Nie znaleziono kanału ogłoszeń. Wskaż identyfikator kanału.');
+    const rune = worldState.runeOfTheDay || {};
+    const colors = { I:0x6B7280, II:0xC59F4E, III:0xB7791F, IV:0x9B2C2C, V:0x50151B };
+    const embed = new EmbedBuilder()
+      .setTitle('☾ MAGICZNA PÓŁNOC • STAN CYTADELI')
+      .setDescription(worldState.narrativeReport || 'Kronikarze nie pozostawili dodatkowego raportu.')
+      .setColor(colors[worldState.threatLevel] || 0x8B6A38)
+      .addFields(
+        { name:'Pora', value:String(worldState.seasonalCycle !== 'NORMAL' ? worldState.seasonalCycle : worldState.timeOfDay), inline:true },
+        { name:'Pogoda', value:`${worldState.weather} • ${Math.round(worldState.temperature)}°C`, inline:true },
+        { name:'Wiatr', value:`${worldState.windDirection} • ${worldState.windIntensity}/5`, inline:true },
+        { name:'Księżyc', value:String(worldState.moonPhase), inline:true },
+        { name:'Runa dnia', value:`${rune.symbol || 'ᛁ'} ${rune.name || '—'}`, inline:true },
+        { name:'Zagrożenie', value:`${worldState.threatLevel} • ${worldState.citadelState}`, inline:true }
+      )
+      .setFooter({ text:`Twierdza Magii Durmstrang • ${actorName || 'Reżyser Świata'}` })
+      .setTimestamp();
+    const sent = await target.send({ embeds:[embed] });
+    return { messageId:sent.id, channelId:target.id, channelName:target.name };
   }
 }
 

@@ -16,6 +16,7 @@ import { BestiaryModal } from './BestiaryModal';
 import { BlackMarketModal } from './BlackMarketModal';
 import { TournamentGauntletModal } from './TournamentGauntletModal';
 import { CustomPageEditorModal } from './CustomPageEditorModal';
+import { StudentHomeworkWidget, ProfessorHomeworkWidget } from './HomeworkWidgets';
 import {
   Castle,
   UserPlus,
@@ -57,7 +58,8 @@ import {
   ShieldAlert,
   ClipboardCheck,
   MessageSquare,
-  Plus
+  Plus,
+  Landmark
 } from 'lucide-react';
 
 export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
@@ -81,7 +83,8 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     blockGraphics,
     showNotification,
     navigateToDocumentModule,
-    activeDocumentCategory
+    activeDocumentCategory,
+    navigateToMemory
   } = useSchool();
 
   const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
@@ -125,6 +128,11 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     if (!currentUser && restrictedViews.includes(view)) {
       setAuthModalOpen(true);
       showNotification('Wymagane Logowanie', 'Dzienniki lekcyjne i prywatne komnaty są dostępne wyłącznie dla zalogowanych adeptów.', 'warning');
+      return;
+    }
+    if (view === 'memory') {
+      if (navigateToMemory) navigateToMemory('overview');
+      else setActiveView('memory');
       return;
     }
     setActiveView(view);
@@ -314,6 +322,10 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           )}
         </div>
       </div>
+
+      {/* WIDGETY PRAC DOMOWYCH */}
+      <StudentHomeworkWidget />
+      <ProfessorHomeworkWidget />
 
       {/* =========================================================================
           1. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
@@ -611,6 +623,24 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 </span>
                 <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
                   NOWE
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => handleNav('memory')}
+                style={{
+                  color: activeView === 'memory' ? '#ffffff' : '#f7dca0',
+                  background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
+                  border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
+                  fontWeight: 700
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Landmark size={14} color="var(--gold-glow)" /> Izba Pamięci & Kroniki
+                </span>
+                <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
+                  ARCHIWUM
                 </span>
               </button>
             </li>

@@ -26,7 +26,8 @@ export const ProfessorJournalEditor = () => {
     subjects,
     houses,
     users,
-    currentUser
+    currentUser,
+    navigateToHomeworkCreator
   } = useSchool();
 
   const [loading, setLoading] = useState(false);
@@ -201,6 +202,24 @@ export const ProfessorJournalEditor = () => {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              navigateToHomeworkCreator({ lesson: formData });
+            }}
+            className="btn-durmstrang"
+            style={{
+              padding: '0.6rem 1.2rem',
+              background: 'rgba(197, 159, 78, 0.18)',
+              borderColor: 'var(--gold-ancient)',
+              color: '#ffffff',
+              fontSize: '0.85rem'
+            }}
+            title="Utwórz pracę domową powiązaną bezpośrednio z tą lekcją"
+          >
+            <BookOpen size={15} color="var(--gold-ancient)" /> Zadaj Pracę Domową
+          </button>
+
           <button
             onClick={handleSaveDraft}
             className="btn-durmstrang"

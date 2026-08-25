@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import db, { dbUserToFrontend, dbEmailToFrontend, dbAppToFrontend } from '../db.js';
 import { requireAuth, requireRole, requireSelfOrRole } from '../middleware/auth.js';
 
@@ -102,6 +103,11 @@ router.patch('/:id/approve', requireAuth, requireRole('admin'), (req, res) => {
 
   db.prepare('UPDATE users SET status = ?, title = ? WHERE id = ?').run('approved', newTitle, req.params.id);
 
+  if (user.role === 'student') {
+    db.prepare("INSERT OR IGNORE INTO character_prologues (user_id, stage, completed, accepted_at) VALUES (?, 'LETTER_PENDING', 0, datetime('now'))").run(req.params.id);
+    db.prepare("UPDATE character_prologues SET accepted_at = COALESCE(accepted_at, datetime('now')), updated_at = datetime('now') WHERE user_id = ?").run(req.params.id);
+  }
+
   // Approve matching application
   db.prepare("UPDATE pending_applications SET status = 'approved' WHERE user_id = ?").run(req.params.id);
 
@@ -183,7 +189,9 @@ router.patch('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
 // PATCH /api/users/:id/reset-password — Wymaga: admin
 router.patch('/:id/reset-password', requireAuth, requireRole('admin'), (req, res) => {
   const { newPassword } = req.body;
-  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newPassword, req.params.id);
+  if (!newPassword) return res.status(400).json({ error: 'Podaj nowe hasło.' });
+  const hashed = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashed, req.params.id);
   res.json({ success: true });
 });
 

@@ -1,4 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+function tryParse(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 import { api } from '../api';
 import { HOUSES } from '../data/seedHouses';
 import { SUBJECTS } from '../data/seedSubjects';
@@ -118,7 +128,33 @@ const ROUTE_ALIASES = {
   '/iron-quill': 'gazette',
   '/gazette-archive': 'gazette-archive',
   '/gazette-panel': 'gazette-panel',
-  '/gazette-reader': 'gazette-reader'
+  '/gazette-reader': 'gazette-reader',
+  '/egzaminy': 'exams',
+  '/egzamin': 'exams',
+  '/sesja-egzaminacyjna': 'exams',
+  '/exams': 'exams',
+  '/exam': 'exams',
+  '/prace-domowe': 'homework',
+  '/praca-domowa': 'homework',
+  '/homework': 'homework',
+  '/zadania-domowe': 'homework',
+  '/zadania': 'homework',
+  '/prace': 'homework',
+  '/homework-creator': 'homework-creator',
+  '/homework-grading': 'homework-grading',
+  '/zadaj-prace': 'homework-creator',
+  '/sprawdzaj-prace': 'homework-grading',
+  // Izba Pamięci
+  '/izba-pamieci': 'memory',
+  '/pamiec': 'memory',
+  '/memory': 'memory',
+  '/archiwum-lat': 'memory',
+  '/sala-pamieci': 'memory',
+  '/sala-pucharow': 'memory',
+  '/sala-dokumentow': 'memory',
+  '/sciana-chwaly': 'memory',
+  '/kronika-ludzi': 'memory',
+  '/os-czasu': 'memory'
 };
 
 const parseHashRoute = () => {
@@ -177,6 +213,77 @@ const parseHashRoute = () => {
     return { view: 'gazette-panel' };
   }
 
+  if (root === '/egzaminy' || root === '/egzamin' || root === '/exams' || root === '/exam' || root === '/sesja-egzaminacyjna') {
+    if (parts[1] === 'podejscie' && parts[2]) return { view: 'exam-taking', examAttemptId: parts[2] };
+    if (parts[1] === 'wynik' && parts[2]) return { view: 'exam-result', examAttemptId: parts[2] };
+    if (parts[1] === 'kreator') return { view: 'exam-creator', examId: parts[2] || null };
+    if (parts[1] === 'sprawdzanie' && parts[2]) return { view: 'exam-grading', examId: parts[2] };
+    if (parts[1] === 'bank') return { view: 'exam-bank' };
+    if (parts[1]) return { view: 'exams', examId: parts[1] };
+    return { view: 'exams' };
+  }
+
+  if (root === '/exam-creator') return { view: 'exam-creator', examId: parts[1] || null };
+  if (root === '/exam-grading') return { view: 'exam-grading', examId: parts[1] || null };
+  if (root === '/exam-taking') return { view: 'exam-taking', examAttemptId: parts[1] || null };
+  if (root === '/exam-result') return { view: 'exam-result', examAttemptId: parts[1] || null };
+  if (root === '/exam-bank') return { view: 'exam-bank' };
+
+  // Prace Domowe & Wypracowania (TMD)
+  if (['/prace-domowe', '/praca-domowa', '/homework', '/zadania-domowe', '/zadania', '/prace'].includes(root)) {
+    if (parts[1] === 'kreator' || parts[1] === 'zadaj' || parts[1] === 'nowa') return { view: 'homework-creator' };
+    if (parts[1] === 'sprawdzanie' || parts[1] === 'ocenianie' || parts[1] === 'grading') return { view: 'homework-grading', homeworkId: parts[2] || null };
+    if (parts[1]) return { view: 'homework-detail', homeworkId: parts[1] };
+    return { view: 'homework' };
+  }
+  if (root === '/zadaj-prace' || root === '/homework-creator') {
+    return { view: 'homework-creator' };
+  }
+  if (root === '/sprawdzaj-prace' || root === '/homework-grading') {
+    return { view: 'homework-grading', homeworkId: parts[1] || null };
+  }
+
+  // ==================== IZBA PAMIĘCI (ROUTING) ====================
+  if (['/izba-pamieci', '/pamiec', '/archiwum-lat', '/sala-pamieci', '/memory'].includes(root)) {
+    if (parts[1] === 'rok' || parts[1] === 'year') {
+      return { view: 'memory', memoryTab: 'year', memoryYearId: parts[2] || 'year-xvii' };
+    }
+    if (parts[1] === 'osoba' || parts[1] === 'postac' || parts[1] === 'person') {
+      return { view: 'memory', memoryTab: 'person', memoryPersonId: parts[2] || null };
+    }
+    if (parts[1] === 'zakon' || parts[1] === 'dom' || parts[1] === 'order') {
+      return { view: 'memory', memoryTab: 'order', memoryHouseKey: parts[2] || 'ravnheim' };
+    }
+    if (parts[1] === 'sciana-chwaly' || parts[1] === 'chwala' || parts[1] === 'wall') {
+      return { view: 'memory', memoryTab: 'wall-of-fame' };
+    }
+    if (parts[1] === 'sala-pucharow' || parts[1] === 'puchary' || parts[1] === 'trophies') {
+      return { view: 'memory', memoryTab: 'trophies' };
+    }
+    if (parts[1] === 'sala-dokumentow' || parts[1] === 'dokumenty' || parts[1] === 'documents') {
+      return { view: 'memory', memoryTab: 'documents' };
+    }
+    if (parts[1] === 'kronika' || parts[1] === 'ludzie' || parts[1] === 'people') {
+      return { view: 'memory', memoryTab: 'people' };
+    }
+    if (parts[1] === 'os-czasu' || parts[1] === 'timeline' || parts[1] === 'historia') {
+      return { view: 'memory', memoryTab: 'timeline' };
+    }
+    if (parts[1] === 'kreator' || parts[1] === 'archiwizuj' || parts[1] === 'wizard') {
+      return { view: 'memory', memoryTab: 'wizard' };
+    }
+    if (parts[1]) {
+      // Dynamiczny rok np. /izba-pamieci/2026 lub /izba-pamieci/year-xvii
+      return { view: 'memory', memoryTab: 'year', memoryYearId: parts[1] };
+    }
+    return { view: 'memory', memoryTab: 'overview' };
+  }
+  if (root === '/sala-pucharow') return { view: 'memory', memoryTab: 'trophies' };
+  if (root === '/sala-dokumentow') return { view: 'memory', memoryTab: 'documents' };
+  if (root === '/sciana-chwaly') return { view: 'memory', memoryTab: 'wall-of-fame' };
+  if (root === '/os-czasu') return { view: 'memory', memoryTab: 'timeline' };
+  if (root === '/kronika-ludzi') return { view: 'memory', memoryTab: 'people' };
+
   if (ROUTE_ALIASES[root]) {
     return { view: ROUTE_ALIASES[root] };
   }
@@ -198,6 +305,25 @@ export const SchoolProvider = ({ children }) => {
   const [activeDocumentCategory, setActiveDocumentCategory] = useState(initialRoute.docCategory || 'all');
   const [activeGazetteIssueId, setActiveGazetteIssueId] = useState(initialRoute.gazetteIssueId || null);
 
+  // Egzaminy — navigation state
+  const [activeExamId, setActiveExamId] = useState(initialRoute.examId || null);
+  const [activeExamAttemptId, setActiveExamAttemptId] = useState(initialRoute.examAttemptId || null);
+
+  // Izba Pamięci — navigation state
+  const [memoryTab, setMemoryTab] = useState(initialRoute.memoryTab || 'overview');
+  const [memoryYearId, setMemoryYearId] = useState(initialRoute.memoryYearId || 'year-xvii');
+  const [memoryPersonId, setMemoryPersonId] = useState(initialRoute.memoryPersonId || null);
+  const [memoryHouseKey, setMemoryHouseKey] = useState(initialRoute.memoryHouseKey || 'ravnheim');
+
+  // Prace Domowe — state
+  const [activeHomeworkId, setActiveHomeworkId] = useState(initialRoute.homeworkId || null);
+  const [activeHomeworkSubId, setActiveHomeworkSubId] = useState(initialRoute.homeworkSubId || null);
+  const [homeworkDraftLessonData, setHomeworkDraftLessonData] = useState(null);
+  const [homeworkAssignments, setHomeworkAssignments] = useState([]);
+  const [homeworkOverview, setHomeworkOverview] = useState(null);
+  const [homeworkTemplates, setHomeworkTemplates] = useState([]);
+  const [homeworkQuickComments, setHomeworkQuickComments] = useState([]);
+
   const navigateToDocumentModule = (category, slug = null) => {
     setActiveDocumentCategory(category || 'all');
     setActiveDocumentSlug(slug);
@@ -209,6 +335,41 @@ export const SchoolProvider = ({ children }) => {
     } else {
       window.location.hash = '#/dokumenty';
     }
+  };
+
+  // Izba Pamięci — Navigation Helpers
+  const navigateToMemory = (tab = 'overview') => {
+    setMemoryTab(tab);
+    setActiveView('memory');
+    if (tab === 'overview') window.location.hash = '#/izba-pamieci';
+    else if (tab === 'trophies') window.location.hash = '#/izba-pamieci/sala-pucharow';
+    else if (tab === 'documents') window.location.hash = '#/izba-pamieci/sala-dokumentow';
+    else if (tab === 'wall-of-fame') window.location.hash = '#/izba-pamieci/sciana-chwaly';
+    else if (tab === 'people') window.location.hash = '#/izba-pamieci/kronika';
+    else if (tab === 'timeline') window.location.hash = '#/izba-pamieci/os-czasu';
+    else if (tab === 'wizard') window.location.hash = '#/izba-pamieci/kreator';
+    else window.location.hash = `#/izba-pamieci/${tab}`;
+  };
+
+  const navigateToMemoryYear = (yearId) => {
+    setMemoryYearId(yearId);
+    setMemoryTab('year');
+    setActiveView('memory');
+    window.location.hash = `#/izba-pamieci/${yearId}`;
+  };
+
+  const navigateToMemoryPerson = (personIdentifier) => {
+    setMemoryPersonId(personIdentifier);
+    setMemoryTab('person');
+    setActiveView('memory');
+    window.location.hash = `#/izba-pamieci/osoba/${encodeURIComponent(personIdentifier)}`;
+  };
+
+  const navigateToMemoryOrder = (houseKey) => {
+    setMemoryHouseKey(houseKey);
+    setMemoryTab('order');
+    setActiveView('memory');
+    window.location.hash = `#/izba-pamieci/zakon/${houseKey}`;
   };
 
   // Żelazne Pióro — Navigation helpers
@@ -229,6 +390,14 @@ export const SchoolProvider = ({ children }) => {
     setActiveView('gazette-archive');
     window.location.hash = '#/gazetka/archiwum';
   };
+
+  // Egzaminy — Navigation helpers
+  const navigateToExams = () => { setActiveView('exams'); window.location.hash = '#/egzaminy'; };
+  const navigateToExamTaking = (attemptId) => { setActiveExamAttemptId(attemptId); setActiveView('exam-taking'); window.location.hash = `#/egzaminy/podejscie/${attemptId}`; };
+  const navigateToExamResult = (attemptId) => { setActiveExamAttemptId(attemptId); setActiveView('exam-result'); window.location.hash = `#/egzaminy/wynik/${attemptId}`; };
+  const navigateToExamCreator = (examId = null) => { setActiveExamId(examId); setActiveView('exam-creator'); window.location.hash = examId ? `#/egzaminy/kreator/${examId}` : '#/egzaminy/kreator'; };
+  const navigateToExamGrading = (examId) => { setActiveExamId(examId); setActiveView('exam-grading'); window.location.hash = `#/egzaminy/sprawdzanie/${examId}`; };
+  const navigateToExamBank = () => { setActiveView('exam-bank'); window.location.hash = '#/egzaminy/bank'; };
 
   // Users Database & Active Account
   const [users, setUsers] = useState(() => {
@@ -313,18 +482,15 @@ Dyrektor Cytadeli Durmstrang`
 
   // Current active user profiles for backward compatibility
   const [studentProfile, setStudentProfile] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_student');
-    return saved ? JSON.parse(saved) : DEMO_ACCOUNTS.student;
+    return tryParse('durmstrang_student', DEMO_ACCOUNTS.student);
   });
 
   const [professorProfile, setProfessorProfile] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_prof');
-    return saved ? JSON.parse(saved) : DEMO_ACCOUNTS.professor;
+    return tryParse('durmstrang_prof', DEMO_ACCOUNTS.professor);
   });
 
   const [adminProfile, setAdminProfile] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_admin');
-    return saved ? JSON.parse(saved) : DEMO_ACCOUNTS.admin;
+    return tryParse('durmstrang_admin', DEMO_ACCOUNTS.admin);
   });
 
   // Category Banners & Block Graphics CMS
@@ -626,6 +792,14 @@ Dyrektor Cytadeli Durmstrang`
         if (parsed.docSlug !== undefined) setActiveDocumentSlug(parsed.docSlug);
         if (parsed.docCategory !== undefined) setActiveDocumentCategory(parsed.docCategory);
         if (parsed.gazetteIssueId !== undefined) setActiveGazetteIssueId(parsed.gazetteIssueId);
+        if (parsed.examId !== undefined) setActiveExamId(parsed.examId);
+        if (parsed.examAttemptId !== undefined) setActiveExamAttemptId(parsed.examAttemptId);
+        if (parsed.homeworkId !== undefined) setActiveHomeworkId(parsed.homeworkId);
+        if (parsed.homeworkSubId !== undefined) setActiveHomeworkSubId(parsed.homeworkSubId);
+        if (parsed.memoryTab !== undefined) setMemoryTab(parsed.memoryTab);
+        if (parsed.memoryYearId !== undefined) setMemoryYearId(parsed.memoryYearId);
+        if (parsed.memoryPersonId !== undefined) setMemoryPersonId(parsed.memoryPersonId);
+        if (parsed.memoryHouseKey !== undefined) setMemoryHouseKey(parsed.memoryHouseKey);
       }
     };
 
@@ -703,6 +877,36 @@ Dyrektor Cytadeli Durmstrang`
       case 'gazette-panel':
         targetHash = '#/gazetka/panel';
         break;
+      case 'exams':
+        targetHash = '#/egzaminy';
+        break;
+      case 'exam-taking':
+        targetHash = activeExamAttemptId ? `#/egzaminy/podejscie/${activeExamAttemptId}` : '#/egzaminy';
+        break;
+      case 'exam-result':
+        targetHash = activeExamAttemptId ? `#/egzaminy/wynik/${activeExamAttemptId}` : '#/egzaminy';
+        break;
+      case 'exam-creator':
+        targetHash = activeExamId ? `#/egzaminy/kreator/${activeExamId}` : '#/egzaminy/kreator';
+        break;
+      case 'exam-grading':
+        targetHash = activeExamId ? `#/egzaminy/sprawdzanie/${activeExamId}` : '#/egzaminy';
+        break;
+      case 'exam-bank':
+        targetHash = '#/egzaminy/bank';
+        break;
+      case 'homework':
+        targetHash = '#/prace-domowe';
+        break;
+      case 'homework-detail':
+        targetHash = activeHomeworkId ? `#/praca-domowa/${activeHomeworkId}` : '#/prace-domowe';
+        break;
+      case 'homework-creator':
+        targetHash = '#/zadaj-prace';
+        break;
+      case 'homework-grading':
+        targetHash = activeHomeworkId ? `#/sprawdzaj-prace/${activeHomeworkId}` : '#/prace-domowe';
+        break;
       case 'documents':
         if (activeDocumentSlug) {
           targetHash = `#/dokument/${activeDocumentSlug}`;
@@ -712,6 +916,31 @@ Dyrektor Cytadeli Durmstrang`
           targetHash = '#/dokumenty';
         }
         break;
+      case 'memory':
+        if (memoryTab === 'overview' || !memoryTab) {
+          targetHash = '#/izba-pamieci';
+        } else if (memoryTab === 'trophies') {
+          targetHash = '#/izba-pamieci/sala-pucharow';
+        } else if (memoryTab === 'documents') {
+          targetHash = '#/izba-pamieci/sala-dokumentow';
+        } else if (memoryTab === 'wall-of-fame') {
+          targetHash = '#/izba-pamieci/sciana-chwaly';
+        } else if (memoryTab === 'people') {
+          targetHash = '#/izba-pamieci/kronika';
+        } else if (memoryTab === 'timeline') {
+          targetHash = '#/izba-pamieci/os-czasu';
+        } else if (memoryTab === 'wizard') {
+          targetHash = '#/izba-pamieci/kreator';
+        } else if (memoryTab === 'person' && memoryPersonId) {
+          targetHash = `#/izba-pamieci/osoba/${encodeURIComponent(memoryPersonId)}`;
+        } else if (memoryTab === 'order' && memoryHouseKey) {
+          targetHash = `#/izba-pamieci/zakon/${memoryHouseKey}`;
+        } else if (memoryTab === 'year' && memoryYearId) {
+          targetHash = `#/izba-pamieci/${memoryYearId}`;
+        } else {
+          targetHash = '#/izba-pamieci';
+        }
+        break;
       default:
         targetHash = `#/${activeView}`;
     }
@@ -719,7 +948,7 @@ Dyrektor Cytadeli Durmstrang`
     if (window.location.hash !== targetHash && !(activeView === 'home' && (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#'))) {
       window.location.hash = targetHash;
     }
-  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId, activeDocumentSlug, activeDocumentCategory, activeGazetteIssueId]);
+  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId, activeDocumentSlug, activeDocumentCategory, activeGazetteIssueId, activeExamId, activeExamAttemptId, activeHomeworkId, memoryTab, memoryYearId, memoryPersonId, memoryHouseKey]);
 
   const navigateTo = useCallback((view, options = {}) => {
     if (options.houseId) setActiveHouseTab(options.houseId);
@@ -754,8 +983,7 @@ Dyrektor Cytadeli Durmstrang`
   });
 
   const [pointAuditLogs, setPointAuditLogs] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_point_audits');
-    return saved ? JSON.parse(saved) : [];
+    return tryParse('durmstrang_point_audits', []);
   });
 
   const [rankingPeriod, setRankingPeriod] = useState('overall'); // 'overall' | 'school_year' | 'monthly' | 'weekly'
@@ -777,8 +1005,7 @@ Dyrektor Cytadeli Durmstrang`
 
   // Houses state (derived from dynamic houseRankings so all views stay in sync)
   const [houses, setHouses] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_houses');
-    return saved ? JSON.parse(saved) : HOUSES;
+    return tryParse('durmstrang_houses', HOUSES);
   });
 
   // ==================== PRZEDMIOTY (KATEDRY) ====================
@@ -812,62 +1039,42 @@ Dyrektor Cytadeli Durmstrang`
   });
 
   const [events, setEvents] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_events');
-    return saved ? JSON.parse(saved) : EVENTS;
+    return tryParse('durmstrang_events', EVENTS);
   });
 
   const [pendingApplications, setPendingApplications] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_apps');
-    return saved ? JSON.parse(saved) : PENDING_APPLICATIONS;
+    return tryParse('durmstrang_apps', PENDING_APPLICATIONS);
   });
 
   const [students, setStudents] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_students');
-    return saved ? JSON.parse(saved) : LEADERBOARD_STUDENTS;
+    return tryParse('durmstrang_students', LEADERBOARD_STUDENTS);
   });
 
   const [staffRanking, setStaffRanking] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_staff_ranking');
-    return saved ? JSON.parse(saved) : LEADERBOARD_STAFF;
+    return tryParse('durmstrang_staff_ranking', LEADERBOARD_STAFF);
   });
 
   // Runes & Workshop System
   const [userRunes, setUserRunes] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_runes');
-    return saved ? JSON.parse(saved) : RUNES_CATALOG;
+    return tryParse('durmstrang_runes', RUNES_CATALOG);
   });
 
   const [craftedFormulas, setCraftedFormulas] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_crafted_formulas');
-    return saved ? JSON.parse(saved) : ['formula-blood-shield'];
+    return tryParse('durmstrang_crafted_formulas', ['formula-blood-shield']);
   });
 
-  // Homework & Submissions
+  // ==================== ZADANIA DOMOWE I WYPRACOWANIA (TMD) ====================
   const [homeworkSubmissions, setHomeworkSubmissions] = useState(() => {
     const saved = localStorage.getItem('durmstrang_submissions');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'sub-demo-1',
-        studentId: 'stud-2',
-        studentName: 'Astrid Vargadottir',
-        house: 'bjornhall',
-        subjectId: 'klatwy-i-uroki',
-        subjectName: 'Klątwy i Magia Bojowa',
-        lessonId: 'ku-1',
-        lessonTitle: 'Lekcja I: Tarcza Pękniętego Żelaza',
-        content: 'W analizie taktycznej proponuję najpierw pochłonąć energię pierwszego uroku za pomocą rotacyjnego ruchu nadgarstka, a następnie skierować falę powrotną pod kątem 30 stopni ku ziemi.',
-        status: 'submitted',
-        submittedAt: '2026-09-10 14:30',
-        grade: null,
-        feedback: null
-      }
-    ];
+    if (saved) { try { return JSON.parse(saved); } catch {} }
+    return [];
   });
 
   // Raven Post Messages
   const [ravenMessages, setRavenMessages] = useState(() => {
     const saved = localStorage.getItem('durmstrang_messages');
-    return saved ? JSON.parse(saved) : [
+    if (saved) { try { return JSON.parse(saved); } catch {} }
+    return [
       {
         id: 'msg-1',
         from: 'Arcymistrzyni Valgerda Storm',
@@ -891,14 +1098,14 @@ Dyrektor Cytadeli Durmstrang`
 
   // Discovered Secrets & Lore
   const [discoveredSecrets, setDiscoveredSecrets] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_secrets');
-    return saved ? JSON.parse(saved) : [];
+    return tryParse('durmstrang_secrets', []);
   });
 
   // Admin Audit Log
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem('durmstrang_logs');
-    return saved ? JSON.parse(saved) : [
+    if (saved) { try { return JSON.parse(saved); } catch {} }
+    return [
       { id: 'log-1', timestamp: '2026-09-01 10:00', admin: 'Arcymistrzyni Valgerda Storm', action: 'Inauguracja XIX Roku Szkolnego', detail: 'Reset punktacji generalnej i przydział bazowy.' },
       { id: 'log-2', timestamp: '2026-09-05 16:20', admin: 'Prof. Gunnar Vargson', action: '+50 pkt dla Zakonu Björnhall', detail: 'Zwycięstwo w eliminacjach turnieju pojedynkowego.' }
     ];
@@ -906,13 +1113,11 @@ Dyrektor Cytadeli Durmstrang`
 
   // ==================== BANK CYTADELI (SKÍRNISBANKI) ====================
   const [bankAccount, setBankAccount] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_bank_account');
-    return saved ? JSON.parse(saved) : SEED_BANK_ACCOUNTS[0];
+    return tryParse('durmstrang_bank_account', SEED_BANK_ACCOUNTS[0]);
   });
 
   const [bankTransactions, setBankTransactions] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_bank_tx');
-    return saved ? JSON.parse(saved) : SEED_BANK_TRANSACTIONS;
+    return tryParse('durmstrang_bank_tx', SEED_BANK_TRANSACTIONS);
   });
 
   const [teacherSalaries, setTeacherSalaries] = useState([]);
@@ -929,33 +1134,28 @@ Dyrektor Cytadeli Durmstrang`
     return STORE_ITEMS;
   });
   const [shoppingLists, setShoppingLists] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_shopping_lists');
-    return saved ? JSON.parse(saved) : SEED_SHOPPING_LISTS;
+    return tryParse('durmstrang_shopping_lists', SEED_SHOPPING_LISTS);
   });
   const [selectedInspectorItem, setSelectedInspectorItem] = useState(null);
 
   // ==================== SKANDYNAWSKA LOTERIA ODYNA ====================
   const [currentLottery, setCurrentLottery] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_current_lottery');
-    return saved ? JSON.parse(saved) : SEED_LOTTERY_ROUNDS[0];
+    return tryParse('durmstrang_current_lottery', SEED_LOTTERY_ROUNDS[0]);
   });
 
   const [userLotteryTickets, setUserLotteryTickets] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_lottery_tickets');
-    return saved ? JSON.parse(saved) : SEED_LOTTERY_USER_TICKETS;
+    return tryParse('durmstrang_lottery_tickets', SEED_LOTTERY_USER_TICKETS);
   });
 
   const [lotteryHistory, setLotteryHistory] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_lottery_history');
-    return saved ? JSON.parse(saved) : [SEED_LOTTERY_ROUNDS[1]];
+    return tryParse('durmstrang_lottery_history', [SEED_LOTTERY_ROUNDS[1]]);
   });
 
   const [lotteryModalOpen, setLotteryModalOpen] = useState(false);
 
   // Completed Quests from Marauder's Map
   const [completedQuests, setCompletedQuests] = useState(() => {
-    const saved = localStorage.getItem('durmstrang_completed_quests');
-    return saved ? JSON.parse(saved) : [];
+    return tryParse('durmstrang_completed_quests', []);
   });
 
   // Visual Atmosphere settings
@@ -1124,10 +1324,16 @@ Dyrektor Cytadeli Durmstrang`
         setRavenMessages(ravenRes.data);
       }
 
-      // Load Homework Submissions
-      const hwRes = await api.getHomework();
-      if (hwRes.ok && hwRes.data.length > 0) {
-        setHomeworkSubmissions(hwRes.data);
+      // Load Homework Assignments & Submissions
+      const hwRes = await api.getHomework({ studentId: currentUserId });
+      if (hwRes.ok && hwRes.data) {
+        setHomeworkAssignments(hwRes.data);
+      }
+      if (currentUserId && currentUserId !== 'guest') {
+        const hwOverviewRes = await api.getStudentHomeworkOverview();
+        if (hwOverviewRes.ok && hwOverviewRes.data) {
+          setHomeworkOverview(hwOverviewRes.data);
+        }
       }
 
       // Load User Quests, Secrets & Formulas
@@ -1151,7 +1357,7 @@ Dyrektor Cytadeli Durmstrang`
 
     loadFromAPI();
 
-    // Auto-polling co 3 sekundy, aby natychmiast synchronizować stan
+    // Auto-polling co 30 sekund
     const pollInterval = setInterval(async () => {
       const lessonsRes = await api.getLessons();
       if (lessonsRes.ok && lessonsRes.data) {
@@ -1186,7 +1392,7 @@ Dyrektor Cytadeli Durmstrang`
       if (hwRes.ok && hwRes.data) {
         setHomeworkSubmissions(hwRes.data);
       }
-    }, 3000);
+    }, 30000);
 
     return () => clearInterval(pollInterval);
   }, [rankingPeriod, currentUserId]);
@@ -1788,74 +1994,311 @@ Dyrektor Cytadeli Durmstrang`
     showNotification('Wiadomość Usunięta', 'List został zniszczony.', 'info');
   };
 
-  // Submit Homework
-  const submitHomework = async ({ subjectId, subjectName, lessonId = '', lessonTitle = '', content }) => {
-    const sub = {
-      id: `sub-${Date.now()}`,
-      studentId: currentUserId,
-      studentName: currentUser?.fullName || studentProfile?.fullName || 'Adept',
-      house: currentUser?.house || 'ravnheim',
-      subjectId,
-      subjectName: subjectName || subjectId,
-      lessonId,
-      lessonTitle,
-      content,
-      status: 'submitted',
-      submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      grade: null,
-      feedback: null
-    };
+  // ==================== ZADANIA DOMOWE I WYPRACOWANIA (TMD) ====================
 
-    setHomeworkSubmissions(prev => [sub, ...prev]);
+  const loadHomework = async (filters = {}) => {
     try {
-      localStorage.setItem('durmstrang_submissions', JSON.stringify([sub, ...homeworkSubmissions]));
-    } catch (_) {}
+      const studentId = currentUser?.id || currentUserId;
+      const res = await api.getHomework({ ...filters, studentId });
+      if (res.ok && res.data) {
+        setHomeworkAssignments(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error loading homework:', err);
+    }
+    return [];
+  };
 
-    if (backendAvailable) {
-      try {
-        const res = await api.submitHomework({ subjectId, subjectName, lessonId, lessonTitle, content });
-        if (res.ok && res.data?.submission) {
-          setHomeworkSubmissions(prev => [res.data.submission, ...prev.filter(s => s.id !== sub.id)]);
+  const loadStudentHomeworkOverview = async () => {
+    try {
+      const res = await api.getStudentHomeworkOverview();
+      if (res.ok && res.data) {
+        setHomeworkOverview(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error loading student homework overview:', err);
+    }
+    return null;
+  };
+
+  const getHomeworkDetails = async (id) => {
+    try {
+      const res = await api.getHomeworkDetails(id);
+      if (res.ok && res.data) {
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error fetching homework details:', err);
+    }
+    return null;
+  };
+
+  const createHomeworkAssignment = async (data) => {
+    try {
+      const res = await api.createHomework(data);
+      if (res.ok && res.data?.homework) {
+        setHomeworkAssignments(prev => [res.data.homework, ...prev]);
+        showNotification('Praca Domowa Zadana!', `Pomyślnie opublikowano zadanie: „${res.data.homework.title}”.`, 'success');
+        return res.data.homework;
+      }
+    } catch (err) {
+      console.error('Error creating homework:', err);
+      showNotification('Błąd', err.message || 'Nie udało się zadać pracy domowej.', 'error');
+    }
+    return null;
+  };
+
+  const updateHomeworkAssignment = async (id, data) => {
+    try {
+      const res = await api.updateHomework(id, data);
+      if (res.ok && res.data?.homework) {
+        setHomeworkAssignments(prev => prev.map(hw => hw.id === id ? res.data.homework : hw));
+        showNotification('Zaktualizowano', 'Zmiany w zadaniu zostały zapisane.', 'success');
+        return res.data.homework;
+      }
+    } catch (err) {
+      console.error('Error updating homework:', err);
+      showNotification('Błąd', err.message || 'Nie udało się zaktualizować pracy domowej.', 'error');
+    }
+    return null;
+  };
+
+  const deleteHomeworkAssignment = async (id) => {
+    try {
+      await api.deleteHomework(id);
+      setHomeworkAssignments(prev => prev.filter(hw => hw.id !== id));
+      showNotification('Usunięto', 'Zadanie domowe zostało usunięte.', 'info');
+      return true;
+    } catch (err) {
+      console.error('Error deleting homework:', err);
+      showNotification('Błąd', 'Nie udało się usunąć zadania.', 'error');
+    }
+    return false;
+  };
+
+  const duplicateHomeworkAssignment = async (id) => {
+    try {
+      const res = await api.duplicateHomework(id);
+      if (res.ok && res.data?.homework) {
+        setHomeworkAssignments(prev => [res.data.homework, ...prev]);
+        showNotification('Zduplikowano', 'Utworzono kopię zadania domowego.', 'success');
+        return res.data.homework;
+      }
+    } catch (err) {
+      console.error('Error duplicating homework:', err);
+      showNotification('Błąd', 'Nie udało się skopiować zadania.', 'error');
+    }
+    return null;
+  };
+
+  const saveHomeworkDraft = async (id, data) => {
+    try {
+      const res = await api.saveHomeworkDraft(id, data);
+      if (res.ok && res.data?.submission) {
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error saving homework draft:', err);
+      throw err;
+    }
+  };
+
+  const submitHomework = async (idOrData, maybeData) => {
+    let homeworkId = idOrData;
+    let payload = maybeData;
+
+    // Support both signatures: submitHomework(id, data) and legacy submitHomework({ subjectId, ... })
+    if (typeof idOrData === 'object' && idOrData !== null) {
+      homeworkId = idOrData.homeworkId || idOrData.id || `hw-${idOrData.subjectId}`;
+      payload = idOrData;
+    }
+
+    try {
+      const res = await api.submitHomework(homeworkId, payload);
+      if (res.ok && res.data?.submission) {
+        showNotification('Praca Zapieczętowana!', 'Twoja praca została zapieczętowana i przekazana profesorowi.', 'success');
+        await loadStudentHomeworkOverview();
+        return res.data.submission;
+      }
+    } catch (err) {
+      console.error('Error submitting homework:', err);
+      showNotification('Błąd', err.message || 'Nie udało się oddać pracy domowej.', 'error');
+      throw err;
+    }
+  };
+
+  const gradeHomeworkSubmission = async (subId, data) => {
+    try {
+      const res = await api.gradeHomeworkSubmission(subId, data);
+      if (res.ok && res.data?.submission) {
+        showNotification('Praca Oceniona!', res.data.message || 'Wystawiono ocenę i komentarz.', 'success');
+        if (res.data.rankings) {
+          setHouseRankings(res.data.rankings);
         }
-      } catch (err) {
-        console.error('Error submitting homework on backend:', err);
+        return res.data.submission;
       }
+    } catch (err) {
+      console.error('Error grading homework:', err);
+      showNotification('Błąd', err.message || 'Nie udało się ocenić pracy.', 'error');
+      throw err;
     }
-
-    showNotification('Zadanie Złożone!', 'Twoja praca została przekazana do oceny przez Profesora Katedry.', 'success');
-    return sub;
   };
 
-  // Grade Homework
-  const gradeHomework = async (id, { grade, feedback, pointsToAward = 15 }) => {
-    setHomeworkSubmissions(prev => prev.map(s => s.id === id ? {
-      ...s,
-      status: 'graded',
-      grade,
-      feedback,
-      gradedBy: currentUser?.fullName || 'Profesor Katedry',
-      gradedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
-    } : s));
-
-    if (backendAvailable) {
-      try {
-        await api.gradeHomework(id, { grade, feedback, pointsToAward });
-      } catch (err) {
-        console.error('Error grading homework on backend:', err);
+  const returnHomeworkForRevision = async (subId, data) => {
+    try {
+      const res = await api.returnHomeworkForRevision(subId, data);
+      if (res.ok && res.data?.submission) {
+        showNotification('Zwrócono do Poprawy', 'Praca została odesłana adeptowi z uwagami.', 'info');
+        return res.data.submission;
       }
-    }
-
-    showNotification('Praca Oceniona', `Wystawiono ocenę ${grade} i przyznano punkty.`, 'success');
-  };
-
-  const deleteHomework = async (id) => {
-    setHomeworkSubmissions(prev => prev.filter(s => s.id !== id));
-    if (backendAvailable) {
-      try {
-        await api.deleteHomework(id);
-      } catch (_) {}
+    } catch (err) {
+      console.error('Error returning homework for revision:', err);
+      showNotification('Błąd', err.message || 'Nie udało się zwrócić pracy.', 'error');
+      throw err;
     }
   };
+
+  const setHomeworkException = async (id, data) => {
+    try {
+      const res = await api.setHomeworkException(id, data);
+      if (res.ok && res.data?.exception) {
+        showNotification('Wyjątek Ustawiony', res.data.message || 'Zapisano indywidualne warunki dla adepta.', 'success');
+        return res.data.exception;
+      }
+    } catch (err) {
+      console.error('Error setting exception:', err);
+      showNotification('Błąd', err.message || 'Nie udało się ustawić wyjątku.', 'error');
+    }
+    return null;
+  };
+
+  const deleteHomeworkException = async (id, studentId) => {
+    try {
+      await api.deleteHomeworkException(id, studentId);
+      showNotification('Wyjątek Usunięty', 'Przywrócono standardowe terminy dla adepta.', 'info');
+      return true;
+    } catch (err) {
+      console.error('Error deleting exception:', err);
+    }
+    return false;
+  };
+
+  const loadHomeworkTemplates = async () => {
+    try {
+      const res = await api.getHomeworkTemplates();
+      if (res.ok && res.data) {
+        setHomeworkTemplates(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error loading templates:', err);
+    }
+    return [];
+  };
+
+  const createHomeworkTemplate = async (data) => {
+    try {
+      const res = await api.createHomeworkTemplate(data);
+      if (res.ok && res.data) {
+        setHomeworkTemplates(prev => [res.data, ...prev]);
+        showNotification('Szablon Zapisany', 'Nowy szablon jest dostępny w kreatorze.', 'success');
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error creating template:', err);
+    }
+    return null;
+  };
+
+  const deleteHomeworkTemplate = async (id) => {
+    try {
+      await api.deleteHomeworkTemplate(id);
+      setHomeworkTemplates(prev => prev.filter(t => t.id !== id));
+      showNotification('Usunięto Szablon', 'Szablon został usunięty z biblioteki.', 'info');
+      return true;
+    } catch (err) {
+      console.error('Error deleting template:', err);
+    }
+    return false;
+  };
+
+  const loadHomeworkQuickComments = async () => {
+    try {
+      const res = await api.getHomeworkQuickComments();
+      if (res.ok && res.data) {
+        setHomeworkQuickComments(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error loading quick comments:', err);
+    }
+    return [];
+  };
+
+  const createHomeworkQuickComment = async (data) => {
+    try {
+      const res = await api.createHomeworkQuickComment(data);
+      if (res.ok && res.data) {
+        setHomeworkQuickComments(prev => [...prev, res.data]);
+        showNotification('Komentarz Zapisany', 'Dodano do biblioteki szybkich uwag.', 'success');
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Error creating quick comment:', err);
+    }
+    return null;
+  };
+
+  const deleteHomeworkQuickComment = async (id) => {
+    try {
+      await api.deleteHomeworkQuickComment(id);
+      setHomeworkQuickComments(prev => prev.filter(c => c.id !== id));
+      return true;
+    } catch (err) {
+      console.error('Error deleting quick comment:', err);
+    }
+    return false;
+  };
+
+  // Navigation helpers for Homework
+  const navigateToHomeworkCenter = (tab = 'all') => {
+    setActiveView('homework');
+    window.location.hash = '#/prace-domowe';
+  };
+
+  const navigateToHomeworkDetail = (id) => {
+    setActiveHomeworkId(id);
+    setActiveView('homework-detail');
+    window.location.hash = `#/praca-domowa/${id}`;
+  };
+
+  const navigateToHomeworkCreator = (lessonData = null) => {
+    setHomeworkDraftLessonData(lessonData);
+    setActiveView('homework-creator');
+    window.location.hash = '#/zadaj-prace';
+  };
+
+  const navigateToHomeworkGrading = (id, subId = null) => {
+    setActiveHomeworkId(id);
+    setActiveHomeworkSubId(subId);
+    setActiveView('homework-grading');
+    window.location.hash = id ? `#/sprawdzaj-prace/${id}` : '#/prace-domowe';
+  };
+
+  const uploadHomeworkAttachment = async (data) => {
+    try {
+      const res = await api.uploadHomeworkAttachment(data);
+      return res;
+    } catch (err) {
+      console.error('Error uploading homework attachment:', err);
+      throw err;
+    }
+  };
+
+  const gradeHomework = gradeHomeworkSubmission;
+  const deleteHomework = deleteHomeworkAssignment;
 
   // Events (Kalendarz)
   const addEvent = async (eventData) => {
@@ -2136,44 +2579,33 @@ Dyrektor Cytadeli Durmstrang`
 
   // Login user by username and password with status check (API-first)
   const loginUser = async (username, password) => {
-    if (backendAvailable) {
-      const res = await api.login(username, password);
-      if (res.ok) {
-        const user = res.data.user;
-        setUsers(prev => {
-          const exists = prev.find(u => u.id === user.id);
-          return exists ? prev.map(u => u.id === user.id ? user : u) : [user, ...prev];
-        });
-        setCurrentUserId(user.id);
-        showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${user.fullName} (${user.role === 'student' ? 'Adept' : user.role === 'professor' ? 'Profesor' : 'Arcymistrz'})`, 'success');
-        return true;
+    const res = await api.login(username, password);
+    if (res.ok) {
+      const { user, token } = res.data;
+      if (token) localStorage.setItem('durmstrang_auth_token', token);
+      setUsers(prev => {
+        const exists = prev.find(u => u.id === user.id);
+        return exists ? prev.map(u => u.id === user.id ? user : u) : [user, ...prev];
+      });
+      setCurrentUserId(user.id);
+      showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${user.fullName} (${user.role === 'student' ? 'Adept' : user.role === 'professor' ? 'Profesor' : 'Arcymistrz'})`, 'success');
+      return true;
+    } else {
+      if (res.data?.status === 'pending') {
+        showNotification('Podanie w Toku Weryfikacji', res.error, 'warning');
+      } else if (res.data?.status === 'rejected') {
+        showNotification('Podanie Odrzucone', res.error, 'warning');
       } else {
-        if (res.data?.status === 'pending') {
-          showNotification('Podanie w Toku Weryfikacji', res.error, 'warning');
-        } else if (res.data?.status === 'rejected') {
-          showNotification('Podanie Odrzucone', res.error, 'warning');
-        } else {
-          showNotification('Błąd Autoryzacji', res.error || 'Nieprawidłowa nazwa adepta lub hasło.', 'warning');
-        }
-        return false;
+        showNotification('Błąd Autoryzacji', res.error || 'Nieprawidłowa nazwa adepta lub hasło.', 'warning');
       }
-    }
-
-    // Fallback
-    const trimmedUser = (username || '').trim().toLowerCase();
-    const found = users.find(u => u.username.toLowerCase() === trimmedUser && u.password === password);
-    if (!found) {
-      showNotification('Błąd Autoryzacji', 'Nieprawidłowa nazwa adepta lub hasło.', 'warning');
       return false;
     }
-    setCurrentUserId(found.id);
-    showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${found.fullName}`, 'success');
-    return true;
   };
 
   const logoutUser = () => {
     setCurrentUserId(null);
     localStorage.setItem('durmstrang_current_user_id', 'guest');
+    localStorage.removeItem('durmstrang_auth_token');
     showNotification('Wylogowano z Cytadeli', 'Złożono pieczęć. Sesja została pomyślnie zamknięta.', 'info');
   };
 
@@ -2205,55 +2637,20 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const registerUser = async (userData) => {
-    if (backendAvailable) {
-      const res = await api.register(userData);
-      if (res.ok) {
-        const { user, email } = res.data;
-        setUsers(prev => [user, ...prev]);
-        if (email) setEmails(prev => [email, ...prev]);
-        showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
-        return true;
-      } else {
-        showNotification('Błąd Rejestracji', res.error || 'Błąd rejestracji podania.', 'warning');
-        return false;
-      }
+    const res = await api.register(userData);
+    if (res.ok) {
+      const { user, email } = res.data;
+      setUsers(prev => [user, ...prev]);
+      if (email) setEmails(prev => [email, ...prev]);
+      showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
+      return true;
+    } else if (res.offline) {
+      showNotification('Brak Połączenia z Serwerem', 'Rejestracja wymaga połączenia z serwerem Cytadeli. Spróbuj ponownie za chwilę.', 'warning');
+      return false;
+    } else {
+      showNotification('Błąd Rejestracji', res.error || 'Błąd rejestracji podania.', 'warning');
+      return false;
     }
-    // Local fallback if offline
-    const newId = `usr-${Date.now()}`;
-    const userEmail = (userData.email || '').trim() || `${userData.username || 'adept'}@durmstrang.edu`;
-    const role = userData.role || 'student';
-    const fullName = `${(userData.name || '').trim()} ${(userData.surname || '').trim()}`;
-    const localUser = {
-      id: newId,
-      username: (userData.username || '').trim().toLowerCase(),
-      password: userData.password || '123',
-      email: userEmail,
-      name: (userData.name || '').trim(),
-      surname: (userData.surname || '').trim(),
-      fullName,
-      role,
-      status: 'pending',
-      house: userData.house || null,
-      title: role === 'professor' ? `Kandydat na Profesora • ${userData.departmentName || 'Katedra'}` : 'Kandydat na Adepta',
-      avatar: userData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-      origin: userData.origin || 'Skandynawia (Norwegia)',
-      gender: userData.gender || 'Kobieta',
-      classYear: userData.classYear || 'Klasa I • Fundamenty',
-      wand: userData.wand || 'Cis Arktyczny, Włókno Serca Smoka, 12 cali, Sztywna',
-      patronus: userData.patronus || 'Wilk Polarny',
-      companion: userData.companion || 'Puchacz Śnieżny',
-      appearance: userData.appearance || '',
-      backstory: userData.backstory || '',
-      level: 1,
-      xp: 0,
-      nextLevelXp: 500,
-      points: 20,
-      currency: 150,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setUsers(prev => [localUser, ...prev]);
-    showNotification('Podanie Złożone', `Karta adepta ${fullName} zapisana. Oczekuje na zatwierdzenie.`, 'success');
-    return true;
   };
 
   const approveUser = async (userId) => {
@@ -3349,15 +3746,52 @@ Dyrektor Cytadeli Durmstrang`
         activeDocumentSlug,
         setActiveDocumentSlug,
         activeDocumentCategory,
-        setActiveDocumentCategory,
         navigateToDocumentModule,
-        // Nowe moduły: Zadania z Mapy, Poczta, Kalendarz, Prace Domowe & Kopia Zapasowa
+        // Moduł Prac Domowych (TMD)
+        homeworkAssignments,
+        setHomeworkAssignments,
+        activeHomeworkId,
+        setActiveHomeworkId,
+        activeHomeworkSubId,
+        setActiveHomeworkSubId,
+        homeworkDraftLessonData,
+        setHomeworkDraftLessonData,
+        homeworkOverview,
+        setHomeworkOverview,
+        homeworkTemplates,
+        setHomeworkTemplates,
+        homeworkQuickComments,
+        setHomeworkQuickComments,
+        loadHomework,
+        loadStudentHomeworkOverview,
+        getHomeworkDetails,
+        createHomeworkAssignment,
+        updateHomeworkAssignment,
+        deleteHomeworkAssignment,
+        duplicateHomeworkAssignment,
+        saveHomeworkDraft,
+        submitHomework,
+        uploadHomeworkAttachment,
+        gradeHomeworkSubmission,
+        returnHomeworkForRevision,
+        setHomeworkException,
+        deleteHomeworkException,
+        loadHomeworkTemplates,
+        createHomeworkTemplate,
+        deleteHomeworkTemplate,
+        loadHomeworkQuickComments,
+        createHomeworkQuickComment,
+        deleteHomeworkQuickComment,
+        navigateToHomeworkCenter,
+        navigateToHomeworkDetail,
+        navigateToHomeworkCreator,
+        navigateToHomeworkGrading,
+        // Zadania z Mapy, Poczta, Kalendarz, Kopia Zapasowa
         completedQuests,
         completeMapQuest,
         markRavenRead,
         toggleRavenStar,
         deleteRavenMessage,
-        submitHomework,
         gradeHomework,
         deleteHomework,
         addEvent,
@@ -3370,7 +3804,31 @@ Dyrektor Cytadeli Durmstrang`
         navigateToGazette,
         navigateToGazetteIssue,
         navigateToGazettePanel,
-        navigateToGazetteArchive
+        navigateToGazetteArchive,
+        // Moduł Egzaminacyjny
+        activeExamId,
+        setActiveExamId,
+        activeExamAttemptId,
+        setActiveExamAttemptId,
+        navigateToExams,
+        navigateToExamTaking,
+        navigateToExamResult,
+        navigateToExamCreator,
+        navigateToExamGrading,
+        navigateToExamBank,
+        // Izba Pamięci (Memorial Hall)
+        memoryTab,
+        setMemoryTab,
+        memoryYearId,
+        setMemoryYearId,
+        memoryPersonId,
+        setMemoryPersonId,
+        memoryHouseKey,
+        setMemoryHouseKey,
+        navigateToMemory,
+        navigateToMemoryYear,
+        navigateToMemoryPerson,
+        navigateToMemoryOrder
       }}
     >
       {children}

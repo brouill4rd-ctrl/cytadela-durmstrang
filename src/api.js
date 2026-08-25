@@ -3,11 +3,10 @@ const API_BASE = '/api';
 
 async function apiFetch(path, options = {}) {
   try {
-    // Automatycznie dołącz nagłówek autoryzacji z aktualnie zalogowanego użytkownika
-    const currentUserId = localStorage.getItem('durmstrang_current_user_id');
+    const token = localStorage.getItem('durmstrang_auth_token');
     const authHeaders = {};
-    if (currentUserId && currentUserId !== 'guest' && currentUserId !== 'null') {
-      authHeaders['X-User-Id'] = currentUserId;
+    if (token) {
+      authHeaders['Authorization'] = `Bearer ${token}`;
     }
 
     const res = await fetch(`${API_BASE}${path}`, {
@@ -29,6 +28,25 @@ async function apiFetch(path, options = {}) {
 }
 
 export const api = {
+  getMyPrologue: () => apiFetch('/prologue/me'),
+  advancePrologue: (stage, choiceId) => apiFetch('/prologue/advance', { method: 'POST', body: JSON.stringify({ stage, choiceId }) }),
+  getPrologueAdmin: () => apiFetch('/prologue/admin'),
+  setPrologueStage: (userId, stage) => apiFetch(`/prologue/admin/${userId}`, { method: 'PATCH', body: JSON.stringify({ stage }) }),
+  getMyLineageDiscoveries: () => apiFetch('/prologue/lineage/me'),
+  getMyWandBond: () => apiFetch('/prologue/wand/me'),
+  // Magiczna Północ — centralny stan świata
+  getWorldState: () => apiFetch('/world'),
+  getWorldDirector: () => apiFetch('/world/director'),
+  updateWorldBase: (data) => apiFetch('/world/base', { method: 'PUT', body: JSON.stringify(data) }),
+  previewWorldState: (data) => apiFetch('/world/preview', { method: 'POST', body: JSON.stringify(data) }),
+  createWorldOverride: (data) => apiFetch('/world/overrides', { method: 'POST', body: JSON.stringify(data) }),
+  deleteWorldOverride: (id) => apiFetch(`/world/overrides/${id}`, { method: 'DELETE' }),
+  createWorldSchedule: (data) => apiFetch('/world/schedules', { method: 'POST', body: JSON.stringify(data) }),
+  deleteWorldSchedule: (id) => apiFetch(`/world/schedules/${id}`, { method: 'DELETE' }),
+  createWorldEffect: (data) => apiFetch('/world/effects', { method: 'POST', body: JSON.stringify(data) }),
+  createWorldScar: (data) => apiFetch('/world/scars', { method: 'POST', body: JSON.stringify(data) }),
+  createWorldEvent: (data) => apiFetch('/world/events', { method: 'POST', body: JSON.stringify(data) }),
+  closeWorldEventWithScar: (id, data) => apiFetch(`/world/events/${id}/close-with-scar`, { method: 'POST', body: JSON.stringify(data) }),
   // Auth
   login: (username, password) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   register: (userData) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
@@ -41,6 +59,12 @@ export const api = {
   rejectUser: (id, adminName) => apiFetch(`/users/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ adminName }) }),
   resetPassword: (id, newPassword) => apiFetch(`/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   getPendingApplications: () => apiFetch('/users/pending/applications'),
+
+  // Pas Adepta
+  getBelt: () => apiFetch('/belt'),
+  pinToBelt: (target, replaceSlot) => apiFetch('/belt', { method: 'POST', body: JSON.stringify({ ...target, replaceSlot }) }),
+  reorderBelt: (items) => apiFetch('/belt/order', { method: 'PUT', body: JSON.stringify({ items }) }),
+  unpinFromBelt: (targetType, targetId = '') => apiFetch(`/belt/${encodeURIComponent(targetType)}${targetId ? `/${encodeURIComponent(targetId)}` : ''}`, { method: 'DELETE' }),
 
   // Emails
   getEmails: () => apiFetch('/emails'),
@@ -243,18 +267,48 @@ export const api = {
   },
   craftFormula: (data) => apiFetch('/workshop/craft', { method: 'POST', body: JSON.stringify(data) }),
 
-  // ==================== ZADANIA DOMOWE I WYPRACOWANIA ====================
+  // ==================== ZADANIA DOMOWE I WYPRACOWANIA (TMD) ====================
   getHomework: (filters = {}) => {
     const params = new URLSearchParams();
     if (filters.studentId) params.append('studentId', filters.studentId);
     if (filters.subjectId) params.append('subjectId', filters.subjectId);
+    if (filters.classYear) params.append('classYear', filters.classYear);
+    if (filters.schoolYear) params.append('schoolYear', filters.schoolYear);
     if (filters.status) params.append('status', filters.status);
+    if (filters.type) params.append('type', filters.type);
+    if (filters.search) params.append('search', filters.search);
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiFetch(`/homework${query}`);
   },
-  submitHomework: (data) => apiFetch('/homework', { method: 'POST', body: JSON.stringify(data) }),
-  gradeHomework: (id, data) => apiFetch(`/homework/${id}/grade`, { method: 'PATCH', body: JSON.stringify(data) }),
+  getStudentHomeworkOverview: () => apiFetch('/homework/student/overview'),
+  getHomeworkCalendar: () => apiFetch('/homework/calendar'),
+  getHomeworkArchive: () => apiFetch('/homework/archive'),
+  getHomeworkDetails: (id) => apiFetch(`/homework/${id}`),
+  createHomework: (data) => apiFetch('/homework', { method: 'POST', body: JSON.stringify(data) }),
+  updateHomework: (id, data) => apiFetch(`/homework/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteHomework: (id) => apiFetch(`/homework/${id}`, { method: 'DELETE' }),
+  duplicateHomework: (id) => apiFetch(`/homework/${id}/duplicate`, { method: 'POST' }),
+  getHomeworkSubmissions: (id, filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.house) params.append('house', filters.house);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/homework/${id}/submissions${query}`);
+  },
+  getHomeworkSubmissionDetails: (subId) => apiFetch(`/homework/submissions/${subId}`),
+  saveHomeworkDraft: (id, data) => apiFetch(`/homework/${id}/draft`, { method: 'POST', body: JSON.stringify(data) }),
+  submitHomework: (id, data) => apiFetch(`/homework/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+  gradeHomeworkSubmission: (subId, data) => apiFetch(`/homework/submissions/${subId}/grade`, { method: 'POST', body: JSON.stringify(data) }),
+  returnHomeworkForRevision: (subId, data) => apiFetch(`/homework/submissions/${subId}/return`, { method: 'POST', body: JSON.stringify(data) }),
+  setHomeworkException: (id, data) => apiFetch(`/homework/${id}/exceptions`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteHomeworkException: (id, studentId) => apiFetch(`/homework/${id}/exceptions/${studentId}`, { method: 'DELETE' }),
+  getHomeworkTemplates: () => apiFetch('/homework/templates'),
+  createHomeworkTemplate: (data) => apiFetch('/homework/templates', { method: 'POST', body: JSON.stringify(data) }),
+  deleteHomeworkTemplate: (id) => apiFetch(`/homework/templates/${id}`, { method: 'DELETE' }),
+  getHomeworkQuickComments: () => apiFetch('/homework/quick-comments'),
+  createHomeworkQuickComment: (data) => apiFetch('/homework/quick-comments', { method: 'POST', body: JSON.stringify(data) }),
+  deleteHomeworkQuickComment: (id) => apiFetch(`/homework/quick-comments/${id}`, { method: 'DELETE' }),
+  uploadHomeworkAttachment: (data) => apiFetch('/homework/upload', { method: 'POST', body: JSON.stringify(data) }),
 
   // ==================== KRUCZA POCZTA & WIADOMOŚCI ====================
   getRavenMessages: () => apiFetch('/raven'),
@@ -331,6 +385,118 @@ export const api = {
     return apiFetch(`/gazette/search?${params.toString()}`);
   },
 
+  // ==================== MODUŁ EGZAMINACYJNY ====================
+  getExamGradingScales: () => apiFetch('/exams/scales'),
+  createExamGradingScale: (data) => apiFetch('/exams/scales', { method: 'POST', body: JSON.stringify(data) }),
+  updateExamGradingScale: (id, data) => apiFetch(`/exams/scales/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExamGradingScale: (id) => apiFetch(`/exams/scales/${id}`, { method: 'DELETE' }),
+
+  getExamSessions: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.classYear) params.append('classYear', filters.classYear);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/exams/sessions${query}`);
+  },
+  getExamSession: (id) => apiFetch(`/exams/sessions/${id}`),
+  createExamSession: (data) => apiFetch('/exams/sessions', { method: 'POST', body: JSON.stringify(data) }),
+  updateExamSession: (id, data) => apiFetch(`/exams/sessions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExamSession: (id) => apiFetch(`/exams/sessions/${id}`, { method: 'DELETE' }),
+
+  getQuestionBankCategories: (subjectId) => {
+    const query = subjectId ? `?subjectId=${subjectId}` : '';
+    return apiFetch(`/exams/question-categories${query}`);
+  },
+  createQuestionBankCategory: (data) => apiFetch('/exams/question-categories', { method: 'POST', body: JSON.stringify(data) }),
+  updateQuestionBankCategory: (id, data) => apiFetch(`/exams/question-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteQuestionBankCategory: (id) => apiFetch(`/exams/question-categories/${id}`, { method: 'DELETE' }),
+
+  getQuestions: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.subjectId) params.append('subjectId', filters.subjectId);
+    if (filters.categoryId) params.append('categoryId', filters.categoryId);
+    if (filters.difficulty) params.append('difficulty', filters.difficulty);
+    if (filters.type) params.append('type', filters.type);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.tags) params.append('tags', filters.tags);
+    if (filters.includeArchived) params.append('includeArchived', '1');
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/exams/questions${query}`);
+  },
+  getQuestion: (id) => apiFetch(`/exams/questions/${id}`),
+  createQuestion: (data) => apiFetch('/exams/questions', { method: 'POST', body: JSON.stringify(data) }),
+  updateQuestion: (id, data) => apiFetch(`/exams/questions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteQuestion: (id) => apiFetch(`/exams/questions/${id}`, { method: 'DELETE' }),
+
+  getExams: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.sessionId) params.append('sessionId', filters.sessionId);
+    if (filters.subjectId) params.append('subjectId', filters.subjectId);
+    if (filters.professorId) params.append('professorId', filters.professorId);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.classYear) params.append('classYear', filters.classYear);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/exams/exams${query}`);
+  },
+  getExam: (id) => apiFetch(`/exams/exams/${id}`),
+  createExam: (data) => apiFetch('/exams/exams', { method: 'POST', body: JSON.stringify(data) }),
+  updateExam: (id, data) => apiFetch(`/exams/exams/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  publishExam: (id) => apiFetch(`/exams/exams/${id}/publish`, { method: 'POST' }),
+  closeExam: (id) => apiFetch(`/exams/exams/${id}/close`, { method: 'POST' }),
+  duplicateExam: (id) => apiFetch(`/exams/exams/${id}/duplicate`, { method: 'POST' }),
+  saveExamAsTemplate: (id, data) => apiFetch(`/exams/exams/${id}/save-template`, { method: 'POST', body: JSON.stringify(data) }),
+  monitorExam: (id) => apiFetch(`/exams/exams/${id}/monitor`),
+
+  addExamSection: (examId, data) => apiFetch(`/exams/exams/${examId}/sections`, { method: 'POST', body: JSON.stringify(data) }),
+  updateExamSection: (sectionId, data) => apiFetch(`/exams/sections/${sectionId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExamSection: (sectionId) => apiFetch(`/exams/sections/${sectionId}`, { method: 'DELETE' }),
+
+  addExamQuestion: (examId, data) => apiFetch(`/exams/exams/${examId}/exam-questions`, { method: 'POST', body: JSON.stringify(data) }),
+  addExamQuestionsBulk: (examId, data) => apiFetch(`/exams/exams/${examId}/exam-questions/bulk`, { method: 'POST', body: JSON.stringify(data) }),
+  updateExamQuestion: (eqId, data) => apiFetch(`/exams/exam-questions/${eqId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExamQuestion: (eqId) => apiFetch(`/exams/exam-questions/${eqId}`, { method: 'DELETE' }),
+  reorderExamQuestions: (examId, order) => apiFetch(`/exams/exams/${examId}/exam-questions/reorder`, { method: 'POST', body: JSON.stringify({ order }) }),
+
+  setExamQuestionRubric: (eqId, data) => apiFetch(`/exams/exam-questions/${eqId}/rubric`, { method: 'POST', body: JSON.stringify(data) }),
+
+  getExamTemplates: () => apiFetch('/exams/templates'),
+  deleteExamTemplate: (id) => apiFetch(`/exams/templates/${id}`, { method: 'DELETE' }),
+
+  getStudentExamCenter: () => apiFetch('/exams/student/center'),
+  getStudentExamCard: (examId) => apiFetch(`/exams/student/exam/${examId}`),
+  getStudentExamHistory: () => apiFetch('/exams/student/history'),
+  getStudentExamResult: (attemptId) => apiFetch(`/exams/student/result/${attemptId}`),
+
+  startExamAttempt: (examId) => apiFetch(`/exams/attempts/start/${examId}`, { method: 'POST' }),
+  getExamAttempt: (attemptId) => apiFetch(`/exams/attempts/${attemptId}`),
+  saveExamAnswer: (attemptId, data) => apiFetch(`/exams/attempts/${attemptId}/save`, { method: 'POST', body: JSON.stringify(data) }),
+  flagExamQuestion: (attemptId, data) => apiFetch(`/exams/attempts/${attemptId}/flag`, { method: 'POST', body: JSON.stringify(data) }),
+  submitExamAttempt: (attemptId) => apiFetch(`/exams/attempts/${attemptId}/submit`, { method: 'POST' }),
+
+  getExamGradingOverview: (examId) => apiFetch(`/exams/grading/exam/${examId}`),
+  getExamGradingAttempt: (attemptId) => apiFetch(`/exams/grading/attempt/${attemptId}`),
+  gradeExamAnswer: (answerId, data) => apiFetch(`/exams/grading/answer/${answerId}`, { method: 'POST', body: JSON.stringify(data) }),
+  approveExamResult: (attemptId, data) => apiFetch(`/exams/grading/attempt/${attemptId}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+  publishAllExamResults: (examId) => apiFetch(`/exams/grading/exam/${examId}/publish-all`, { method: 'POST' }),
+
+  getExamStatistics: (examId) => apiFetch(`/exams/statistics/exam/${examId}`),
+
+  createExamException: (data) => apiFetch('/exams/exceptions', { method: 'POST', body: JSON.stringify(data) }),
+  getExamExceptions: (examId) => apiFetch(`/exams/exceptions/exam/${examId}`),
+  deleteExamException: (id) => apiFetch(`/exams/exceptions/${id}`, { method: 'DELETE' }),
+
+  extendAttemptTime: (attemptId, data) => apiFetch(`/exams/attempts/${attemptId}/extend-time`, { method: 'POST', body: JSON.stringify(data) }),
+  extendExamTimeAll: (examId, data) => apiFetch(`/exams/exams/${examId}/extend-time-all`, { method: 'POST', body: JSON.stringify(data) }),
+
+  getExamAuditLog: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.entityType) params.append('entityType', filters.entityType);
+    if (filters.entityId) params.append('entityId', filters.entityId);
+    if (filters.limit) params.append('limit', filters.limit);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/exams/audit${query}`);
+  },
+
   // Admin & System Diagnostics & Interactive Database Explorer
   createAdminAccount: (adminData) => apiFetch('/admin/create-account', { method: 'POST', body: JSON.stringify(adminData) }),
   getAuditLogs: () => apiFetch('/admin/audit-logs'),
@@ -354,7 +520,52 @@ export const api = {
   deleteDbTableRow: (tableName, id) => apiFetch(`/admin/db/table/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Health
-  health: () => apiFetch('/health')
+  health: () => apiFetch('/health'),
+
+  // ==================== IZBA PAMIĘCI (MEMORIAL ARCHIVE) ====================
+  getMemoryOverview: () => apiFetch('/memory/overview'),
+  getMemoryYears: (includeDrafts = false) => apiFetch(`/memory/years${includeDrafts ? '?includeDrafts=true' : ''}`),
+  getMemoryYear: (yearId) => apiFetch(`/memory/years/${encodeURIComponent(yearId)}`),
+  getMemoryWallOfFame: () => apiFetch('/memory/wall-of-fame'),
+  getMemoryTrophies: (house = 'all') => apiFetch(`/memory/trophies${house && house !== 'all' ? `?house=${house}` : ''}`),
+  getMemoryDocuments: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.house) params.append('house', filters.house);
+    if (filters.yearId) params.append('yearId', filters.yearId);
+    if (filters.search) params.append('search', filters.search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/memory/documents${query}`);
+  },
+  getMemoryChronicle: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.category) params.append('category', filters.category);
+    if (filters.yearId) params.append('yearId', filters.yearId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/memory/chronicle${query}`);
+  },
+  getMemoryPeople: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.role) params.append('role', filters.role);
+    if (filters.house) params.append('house', filters.house);
+    if (filters.yearId) params.append('yearId', filters.yearId);
+    if (filters.search) params.append('search', filters.search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch(`/memory/people${query}`);
+  },
+  getMemoryPerson: (identifier) => apiFetch(`/memory/person/${encodeURIComponent(identifier)}`),
+  getMemoryOrderShowcase: (houseKey) => apiFetch(`/memory/order/${encodeURIComponent(houseKey)}`),
+  searchMemory: (q) => apiFetch(`/memory/search?q=${encodeURIComponent(q)}`),
+  previewYearArchive: (params = {}) => apiFetch('/memory/archive-year/preview', { method: 'POST', body: JSON.stringify(params) }),
+  publishYearArchive: (payload) => apiFetch('/memory/archive-year/publish', { method: 'POST', body: JSON.stringify(payload) }),
+  createMemoryCertificate: (cert) => apiFetch('/memory/certificates', { method: 'POST', body: JSON.stringify(cert) }),
+  deleteMemoryCertificate: (id) => apiFetch(`/memory/certificates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  createMemoryDiploma: (dipl) => apiFetch('/memory/diplomas', { method: 'POST', body: JSON.stringify(dipl) }),
+  deleteMemoryDiploma: (id) => apiFetch(`/memory/diplomas/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  createMemoryAward: (aw) => apiFetch('/memory/awards', { method: 'POST', body: JSON.stringify(aw) }),
+  deleteMemoryAward: (id) => apiFetch(`/memory/awards/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  createMemoryAchievement: (ach) => apiFetch('/memory/custom-achievements', { method: 'POST', body: JSON.stringify(ach) }),
+  deleteMemoryAchievement: (id) => apiFetch(`/memory/custom-achievements/${encodeURIComponent(id)}`, { method: 'DELETE' })
 };
 
-
+export default api;

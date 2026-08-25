@@ -5,8 +5,10 @@ import { api } from '../api';
 import { NewsEditorModal } from '../components/NewsEditorModal';
 import { NewsDetailModal } from '../components/NewsDetailModal';
 import { CategoryBanner } from '../components/CategoryBanner';
-import { ItemPlaceholder } from '../components/ItemPlaceholder';
 import { DatabaseExplorerPanel } from '../components/DatabaseExplorerPanel';
+import { MemoryArchiveWizardTab } from './memory/MemoryArchiveWizardTab';
+import { AdminWorldDirector } from '../components/AdminWorldDirector';
+import { PrologueAdminPanel } from '../components/PrologueAdminPanel';
 import {
   Settings,
   Users,
@@ -499,6 +501,8 @@ export const AdminCMSView = () => {
 
       {/* CMS Module Tabs */}
       <div style={{ display: 'flex', gap: '0.6rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => setActiveTab('prologue')} className="btn-durmstrang-secondary" style={{padding:'0.65rem 1.2rem'}}>✉ Prolog postaci</button>
+        <button onClick={() => { playWandSwoosh(); setActiveTab('world-director'); }} style={{padding:'0.65rem 1.2rem',background:activeTab==='world-director'?'rgba(139,106,56,.28)':'rgba(139,106,56,.1)',border:activeTab==='world-director'?'1px solid #c7b17d':'1px solid rgba(139,106,56,.45)',borderRadius:'4px',color:'#d7d0c5',fontFamily:'var(--font-heading)',fontSize:'.85rem',fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',gap:'.45rem'}}><span>☾</span> Magiczna Północ</button>
         <button
           onClick={() => { playWandSwoosh(); setActiveTab('lessons'); }}
           style={{
@@ -741,7 +745,42 @@ export const AdminCMSView = () => {
         >
           <Server size={14} color="#10b981" /> System & Diagnostyka
         </button>
+
+        <button
+          onClick={() => { playWandSwoosh(); setActiveTab('memory-archive'); }}
+          style={{
+            padding: '0.65rem 1.2rem',
+            background: activeTab === 'memory-archive' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
+            border: activeTab === 'memory-archive' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'memory-archive' ? '#ffffff' : '#f7dca0',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <span>🏛️</span> Izba Pamięci & Archiwizacja Roku
+        </button>
       </div>
+
+      {activeTab === 'world-director' && <AdminWorldDirector />}
+      {activeTab === 'prologue' && <PrologueAdminPanel />}
+
+      {/* =========================================================================
+          TAB: 🏛️ IZBA PAMIĘCI & AUTOMATYCZNA ARCHIWIZACJA ROKU
+          ========================================================================= */}
+      {activeTab === 'memory-archive' && (
+        <MemoryArchiveWizardTab
+          onPublishedYear={(yearId) => {
+            showNotification('Archiwum Opublikowane!', 'Rocznik został pomyślnie zarchiwizowany w Izbie Pamięci.', 'success');
+            setActiveView('memory');
+          }}
+        />
+      )}
 
       {/* =========================================================================
           TAB: 🗄️ BAZA DANYCH & INTERAKTYWNY EKSPLORATOR SQL (CRUD DLA DYREKCJI)

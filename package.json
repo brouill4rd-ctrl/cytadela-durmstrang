@@ -11,19 +11,25 @@
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "build:serve": "npm run build && node server/index.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:world": "node --test server/worldState.test.js",
+    "test:belt": "node --test server/belt.test.js",
+    "test": "node --test server/*.test.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "concurrently": "^10.0.5",
     "cors": "^2.8.6",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.16.0",
     "multer": "^2.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

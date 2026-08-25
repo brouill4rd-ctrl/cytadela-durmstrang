@@ -4,6 +4,8 @@ import { useSound } from './context/SoundContext';
 import { Navbar } from './components/Navbar';
 import { SnowCanvas } from './components/SnowCanvas';
 import { AuroraCanvas } from './components/AuroraCanvas';
+import { CitadelAstrolabe } from './components/CitadelAstrolabe';
+import { useWorldState } from './context/WorldStateContext';
 import { TorchCursor } from './components/TorchCursor';
 import { WandSparks } from './components/WandSparks';
 import { Footer } from './components/Footer';
@@ -17,6 +19,7 @@ import { EmailInboxModal } from './components/EmailInboxModal';
 import { DiscordLessonSimulatorModal } from './components/DiscordLessonSimulatorModal';
 
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { AdeptBelt } from './components/AdeptBelt';
 
 // Views
 import { HomeView } from './views/HomeView';
@@ -43,6 +46,19 @@ import { GazetteView } from './views/GazetteView';
 import { GazetteFlipbook } from './views/GazetteFlipbook';
 import { GazettePanelView } from './views/GazettePanelView';
 import { GazetteArchiveView } from './views/GazetteArchiveView';
+import { ExamCenterView } from './views/ExamCenterView';
+import { ExamTakingView } from './views/ExamTakingView';
+import { ExamResultView } from './views/ExamResultView';
+import { ExamCreatorView } from './views/ExamCreatorView';
+import { ExamGradingView } from './views/ExamGradingView';
+import { ExamBankView } from './views/ExamBankView';
+import { HomeworkCenterView } from './views/HomeworkCenterView';
+import { HomeworkDetailView } from './views/HomeworkDetailView';
+import { HomeworkCreatorView } from './views/HomeworkCreatorView';
+import { HomeworkGradingView } from './views/HomeworkGradingView';
+import { MemoryMainView } from './views/MemoryMainView';
+import { PrologueView } from './views/PrologueView';
+import { api } from './api';
 
 import { Sparkles, Info, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
 
@@ -56,7 +72,17 @@ const RESTRICTED_VIEW_LABELS = {
   'bank': 'Skarbca Banku Skirnirów',
   'profile': 'Karty Tożsamości i Ekwipunku',
   'raven-post': 'Poczty Kruków',
-  'admin': 'Komnat Najwyższej Rady Dyrekcji'
+  'admin': 'Komnat Najwyższej Rady Dyrekcji',
+  'exams': 'Centrum Egzaminacyjnego Twierdzy',
+  'exam-taking': 'arkusza egzaminacyjnego',
+  'exam-result': 'protokołu wyników egzaminu',
+  'exam-creator': 'kreatora arkuszy egzaminacyjnych',
+  'exam-grading': 'panelu sprawdzania prac egzaminacyjnych',
+  'exam-bank': 'Banku Pytań Egzaminacyjnych',
+  'homework': 'Centrum Prac Domowych Cytadeli',
+  'homework-detail': 'Karty Pracy Domowej',
+  'homework-creator': 'Kreatora Prac Domowych',
+  'homework-grading': 'Panelu Oceniania Prac Domowych'
 };
 
 export const App = () => {
@@ -79,11 +105,26 @@ export const App = () => {
   } = useSchool();
 
   const { playRuneChime } = useSound();
+  const { worldState, effectiveMode } = useWorldState();
 
   const [creationModalOpen, setCreationModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [auroraEnabled, setAuroraEnabled] = useState(true);
   const [torchEnabled, setTorchEnabled] = useState(true);
+  // null = status Prologu jeszcze nieznany; Pas pozostaje wtedy schowany.
+  const [prologueRequired, setPrologueRequired] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!currentUser || currentUser.role !== 'student') {
+      setPrologueRequired(false);
+      return () => { active = false; };
+    }
+    api.getMyPrologue().then(result => {
+      if (active && result.ok) setPrologueRequired(!result.data.completed);
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
 
   // Global Keyboard Shortcuts (Ctrl+K or / for Magiczny Kompas Cytadeli)
   useEffect(() => {
@@ -118,9 +159,9 @@ export const App = () => {
   }, [activeView]);
 
   const renderActiveView = () => {
-    // Widoki wymagające logowania (Dzienniki, Gry i Warsztaty, Bank, Rynek, Profil, Poczta, CMS)
-    // PUBLICZNE: home, houses, map, lore, academic, subject-detail, timetable
-    const isRestricted = ['journals', 'lesson-detail', 'professor-journal-editor', 'ceremony', 'rune-workshop', 'markethall', 'bank', 'profile', 'raven-post', 'admin', 'gazette-panel'].includes(activeView);
+    // Widoki wymagające logowania (Dzienniki, Gry i Warsztaty, Bank, Rynek, Profil, Poczta, CMS, Egzaminy)
+    // PUBLICZNE: home, houses, map, lore, academic, subject-detail, timetable, exams
+    const isRestricted = ['lesson-detail', 'professor-journal-editor', 'ceremony', 'rune-workshop', 'markethall', 'bank', 'profile', 'raven-post', 'admin', 'gazette-panel', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView);
     if (!currentUser && isRestricted) {
       return <RestrictedAccessView targetName={RESTRICTED_VIEW_LABELS[activeView] || 'tych komnat'} />;
     }
@@ -131,6 +172,9 @@ export const App = () => {
     }
     if (activeView === 'professor-journal-editor' && currentUser?.role !== 'admin' && currentUser?.role !== 'professor') {
       return <RestrictedAccessView targetName="panelu redagowania dziennika (Dostępne dla Profesorów i Dyrekcji)" />;
+    }
+    if (['exam-creator', 'exam-grading', 'exam-bank', 'homework-creator', 'homework-grading'].includes(activeView) && currentUser?.role !== 'admin' && currentUser?.role !== 'professor') {
+      return <RestrictedAccessView targetName="panelu profesorskiego (Wymagane uprawnienia Profesora lub Dyrekcji)" />;
     }
 
     switch (activeView) {
@@ -180,18 +224,42 @@ export const App = () => {
         return <GazetteArchiveView />;
       case 'gazette-panel':
         return <GazettePanelView />;
+      case 'exams':
+        return <ExamCenterView />;
+      case 'exam-taking':
+        return <ExamTakingView />;
+      case 'exam-result':
+        return <ExamResultView />;
+      case 'exam-creator':
+        return <ExamCreatorView />;
+      case 'exam-grading':
+        return <ExamGradingView />;
+      case 'exam-bank':
+        return <ExamBankView />;
+      case 'homework':
+        return <HomeworkCenterView />;
+      case 'homework-detail':
+        return <HomeworkDetailView />;
+      case 'homework-creator':
+        return <HomeworkCreatorView />;
+      case 'homework-grading':
+        return <HomeworkGradingView />;
+      case 'memory':
+        return <MemoryMainView />;
       default:
         return <HomeView />;
     }
   };
 
   return (
-    <div className="durmstrang-app">
+    <div className={`durmstrang-app world-${worldState.weather.toLowerCase()} citadel-${worldState.citadelState.toLowerCase()} presentation-${effectiveMode.toLowerCase()}`}>
+      {prologueRequired && <PrologueView onComplete={() => setPrologueRequired(false)} />}
       {/* Particle Snow Canvas */}
       <SnowCanvas />
 
       {/* Dynamic Aurora Borealis Canvas */}
-      <AuroraCanvas enabled={auroraEnabled} intensity={0.65} />
+      <AuroraCanvas enabled={auroraEnabled && effectiveMode !== 'QUIET'} intensity={worldState.skyState === 'AURORA' ? (effectiveMode === 'FULL' ? 1 : 0.55) : 0.2} />
+      <CitadelAstrolabe />
 
       {/* Lumos Torchlight Cursor Trail */}
       <TorchCursor enabled={torchEnabled} size={300} />
@@ -280,6 +348,8 @@ export const App = () => {
           isOpen={commandPaletteOpen}
           onClose={() => setCommandPaletteOpen(false)}
         />
+
+        <AdeptBelt hidden={prologueRequired !== false} />
 
         {/* Floating Quick Arcane Compass Trigger Button */}
         <button

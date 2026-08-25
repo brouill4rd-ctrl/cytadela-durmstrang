@@ -27,6 +27,11 @@ import workshopRoutes from './routes/workshop.js';
 import homeworkRoutes from './routes/homework.js';
 import ravenRoutes from './routes/raven.js';
 import gazetteRoutes from './routes/gazette.js';
+import examsRoutes from './routes/exams.js';
+import memoryRoutes from './routes/memory.js';
+import worldRoutes from './routes/world.js';
+import prologueRoutes from './routes/prologue.js';
+import beltRoutes from './routes/belt.js';
 import { discordBot } from './discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -85,6 +90,11 @@ app.use('/api/workshop', workshopRoutes);
 app.use('/api/homework', homeworkRoutes);
 app.use('/api/raven', ravenRoutes);
 app.use('/api/gazette', gazetteRoutes);
+app.use('/api/exams', examsRoutes);
+app.use('/api/memory', memoryRoutes);
+app.use('/api/world', worldRoutes);
+app.use('/api/prologue', prologueRoutes);
+app.use('/api/belt', beltRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -149,4 +159,3 @@ const gracefulShutdown = (signal) => {
 
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-

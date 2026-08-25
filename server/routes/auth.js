@@ -1,16 +1,25 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import db, { dbUserToFrontend, dbEmailToFrontend } from '../db.js';
 
 const router = Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294';
+const JWT_EXPIRY = '7d';
+
+function signToken(user) {
+  return jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+}
 
 // POST /api/auth/login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   const trimmedUser = (username || '').trim().toLowerCase();
 
-  const row = db.prepare('SELECT * FROM users WHERE LOWER(username) = ? AND password = ?').get(trimmedUser, password);
+  const row = db.prepare('SELECT * FROM users WHERE LOWER(username) = ?').get(trimmedUser);
 
-  if (!row) {
+  if (!row || !bcrypt.compareSync(password, row.password)) {
     return res.status(401).json({ error: 'Nieprawidłowa nazwa adepta lub hasło do archiwum.' });
   }
 
@@ -29,7 +38,8 @@ router.post('/login', (req, res) => {
     return res.status(403).json({ error: 'Twoje podanie rekrutacyjne zostało odrzucone przez Radę Mistrzów.', status: 'rejected' });
   }
 
-  res.json({ user });
+  const token = signToken(user);
+  res.json({ user, token });
 });
 
 // POST /api/auth/register
@@ -46,26 +56,29 @@ router.post('/register', (req, res) => {
     return res.status(409).json({ error: 'Adept o takim loginie już figuruje w księdze Cytadeli.' });
   }
 
+  const rawPassword = data.password || '123';
+  const hashedPassword = bcrypt.hashSync(rawPassword, 10);
+
   const newId = `usr-${Date.now()}`;
   const userEmail = (data.email || '').trim() || `${trimmedUsername}@durmstrang.edu`;
   const role = data.role || 'student';
   const fullName = `${(data.name || '').trim()} ${(data.surname || '').trim()}`;
 
-  // Build user fields
   const userFields = {
     id: newId,
     username: trimmedUsername,
-    password: data.password || '123',
+    password: hashedPassword,
     email: userEmail,
     name: (data.name || '').trim(),
     surname: (data.surname || '').trim(),
     full_name: fullName,
     role,
     status: 'pending',
-    house: data.house || (role === 'professor' ? 'ravnheim' : null),
+    // Przydział jest osobną ceremonią po przybyciu; prolog nie może ujawnić ani utrwalić Zakonu.
+    house: role === 'professor' ? (data.house || 'ravnheim') : null,
     title: role === 'professor'
       ? `Kandydat na Profesora • ${data.departmentName || 'Katedra Magii'}`
-      : data.house ? `Adept Zakonu ${data.house}` : 'Kandydat na Adepta',
+      : 'Kandydat na Adepta',
     avatar: data.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     department: data.department || (role === 'professor' ? 'czarna-magia' : null),
     department_name: data.departmentName || (role === 'professor' ? 'Katedra Czarnej Magii' : null),
@@ -91,13 +104,16 @@ router.post('/register', (req, res) => {
     created_at: new Date().toISOString().split('T')[0]
   };
 
-  // Insert user
   db.prepare(`
     INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, gender, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
     VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @gender, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
   `).run(userFields);
 
-  // Insert pending application
+  db.prepare(`
+    INSERT INTO character_prologues (user_id, stage, completed)
+    VALUES (?, ?, ?)
+  `).run(newId, role === 'student' ? 'LETTER_PENDING' : 'COMPLETED', role === 'student' ? 0 : 1);
+
   const appId = `app-${Date.now()}`;
   db.prepare(`
     INSERT INTO pending_applications (id, user_id, email, name, surname, role, department_name, origin, age, wand, patronus, companion, appearance, backstory, status, date_submitted)
@@ -115,7 +131,6 @@ router.post('/register', (req, res) => {
     userFields.created_at
   );
 
-  // Dispatch confirmation email
   const emailId = `mail-${Date.now()}`;
   const now = new Date();
   const dateStr = now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
@@ -128,23 +143,9 @@ router.post('/register', (req, res) => {
     'kancelaria@durmstrang.edu', 'Kancelaria Cytadeli Durmstrang',
     `[DURMSTRANG] Potwierdzenie rejestracji podania (${role === 'professor' ? 'Katedra' : 'Adept'})`,
     dateStr,
-    `Witaj ${fullName},
-
-Niniejszym Kancelaria Cytadeli Durmstrang potwierdza pomyślne zarejestrowanie Twojego podania ${role === 'professor' ? `o nominację na Katedrę (${userFields.department_name})` : 'o przyjęcie do grona adeptów'}.
-
-PIECZĘĆ PODANIA: #${newId}
-ADRES E-MAIL: ${userEmail}
-DATA ZGŁOSZENIA: ${now.toLocaleDateString('pl-PL')}
-STATUS: Oczekuje na weryfikację i podpisanie dekretu przez Radę Dyrekcji Cytadeli.
-
-Twoje dokumenty zostały przekazane do Archiwum Najwyższej Wieży. Gdy Arcymistrzyni Valgerda Storm złoży pieczęć akceptacji, otrzymasz oficjalny list przyjęcia, a Twoje konto zostanie natychmiast odblokowane.
-
-Z pieczęcią przymierza,
-Kancelaria Rejestracji Paktu
-Cytadela Durmstrang`
+    `Witaj ${fullName},\n\nKancelaria Cytadeli Durmstrang potwierdza pomyślne zarejestrowanie Twojego podania.\n\nPIECZĘĆ PODANIA: #${newId}\nADRES E-MAIL: ${userEmail}\nDATA ZGŁOSZENIA: ${now.toLocaleDateString('pl-PL')}\nSTATUS: Oczekuje na weryfikację przez Radę Dyrekcji.\n\nZ pieczęcią przymierza,\nKancelaria Rejestracji Paktu\nCytadela Durmstrang`
   );
 
-  // Audit log
   db.prepare(`
     INSERT INTO audit_logs (id, timestamp, admin, action, detail)
     VALUES (?, ?, 'Kancelaria Rekrutacji', ?, ?)
@@ -155,7 +156,6 @@ Cytadela Durmstrang`
     `Wysłano e-mail potwierdzający na adres: ${userEmail}`
   );
 
-  // Return created user + confirmation email
   const createdUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(newId));
   const confirmEmailRow = db.prepare('SELECT * FROM emails WHERE id = ?').get(emailId);
   const confirmEmail = dbEmailToFrontend(confirmEmailRow);

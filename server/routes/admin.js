@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import db, { dbUserToFrontend } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
@@ -28,7 +29,7 @@ router.post('/create-account', (req, res) => {
     INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'admin', 'approved', NULL, ?, ?, 'edykty', 'Rada Dyrekcji Cytadeli', 'edykty', ?, 'Najwyższa Magia Północy, Starożytne Pieczęcie i Prawa Cytadeli', ?)
   `).run(
-    newId, trimmedUsername, data.password || '123', userEmail,
+    newId, trimmedUsername, bcrypt.hashSync(data.password || '123', 10), userEmail,
     (data.name || '').trim(), (data.surname || '').trim(),
     `${(data.name || '').trim()} ${(data.surname || '').trim()}`,
     data.title || 'Arcymistrz Cytadeli Durmstrang',

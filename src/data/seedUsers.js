@@ -2,7 +2,6 @@ export const SEED_USERS = [
   {
     id: 'usr-valdemar',
     username: 'valdemar',
-    password: '123',
     name: 'Valdemar',
     surname: 'Krag-Hansen',
     fullName: 'Valdemar Krag-Hansen',
@@ -38,7 +37,7 @@ export const SEED_USERS = [
   {
     id: 'usr-astrid',
     username: 'astrid',
-    password: '123',
+
     name: 'Astrid',
     surname: 'Vargadottir',
     fullName: 'Astrid Vargadottir',
@@ -63,7 +62,7 @@ export const SEED_USERS = [
   {
     id: 'usr-magnus',
     username: 'magnus',
-    password: '123',
+
     name: 'Magnus',
     surname: 'Blom',
     fullName: 'Magnus Blom',
@@ -88,7 +87,7 @@ export const SEED_USERS = [
   {
     id: 'usr-sigrun',
     username: 'sigrun',
-    password: '123',
+
     name: 'Sigrun',
     surname: 'Lindqvist',
     fullName: 'Sigrun Lindqvist',
@@ -113,7 +112,7 @@ export const SEED_USERS = [
   {
     id: 'usr-einar',
     username: 'einar',
-    password: '123',
+
     name: 'Einar',
     surname: 'Jarnskjold',
     fullName: 'Einar Jarnskjold',
@@ -136,7 +135,7 @@ export const SEED_USERS = [
   {
     id: 'usr-henrik',
     username: 'henrik',
-    password: '123',
+
     name: 'Henrik',
     surname: 'Frostgard',
     fullName: 'Henrik Frostgard',
@@ -159,7 +158,7 @@ export const SEED_USERS = [
   {
     id: 'usr-morana',
     username: 'morana',
-    password: '123',
+
     name: 'Morana',
     surname: 'Vane',
     fullName: 'Prof. Morana Vane',
@@ -181,7 +180,7 @@ export const SEED_USERS = [
   {
     id: 'usr-gunnar',
     username: 'gunnar',
-    password: '123',
+
     name: 'Gunnar',
     surname: 'Vargson',
     fullName: 'Prof. Gunnar Vargson',
@@ -203,7 +202,7 @@ export const SEED_USERS = [
   {
     id: 'usr-sigrid',
     username: 'sigrid',
-    password: '123',
+
     name: 'Sigrid',
     surname: 'Hällström',
     fullName: 'Prof. Sigrid Hällström',
@@ -225,7 +224,7 @@ export const SEED_USERS = [
   {
     id: 'usr-klaus',
     username: 'klaus',
-    password: '123',
+
     name: 'Klaus',
     surname: 'Lindqvist',
     fullName: 'Prof. Klaus Lindqvist',
@@ -247,7 +246,7 @@ export const SEED_USERS = [
   {
     id: 'usr-valgerda',
     username: 'valgerda',
-    password: '123',
+
     name: 'Valgerda',
     surname: 'Storm',
     fullName: 'Arcymistrzyni Valgerda Storm',

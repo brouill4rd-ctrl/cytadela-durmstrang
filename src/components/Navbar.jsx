@@ -26,7 +26,9 @@ import {
   Building,
   Search,
   Newspaper,
-  Feather
+  Feather,
+  Award,
+  Landmark
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -45,7 +47,8 @@ export const Navbar = () => {
     logoutUser,
     emails,
     setEmailInboxOpen,
-    showNotification
+    showNotification,
+    navigateToMemory
   } = useSchool();
 
   const { soundEnabled, setSoundEnabled, playWandSwoosh } = useSound();
@@ -71,6 +74,13 @@ export const Navbar = () => {
 
   const handleNavClick = (view, houseTab = null) => {
     playWandSwoosh();
+    if (view === 'memory') {
+      if (navigateToMemory) navigateToMemory('overview');
+      else setActiveView('memory');
+      setOpenDropdown(null);
+      setMobileMenuOpen(false);
+      return;
+    }
     const restrictedViews = ['journals', 'lesson-detail', 'professor-journal-editor', 'ceremony', 'rune-workshop', 'markethall', 'bank', 'profile', 'raven-post', 'admin'];
     if (!currentUser && restrictedViews.includes(view)) {
       setAuthModalOpen(true);
@@ -245,6 +255,84 @@ export const Navbar = () => {
           >
             <Calendar size={13} color="var(--gold-ancient)" />
             <span>Plan Lekcji</span>
+          </button>
+
+          {/* Egzaminy Link */}
+          <button
+            onClick={() => handleNavClick('exams')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.7rem',
+              background: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+              border: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+              borderRadius: '5px',
+              color: ['exams', 'exam-taking', 'exam-result', 'exam-creator', 'exam-grading', 'exam-bank'].includes(activeView) ? '#ffffff' : '#e2e8f0',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Award size={13} color="var(--gold-glow)" />
+            <span>Egzaminy</span>
+          </button>
+
+          {/* Prace Domowe Link */}
+          <button
+            onClick={() => handleNavClick('homework')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.7rem',
+              background: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+              border: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+              borderRadius: '5px',
+              color: ['homework', 'homework-detail', 'homework-creator', 'homework-grading'].includes(activeView) ? '#ffffff' : '#e2e8f0',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <BookOpen size={13} color="var(--gold-ancient)" />
+            <span>Prace Domowe</span>
+          </button>
+
+          {/* Izba Pamięci Link (Public) */}
+          <button
+            onClick={() => handleNavClick('memory')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.7rem',
+              background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
+              border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
+              borderRadius: '5px',
+              color: activeView === 'memory' ? '#ffffff' : '#f7dca0',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Landmark size={13} color="var(--gold-glow)" />
+            <span>Izba Pamięci</span>
           </button>
 
           {/* Academy Dropdown Hub */}
@@ -1044,6 +1132,23 @@ export const Navbar = () => {
             }}
           >
             📜 Dzienniki Lekcyjne
+          </button>
+          <button
+            onClick={() => handleNavClick('memory')}
+            style={{
+              padding: '0.65rem 0.8rem',
+              background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
+              border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
+              borderRadius: '4px',
+              color: '#f7dca0',
+              textAlign: 'left',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            🏛️ Izba Pamięci & Archiwum
           </button>
           <button
             onClick={() => handleNavClick('rules-guide')}

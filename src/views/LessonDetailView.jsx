@@ -275,7 +275,10 @@ export const LessonDetailView = () => {
     publishLesson,
     houses,
     currentUser,
-    hasPermission
+    hasPermission,
+    homeworkAssignments,
+    navigateToHomeworkDetail,
+    navigateToHomeworkCreator
   } = useSchool();
 
   const [lesson, setLesson] = useState(null);
@@ -738,6 +741,63 @@ export const LessonDetailView = () => {
                 })}
               </div>
             </div>
+
+            {/* Linked Homework Section */}
+            {(() => {
+              const linkedHomework = homeworkAssignments?.find(h => h.lessonId === lesson.id || (lesson.id && h.lessonTitle && h.lessonTitle.includes(lesson.topic || '___')));
+              return (
+                <div style={{ marginBottom: '2.5rem', background: 'rgba(15, 20, 30, 0.95)', border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '10px', padding: '1.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.8rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <BookOpen size={20} color="var(--gold-ancient)" />
+                      <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1rem', fontFamily: 'var(--font-heading)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        PRACA DOMOWA Z TEJ LEKCJI
+                      </h4>
+                    </div>
+                    {linkedHomework ? (
+                      <button
+                        onClick={() => navigateToHomeworkDetail(linkedHomework.id)}
+                        className="btn-durmstrang"
+                        style={{ padding: '0.45rem 1.2rem', fontSize: '0.82rem', background: 'rgba(197, 159, 78, 0.2)', borderColor: 'var(--gold-ancient)', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ffffff', cursor: 'pointer' }}
+                      >
+                        <span>OTWÓRZ PRACĘ DOMOWĄ</span>
+                        <ExternalLink size={13} />
+                      </button>
+                    ) : (
+                      hasPermission('canManageLessons') && (
+                        <button
+                          onClick={() => navigateToHomeworkCreator({ lesson })}
+                          className="btn-durmstrang"
+                          style={{ padding: '0.45rem 1.2rem', fontSize: '0.82rem', background: 'rgba(197, 159, 78, 0.15)', borderColor: 'var(--gold-ancient)', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ffffff', cursor: 'pointer' }}
+                        >
+                          <Plus size={13} />
+                          <span>ZADAJ PRACĘ DOMOWĄ</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  {linkedHomework ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: '#cbd5e1', fontSize: '0.88rem' }}>
+                      <div style={{ fontSize: '1.1rem', color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontWeight: 800 }}>
+                        „{linkedHomework.title}”
+                      </div>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85rem' }}>
+                        {linkedHomework.description || (linkedHomework.instructions ? linkedHomework.instructions.slice(0, 120) + '...' : '')}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.4rem', fontSize: '0.8rem', color: '#a0aec0' }}>
+                        <span>Termin: <strong style={{ color: '#ffffff' }}>{new Date(linkedHomework.dueDate).toLocaleDateString('pl-PL')}, {new Date(linkedHomework.dueDate).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+                        <span>Maksymalnie: <strong style={{ color: 'var(--gold-ancient)' }}>{linkedHomework.maxPoints} pkt</strong></span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                      Do tej lekcji nie przypisano jeszcze pracy domowej.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Participants Table */}
             <div>

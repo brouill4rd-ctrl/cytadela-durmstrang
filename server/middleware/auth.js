@@ -1,20 +1,21 @@
+import jwt from 'jsonwebtoken';
 import db from '../db.js';
 
-/**
- * Middleware autoryzacji Cytadeli Durmstrang
- * 
- * Prostą autoryzacja oparta na nagłówku X-User-Id.
- * Pobiera użytkownika z bazy i wstrzykuje req.user.
- */
+const JWT_SECRET = process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294';
 
-/**
- * requireAuth — wymaga zalogowanego użytkownika.
- * Sprawdza nagłówek X-User-Id, pobiera usera z DB i wstrzykuje req.user.
- * Zwraca 401 jeśli brak nagłówka lub user nie istnieje.
- */
 export function requireAuth(req, res, next) {
-  const userId = req.headers['x-user-id'];
-  if (!userId) {
+  const authHeader = req.headers['authorization'];
+  let userId = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      userId = payload.id;
+    } catch {
+      return res.status(401).json({ error: 'Sesja wygasła lub token nieprawidłowy. Zaloguj się ponownie.' });
+    }
+  } else {
     return res.status(401).json({ error: 'Brak autoryzacji. Zaloguj się do Cytadeli.' });
   }
 
@@ -43,87 +44,57 @@ export function requireAuth(req, res, next) {
   next();
 }
 
-/**
- * requireRole(...roles) — wymaga konkretnej roli.
- * Musi być użyty PO requireAuth.
- * np. requireRole('admin') lub requireRole('admin', 'professor')
- */
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Brak autoryzacji.' });
     }
-
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         error: `Brak uprawnień. Wymagana rola: ${roles.join(' lub ')}. Twoja rola: ${req.user.role}.`
       });
     }
-
     next();
   };
 }
 
-/**
- * requireSelf — wymaga że req.user.id === req.params.id
- * Używane do operacji na własnym profilu/koncie.
- */
+// Aliasy zgodności dla starszych modułów tras (np. Izba Pamięci).
+export const authenticateToken = requireAuth;
+export const requireAdmin = requireRole('admin');
+
 export function requireSelf(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ error: 'Brak autoryzacji.' });
   }
-
   if (req.user.id !== req.params.id) {
     return res.status(403).json({ error: 'Nie masz uprawnień do modyfikacji cudzego profilu.' });
   }
-
   next();
 }
 
-/**
- * requireSelfOrRole(...roles) — pozwala na operację na sobie LUB jeśli masz odpowiednią rolę.
- * np. requireSelfOrRole('admin') — user edytuje siebie, albo admin edytuje kogokolwiek.
- */
 export function requireSelfOrRole(...roles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Brak autoryzacji.' });
     }
-
     if (req.user.id === req.params.id || roles.includes(req.user.role)) {
       return next();
     }
-
     return res.status(403).json({ error: 'Nie masz uprawnień do tej operacji.' });
   };
 }
 
-/**
- * requireSubjectOwnerOrAdmin — pozwala profesorowi edytować TYLKO swój przedmiot, admin może wszystko.
- * Sprawdza req.params.id (subjectId) vs req.user.taughtSubjectIds.
- */
 export function requireSubjectOwnerOrAdmin(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ error: 'Brak autoryzacji.' });
   }
-
-  if (req.user.role === 'admin') {
-    return next();
-  }
-
+  if (req.user.role === 'admin') return next();
   if (req.user.role === 'professor') {
     const subjectId = req.params.id;
-    // Check if professor teaches this subject
-    if (req.user.taughtSubjectIds.includes(subjectId)) {
-      return next();
-    }
-    // Also check subject's professor_id in DB
+    if (req.user.taughtSubjectIds.includes(subjectId)) return next();
     const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(subjectId);
-    if (subject && subject.professor_id === req.user.id) {
-      return next();
-    }
+    if (subject && subject.professor_id === req.user.id) return next();
     return res.status(403).json({ error: 'Możesz edytować tylko przedmioty, które prowadzisz.' });
   }
-
   return res.status(403).json({ error: 'Brak uprawnień. Wymagana rola: admin lub profesor.' });
 }
