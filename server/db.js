@@ -85,6 +85,25 @@ db.exec(`
     body TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS transactional_email_deliveries (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    email_type TEXT NOT NULL CHECK (email_type IN ('account_created', 'account_approved')),
+    recipient_email TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    provider_message_id TEXT DEFAULT '',
+    last_error TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_attempt_at TEXT,
+    sent_at TEXT,
+    UNIQUE (user_id, email_type),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_transactional_email_status
+    ON transactional_email_deliveries(status, created_at);
+
   CREATE TABLE IF NOT EXISTS news (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -2376,7 +2395,9 @@ export function dbEmailToFrontend(row) {
     date: row.date,
     read: !!row.read,
     type: row.type,
-    body: row.body
+    body: row.body,
+    htmlBody: row.html_body || '',
+    deliveryId: row.delivery_id || ''
   };
 }
 
@@ -3656,6 +3677,9 @@ try { db.exec("ALTER TABLE news ADD COLUMN author_signature TEXT DEFAULT ''"); }
 try { db.exec("ALTER TABLE news ADD COLUMN read_time TEXT DEFAULT ''"); } catch (_) {}
 // Professor signature image
 try { db.exec("ALTER TABLE users ADD COLUMN signature_png TEXT DEFAULT ''"); } catch (_) {}
+// HTML transaction e-mail archive and link to the external delivery ledger.
+try { db.exec("ALTER TABLE emails ADD COLUMN html_body TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE emails ADD COLUMN delivery_id TEXT DEFAULT ''"); } catch (_) {}
 
 export function dbRoleMappingToFrontend(row) {
   if (!row) return null;

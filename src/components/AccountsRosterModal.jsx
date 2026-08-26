@@ -21,7 +21,9 @@ import {
   SlidersHorizontal,
   Flame,
   Eye,
-  Compass
+  Compass,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 
 const HOUSE_THEMES = {
@@ -79,7 +81,8 @@ export const AccountsRosterModal = ({ isOpen, onClose, initialHouseFilter = 'all
     setActiveView,
     setActiveHouseTab,
     setEmailInboxOpen,
-    showNotification
+    showNotification,
+    retryTransactionalEmail
   } = useSchool();
 
   const { playWandSwoosh, playRuneChime } = useSound();
@@ -89,6 +92,7 @@ export const AccountsRosterModal = ({ isOpen, onClose, initialHouseFilter = 'all
   const [houseFilter, setHouseFilter] = useState(initialHouseFilter); // 'all' | 'reinhall' | 'bjornhall' | 'ravnheim' | 'otergard' | 'neutral'
   const [sortBy, setSortBy] = useState('points-desc'); // 'points-desc' | 'level-desc' | 'name-asc' | 'role'
   const [selectedUserModal, setSelectedUserModal] = useState(null);
+  const [retryingEmailType, setRetryingEmailType] = useState(null);
 
   // Sync initial filters when opened
   React.useEffect(() => {
@@ -230,6 +234,19 @@ export const AccountsRosterModal = ({ isOpen, onClose, initialHouseFilter = 'all
       setActiveView('raven-post');
     }
     showNotification('Poczta Kruków', `Zaadresowano list do: ${user.fullName || user.name}`, 'info');
+  };
+
+  const handleRetryEmail = async (type) => {
+    if (!selectedUserModal?.id || !retryTransactionalEmail || retryingEmailType) return;
+    setRetryingEmailType(type);
+    const delivery = await retryTransactionalEmail(selectedUserModal.id, type);
+    if (delivery) {
+      setSelectedUserModal(current => ({
+        ...current,
+        transactionalEmails: { ...(current.transactionalEmails || {}), [type]: delivery }
+      }));
+    }
+    setRetryingEmailType(null);
   };
 
   return (
@@ -1087,6 +1104,39 @@ export const AccountsRosterModal = ({ isOpen, onClose, initialHouseFilter = 'all
                   <div style={{ fontSize: '0.8rem', color: '#e2e8f0', marginTop: '0.2rem' }}>
                     {selectedUserModal.specialization}
                   </div>
+                </div>
+              )}
+
+              {currentUser?.role === 'admin' && (
+                <div style={{ background: 'rgba(5, 8, 14, 0.72)', padding: '0.8rem', borderRadius: '6px', border: '1px solid rgba(197,159,78,0.24)', marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.6rem' }}>
+                    Korespondencja transakcyjna
+                  </div>
+                  {[
+                    ['account_created', 'Wiadomość rejestracyjna'],
+                    ['account_approved', 'List przyjęcia']
+                  ].map(([type, label]) => {
+                    const delivery = selectedUserModal.transactionalEmails?.[type];
+                    const failed = delivery?.status === 'failed';
+                    const sentLabel = delivery?.sentAt
+                      ? new Date(delivery.sentAt.endsWith?.('Z') ? delivery.sentAt : `${delivery.sentAt}Z`).toLocaleString('pl-PL')
+                      : null;
+                    return (
+                      <div key={type} style={{ padding: '0.55rem 0', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 700 }}>{label}</div>
+                          <div style={{ marginTop: '0.18rem', fontSize: '0.72rem', color: failed ? '#fca5a5' : delivery?.status === 'sent' ? '#86efac' : '#94a3b8' }} title={failed ? delivery.lastError : ''}>
+                            {failed ? <><AlertTriangle size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />Nie udało się wysłać wiadomości</> : delivery?.status === 'sent' ? `Wysłano: ${sentLabel}` : delivery?.status === 'sending' ? 'Wysyłanie w toku' : delivery?.status === 'pending' ? 'Oczekuje na wysłanie' : 'Jeszcze niewysłany'}
+                          </div>
+                        </div>
+                        {failed && (
+                          <button type="button" onClick={() => handleRetryEmail(type)} disabled={Boolean(retryingEmailType)} className="btn-durmstrang-secondary" style={{ padding: '0.38rem 0.65rem', fontSize: '0.7rem' }}>
+                            <RefreshCw size={12} /> {retryingEmailType === type ? 'Wysyłanie…' : 'Wyślij ponownie'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

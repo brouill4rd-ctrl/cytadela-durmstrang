@@ -294,7 +294,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
     const userData = {
       username: regUsername.trim(),
-      email: regEmail.trim() || `${regUsername.trim()}@durmstrang.edu`,
+      email: regEmail.trim(),
       password: regPassword.trim() || '123',
       name: regName.trim(),
       surname: regSurname.trim(),

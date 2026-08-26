@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import db, { dbUserToFrontend, dbEmailToFrontend } from '../db.js';
+import { EMAIL_TYPES, HOUSE_EMAIL_THEMES } from '../email/emailTemplates.js';
+import { deliverTransactionalEmail, queueTransactionalEmail } from '../email/transactionalEmailService.js';
 
 const router = Router();
 
@@ -43,12 +46,15 @@ router.post('/login', (req, res) => {
 });
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const data = req.body;
   const trimmedUsername = (data.username || '').trim().toLowerCase();
 
   if (!trimmedUsername) {
     return res.status(400).json({ error: 'Podaj unikalną nazwę użytkownika (login).' });
+  }
+  if (!(data.name || '').trim() || !(data.surname || '').trim()) {
+    return res.status(400).json({ error: 'Imię i nazwisko są wymagane do wpisu w księdze Twierdzy.' });
   }
 
   const existing = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(trimmedUsername);
@@ -56,12 +62,21 @@ router.post('/register', (req, res) => {
     return res.status(409).json({ error: 'Adept o takim loginie już figuruje w księdze Cytadeli.' });
   }
 
+  const userEmail = (data.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+    return res.status(400).json({ error: 'Podaj poprawny adres e-mail, na który Rada ma przesłać korespondencję.' });
+  }
+
+  const role = data.role === 'professor' ? 'professor' : 'student';
+  const selectedHouse = String(data.house || '').toLowerCase();
+  if (role === 'student' && !HOUSE_EMAIL_THEMES[selectedHouse]) {
+    return res.status(400).json({ error: 'Rytuał Przydziału nie wskazał prawidłowego Zakonu.' });
+  }
+
   const rawPassword = data.password || '123';
   const hashedPassword = bcrypt.hashSync(rawPassword, 10);
 
-  const newId = `usr-${Date.now()}`;
-  const userEmail = (data.email || '').trim() || `${trimmedUsername}@durmstrang.edu`;
-  const role = data.role || 'student';
+  const newId = `usr-${randomUUID()}`;
   const fullName = `${(data.name || '').trim()} ${(data.surname || '').trim()}`;
 
   const userFields = {
@@ -74,8 +89,8 @@ router.post('/register', (req, res) => {
     full_name: fullName,
     role,
     status: 'pending',
-    // Przydział jest osobną ceremonią po przybyciu; prolog nie może ujawnić ani utrwalić Zakonu.
-    house: role === 'professor' ? (data.house || 'ravnheim') : null,
+    // Wynik obowiązkowego rytuału rejestracyjnego jest utrwalany i ujawniany w liście przyjęcia.
+    house: role === 'student' ? selectedHouse : null,
     title: role === 'professor'
       ? `Kandydat na Profesora • ${data.departmentName || 'Katedra Magii'}`
       : 'Kandydat na Adepta',
@@ -104,63 +119,69 @@ router.post('/register', (req, res) => {
     created_at: new Date().toISOString().split('T')[0]
   };
 
-  db.prepare(`
-    INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, gender, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
-    VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @gender, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
-  `).run(userFields);
-
-  db.prepare(`
-    INSERT INTO character_prologues (user_id, stage, completed)
-    VALUES (?, ?, ?)
-  `).run(newId, role === 'student' ? 'LETTER_PENDING' : 'COMPLETED', role === 'student' ? 0 : 1);
-
-  const appId = `app-${Date.now()}`;
-  db.prepare(`
-    INSERT INTO pending_applications (id, user_id, email, name, surname, role, department_name, origin, age, wand, patronus, companion, appearance, backstory, status, date_submitted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-  `).run(
-    appId, newId, userEmail,
-    userFields.name, userFields.surname, role,
-    userFields.department_name,
-    userFields.origin, data.age ? `${data.age}` : '14',
-    userFields.wand || 'Różdżka Adepta',
-    userFields.patronus || 'Brak',
-    userFields.companion || 'Brak',
-    userFields.appearance || 'Kandydat w szacie podróżnej.',
-    userFields.backstory || 'Podanie o przyjęcie.',
-    userFields.created_at
-  );
-
-  const emailId = `mail-${Date.now()}`;
+  const appId = `app-${randomUUID()}`;
   const now = new Date();
-  const dateStr = now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 
-  db.prepare(`
-    INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'registration_confirm', ?)
-  `).run(
-    emailId, userEmail, fullName,
-    'kancelaria@durmstrang.edu', 'Kancelaria Cytadeli Durmstrang',
-    `[DURMSTRANG] Potwierdzenie rejestracji podania (${role === 'professor' ? 'Katedra' : 'Adept'})`,
-    dateStr,
-    `Witaj ${fullName},\n\nKancelaria Cytadeli Durmstrang potwierdza pomyślne zarejestrowanie Twojego podania.\n\nPIECZĘĆ PODANIA: #${newId}\nADRES E-MAIL: ${userEmail}\nDATA ZGŁOSZENIA: ${now.toLocaleDateString('pl-PL')}\nSTATUS: Oczekuje na weryfikację przez Radę Dyrekcji.\n\nZ pieczęcią przymierza,\nKancelaria Rejestracji Paktu\nCytadela Durmstrang`
-  );
+  const createRegistration = db.transaction(() => {
+    db.prepare(`
+      INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, gender, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
+      VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @gender, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
+    `).run(userFields);
 
-  db.prepare(`
-    INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-    VALUES (?, ?, 'Kancelaria Rekrutacji', ?, ?)
-  `).run(
-    `log-${Date.now()}`,
-    now.toISOString(),
-    `Złożono podanie (${role}): ${fullName}`,
-    `Wysłano e-mail potwierdzający na adres: ${userEmail}`
-  );
+    db.prepare(`
+      INSERT INTO character_prologues (user_id, stage, completed)
+      VALUES (?, ?, ?)
+    `).run(newId, role === 'student' ? 'LETTER_PENDING' : 'COMPLETED', role === 'student' ? 0 : 1);
+
+    db.prepare(`
+      INSERT INTO pending_applications (id, user_id, email, name, surname, role, department_name, origin, age, wand, patronus, companion, appearance, backstory, status, date_submitted)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+    `).run(
+      appId, newId, userEmail,
+      userFields.name, userFields.surname, role,
+      userFields.department_name,
+      userFields.origin, data.age ? `${data.age}` : '14',
+      userFields.wand || 'Różdżka Adepta',
+      userFields.patronus || 'Brak',
+      userFields.companion || 'Brak',
+      userFields.appearance || 'Kandydat w szacie podróżnej.',
+      userFields.backstory || 'Podanie o przyjęcie.',
+      userFields.created_at
+    );
+
+    queueTransactionalEmail(db, userFields, EMAIL_TYPES.ACCOUNT_CREATED);
+
+    db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+      VALUES (?, ?, 'Kancelaria Rekrutacji', ?, ?)
+    `).run(
+      `log-${randomUUID()}`,
+      now.toISOString(),
+      `Złożono podanie (${role}): ${fullName}`,
+      `Zakolejkowano potwierdzenie zgłoszenia na adres: ${userEmail}`
+    );
+  });
+
+  try {
+    createRegistration();
+  } catch (error) {
+    if (String(error?.message || '').includes('UNIQUE constraint failed: users.username')) {
+      return res.status(409).json({ error: 'Adept o takim loginie już figuruje w księdze Cytadeli.' });
+    }
+    throw error;
+  }
+
+  const deliveryResult = await deliverTransactionalEmail({
+    database: db,
+    userId: newId,
+    emailType: EMAIL_TYPES.ACCOUNT_CREATED
+  });
 
   const createdUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(newId));
-  const confirmEmailRow = db.prepare('SELECT * FROM emails WHERE id = ?').get(emailId);
+  const confirmEmailRow = db.prepare('SELECT * FROM emails WHERE delivery_id = ?').get(deliveryResult.delivery?.id);
   const confirmEmail = dbEmailToFrontend(confirmEmailRow);
 
-  res.status(201).json({ user: createdUser, email: confirmEmail });
+  res.status(201).json({ user: createdUser, email: confirmEmail, emailDelivery: deliveryResult.delivery });
 });
 
 export default router;

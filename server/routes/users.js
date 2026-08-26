@@ -1,21 +1,34 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import db, { dbUserToFrontend, dbEmailToFrontend, dbAppToFrontend } from '../db.js';
 import { requireAuth, requireRole, requireSelfOrRole } from '../middleware/auth.js';
+import { EMAIL_TYPES, HOUSE_EMAIL_THEMES } from '../email/emailTemplates.js';
+import {
+  deliverTransactionalEmail,
+  getUserEmailDeliveries,
+  queueTransactionalEmail
+} from '../email/transactionalEmailService.js';
 
 const router = Router();
 
 // GET /api/users — all users (zalogowani)
 router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
-  res.json(rows.map(dbUserToFrontend));
+  res.json(rows.map(row => ({
+    ...dbUserToFrontend(row),
+    ...(req.user.role === 'admin' ? { transactionalEmails: getUserEmailDeliveries(db, row.id) } : {})
+  })));
 });
 
 // GET /api/users/:id — single user (zalogowani)
 router.get('/:id', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'User not found' });
-  res.json(dbUserToFrontend(row));
+  res.json({
+    ...dbUserToFrontend(row),
+    ...(req.user.role === 'admin' ? { transactionalEmails: getUserEmailDeliveries(db, row.id) } : {})
+  });
 });
 
 // PATCH /api/users/:id — update user profile
@@ -95,73 +108,118 @@ router.patch('/:id', requireAuth, requireSelfOrRole('admin'), (req, res) => {
 
 // PATCH /api/users/:id/approve — approve user + send acceptance email
 // Wymaga: admin
-router.patch('/:id/approve', requireAuth, requireRole('admin'), (req, res) => {
+router.patch('/:id/approve', requireAuth, requireRole('admin'), async (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'User not found' });
 
   const user = dbUserToFrontend(row);
-  const newTitle = user.role === 'professor'
-    ? `Profesor • ${user.departmentName}`
-    : user.house ? `Adept Zakonu ${user.house}` : 'Adept Nowicjusz';
-
-  db.prepare('UPDATE users SET status = ?, title = ? WHERE id = ?').run('approved', newTitle, req.params.id);
-
-  if (user.role === 'student') {
-    db.prepare("INSERT OR IGNORE INTO character_prologues (user_id, stage, completed, accepted_at) VALUES (?, 'LETTER_PENDING', 0, datetime('now'))").run(req.params.id);
-    db.prepare("UPDATE character_prologues SET accepted_at = COALESCE(accepted_at, datetime('now')), updated_at = datetime('now') WHERE user_id = ?").run(req.params.id);
+  if (user.status === 'approved') {
+    const archived = db.prepare(
+      "SELECT * FROM emails WHERE delivery_id = ?"
+    ).get(`txmail-${EMAIL_TYPES.ACCOUNT_APPROVED}-${user.id}`);
+    return res.json({
+      user: { ...user, transactionalEmails: getUserEmailDeliveries(db, user.id) },
+      email: dbEmailToFrontend(archived),
+      emailDelivery: getUserEmailDeliveries(db, user.id)[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
+      alreadyApproved: true
+    });
+  }
+  if (user.status !== 'pending') {
+    return res.status(409).json({ error: `Konto nie oczekuje na akceptację (status: ${user.status}).` });
+  }
+  if (user.role === 'student' && !HOUSE_EMAIL_THEMES[String(user.house || '').toLowerCase()]) {
+    return res.status(422).json({ error: 'Nie można zatwierdzić adepta bez prawidłowego Zakonu z Rytuału Przydziału.' });
   }
 
-  // Approve matching application
-  db.prepare("UPDATE pending_applications SET status = 'approved' WHERE user_id = ?").run(req.params.id);
-
-  // Dispatch acceptance email
-  const userEmail = user.email || `${user.username}@durmstrang.edu`;
+  const newTitle = user.role === 'professor'
+    ? `Profesor • ${user.departmentName}`
+    : `Adept Zakonu ${HOUSE_EMAIL_THEMES[user.house].name}`;
   const now = new Date();
-  const dateStr = now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-  const emailId = `mail-accept-${Date.now()}`;
+  const adminName = req.user.fullName || 'Rada Arcymistrzów';
 
-  db.prepare(`
-    INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'acceptance', ?)
-  `).run(
-    emailId, userEmail, user.fullName,
-    'dyrekcja@durmstrang.edu', 'Arcymistrzyni Valgerda Storm',
-    user.role === 'professor'
-      ? `[DURMSTRANG] Oficjalny Dekret Nominacji Profesorskiej: ${user.departmentName}`
-      : '[DURMSTRANG] Oficjalny List Przyjęcia do Cytadeli Durmstrang!',
-    dateStr,
-    `Szanowny/a ${user.fullName},
+  const approvePendingUser = db.transaction(() => {
+    const update = db.prepare(
+      "UPDATE users SET status = 'approved', title = ? WHERE id = ? AND status = 'pending'"
+    ).run(newTitle, req.params.id);
+    if (update.changes !== 1) throw new Error('Konto zostało już rozpatrzone przez inną operację.');
 
-Z radością informujemy, że Dyrekcja Cytadeli Durmstrang oraz Kolegium Mistrzów ZATWIERDZIŁY Twoje podanie!
+    if (user.role === 'student') {
+      db.prepare("INSERT OR IGNORE INTO character_prologues (user_id, stage, completed, accepted_at) VALUES (?, 'LETTER_PENDING', 0, datetime('now'))").run(req.params.id);
+      db.prepare("UPDATE character_prologues SET accepted_at = COALESCE(accepted_at, datetime('now')), updated_at = datetime('now') WHERE user_id = ?").run(req.params.id);
+      queueTransactionalEmail(db, row, EMAIL_TYPES.ACCOUNT_APPROVED);
+    }
 
-${user.role === 'professor'
-  ? `Zostałeś/aś oficjalnie mianowany/a Profesorem i Kierownikiem w: ${user.departmentName}. Otrzymujesz dostęp do Komnat Wykładowych, prawo oceniania prac adeptów oraz kaligrafowania edyktów Katedry.`
-  : `Zostałeś/aś oficjalnie przyjęty/a w poczet adeptów Cytadeli Durmstrang. Twoja pieczęć została odblokowana. Możesz otworzyć wrota szkoły, złożyć przysięgę przed Kamieniem Przeznaczenia i rozpocząć studia nad magią północy.`}
+    db.prepare("UPDATE pending_applications SET status = 'approved' WHERE user_id = ? AND status = 'pending'").run(req.params.id);
+    db.prepare(`
+      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      `log-${randomUUID()}`,
+      now.toISOString(),
+      adminName,
+      `Zatwierdzono podanie (${user.role}): ${user.fullName}`,
+      user.role === 'student'
+        ? `Zakolejkowano oficjalny list przyjęcia na adres: ${user.email}`
+        : 'Zatwierdzono nominację profesorską; list przyjęcia adepta nie ma zastosowania.'
+    );
+  });
 
-Twoje konto (@${user.username}) jest już w pełni aktywne. Możesz zalogować się do Cytadeli przy użyciu wybranego hasła.
+  try {
+    approvePendingUser();
+  } catch (error) {
+    if (String(error?.message || '').includes('już rozpatrzone')) {
+      const current = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id));
+      return res.json({
+        user: { ...current, transactionalEmails: getUserEmailDeliveries(db, current.id) },
+        emailDelivery: getUserEmailDeliveries(db, current.id)[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
+        alreadyApproved: current.status === 'approved'
+      });
+    }
+    throw error;
+  }
 
-Podpisano Złotą Pieczęcią Paktu 1294,
-Arcymistrzyni Valgerda Storm
-Dyrektor Cytadeli Durmstrang`
-  );
-
-  // Audit log
-  const adminName = req.user.fullName || 'Arcymistrzyni Valgerda Storm';
-  db.prepare(`
-    INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    `log-${Date.now()}`,
-    now.toISOString(),
-    adminName,
-    `Zatwierdzono podanie (${user.role}): ${user.fullName}`,
-    `Wysłano oficjalny list przyjęcia na adres: ${userEmail}`
-  );
+  const deliveryResult = user.role === 'student'
+    ? await deliverTransactionalEmail({ database: db, userId: user.id, emailType: EMAIL_TYPES.ACCOUNT_APPROVED })
+    : { delivery: null, sent: false, reason: 'not_applicable' };
 
   const updatedUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id));
-  const acceptEmail = dbEmailToFrontend(db.prepare('SELECT * FROM emails WHERE id = ?').get(emailId));
+  const acceptEmail = deliveryResult.delivery
+    ? dbEmailToFrontend(db.prepare('SELECT * FROM emails WHERE delivery_id = ?').get(deliveryResult.delivery.id))
+    : null;
 
-  res.json({ user: updatedUser, email: acceptEmail });
+  res.json({
+    user: { ...updatedUser, transactionalEmails: getUserEmailDeliveries(db, updatedUser.id) },
+    email: acceptEmail,
+    emailDelivery: deliveryResult.delivery
+  });
+});
+
+// POST /api/users/:id/transactional-emails/:type/retry — bezpieczna ponowna próba tylko po błędzie
+router.post('/:id/transactional-emails/:type/retry', requireAuth, requireRole('admin'), async (req, res) => {
+  const type = req.params.type;
+  if (!Object.values(EMAIL_TYPES).includes(type)) {
+    return res.status(400).json({ error: 'Nieznany typ wiadomości transakcyjnej.' });
+  }
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const existingDelivery = getUserEmailDeliveries(db, user.id)[type];
+  if (!existingDelivery) {
+    return res.status(404).json({ error: 'Nie znaleziono tej wiadomości w rejestrze dostarczeń.' });
+  }
+
+  const result = await deliverTransactionalEmail({
+    database: db,
+    userId: user.id,
+    emailType: type,
+    retry: true
+  });
+  if (result.reason === 'cooldown') {
+    return res.status(429).json({ error: 'Ponowna próba jest chwilowo zablokowana. Odczekaj co najmniej minutę.', emailDelivery: result.delivery });
+  }
+  if (result.reason === 'not_failed') {
+    return res.status(409).json({ error: 'Ponowna wysyłka jest dostępna wyłącznie dla wiadomości ze statusem błędu.', emailDelivery: result.delivery });
+  }
+  res.json({ emailDelivery: result.delivery });
 });
 
 // PATCH /api/users/:id/reject — Wymaga: admin
@@ -201,7 +259,10 @@ router.patch('/:id/reset-password', requireAuth, requireRole('admin'), (req, res
 // GET /api/users/pending/applications — Wymaga: admin
 router.get('/pending/applications', requireAuth, requireRole('admin'), (req, res) => {
   const rows = db.prepare('SELECT * FROM pending_applications ORDER BY date_submitted DESC').all();
-  res.json(rows.map(dbAppToFrontend));
+  res.json(rows.map(row => ({
+    ...dbAppToFrontend(row),
+    transactionalEmails: row.user_id ? getUserEmailDeliveries(db, row.user_id) : {}
+  })));
 });
 
 // POST /api/users/applications — submit recruitment application (publiczny)
@@ -234,23 +295,6 @@ router.post('/applications', (req, res) => {
   );
 
   const created = db.prepare('SELECT * FROM pending_applications WHERE id = ?').get(appId);
-
-  // Automatycznie twórz email potwierdzający w bazie
-  const emailId = `mail-app-${Date.now()}`;
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
-  const toEmail = data.email || `${(data.name || 'adept').toLowerCase()}@durmstrang.edu`;
-  const fullName = `${data.name} ${data.surname}`;
-  db.prepare(`
-    INSERT OR IGNORE INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'system', ?)
-  `).run(
-    emailId, toEmail, fullName,
-    'rekrutacja@durmstrang.edu', 'Wrota Rekrutacji Cytadeli',
-    '[POTWIERDZENIE] Twoje podanie do Cytadeli Durmstrang zostało przyjęte',
-    dateStr,
-    `Witaj, ${fullName}!\n\nTwoje podanie rekrutacyjne zostało pomyślnie złożone do Rady Mistrzów Cytadeli Durmstrang.\n\nWyposażenie: ${data.wand || '—'}\nPatronus / Duch zwierzęcy: ${data.patronus || '—'}\n\nOczekuj na oficjalny dekret Arcymistrzyni i wezwanie przed Kamień Przysięgi na Ceremonię Przydziału!`
-  );
 
   res.status(201).json(dbAppToFrontend(created));
 });

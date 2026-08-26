@@ -2755,10 +2755,14 @@ Dyrektor Cytadeli Durmstrang`
   const registerUser = async (userData) => {
     const res = await api.register(userData);
     if (res.ok) {
-      const { user, email } = res.data;
+      const { user, email, emailDelivery } = res.data;
       setUsers(prev => [user, ...prev]);
       if (email) setEmails(prev => [email, ...prev]);
-      showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
+      if (emailDelivery?.status === 'sent') {
+        showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
+      } else {
+        showNotification('Podanie Złożone Pomyślnie! ᛞ', 'Karta tożsamości została bezpiecznie zapisana. Kancelaria odnotowała problem z doręczeniem potwierdzenia.', 'warning');
+      }
       return true;
     } else if (res.offline) {
       showNotification('Brak Połączenia z Serwerem', 'Rejestracja wymaga połączenia z serwerem Cytadeli. Spróbuj ponownie za chwilę.', 'warning');
@@ -2771,14 +2775,41 @@ Dyrektor Cytadeli Durmstrang`
 
   const approveUser = async (userId) => {
     if (backendAvailable) {
-      const res = await api.approveUser(userId, currentUser?.fullName || 'Arcymistrzyni Valgerda Storm');
+      const res = await api.approveUser(userId, currentUser?.fullName || 'Rada Arcymistrzów');
       if (res.ok) {
-        const { user, email } = res.data;
+        const { user, email, emailDelivery } = res.data;
         setUsers(prev => prev.map(u => u.id === userId ? user : u));
+        setPendingApplications(prev => prev.filter(app => app.userId !== userId && app.id !== userId));
         if (email) setEmails(prev => [email, ...prev]);
-        showNotification('Podanie Zatwierdzone', `Zatwierdzono: ${user.fullName}. List przyjęcia wysłany.`, 'success');
+        if (emailDelivery?.status === 'sent' || user.role !== 'student') {
+          showNotification('Podanie Zatwierdzone', `Zatwierdzono: ${user.fullName}.${emailDelivery?.status === 'sent' ? ' List przyjęcia wysłany.' : ''}`, 'success');
+        } else {
+          showNotification('Podanie Zatwierdzone', `Zatwierdzono: ${user.fullName}. Dostarczenie listu przyjęcia wymaga ponownej próby.`, 'warning');
+        }
+        return true;
+      } else {
+        showNotification('Nie zatwierdzono podania', res.error || 'Rada nie mogła zakończyć weryfikacji konta.', 'warning');
       }
     }
+    return false;
+  };
+
+  const retryTransactionalEmail = async (userId, type) => {
+    const res = await api.retryTransactionalEmail(userId, type);
+    if (!res.ok) {
+      showNotification('Nie wysłano wiadomości', res.error || 'Ponowna próba nie powiodła się.', 'warning');
+      return false;
+    }
+    setUsers(prev => prev.map(user => user.id === userId
+      ? { ...user, transactionalEmails: { ...(user.transactionalEmails || {}), [type]: res.data.emailDelivery } }
+      : user));
+    const sent = res.data.emailDelivery?.status === 'sent';
+    showNotification(
+      sent ? 'Wiadomość wysłana' : 'Nie wysłano wiadomości',
+      sent ? 'Korespondencja została doręczona providerowi pocztowemu.' : 'Błąd został zapisany do diagnostyki.',
+      sent ? 'success' : 'warning'
+    );
+    return res.data.emailDelivery;
   };
 
   const rejectUser = async (userId) => {
@@ -2846,12 +2877,13 @@ Dyrektor Cytadeli Durmstrang`
 
   const approveApplication = async (appId) => {
     const app = pendingApplications.find(a => a.id === appId || a.userId === appId);
+    let approved = false;
     if (app && app.userId) {
-      await approveUser(app.userId);
+      approved = await approveUser(app.userId);
     } else if (app) {
-      await approveUser(app.id);
+      approved = await approveUser(app.id);
     }
-    setPendingApplications(prev => prev.filter(a => a.id !== appId && a.userId !== appId));
+    if (approved) setPendingApplications(prev => prev.filter(a => a.id !== appId && a.userId !== appId));
   };
 
   const rejectApplication = async (appId) => {
@@ -3716,6 +3748,7 @@ Dyrektor Cytadeli Durmstrang`
         setDiscordSimulatorOpen,
         approveUser,
         rejectUser,
+        retryTransactionalEmail,
         approveApplication,
         rejectApplication,
         createAdminAccount,

@@ -62,6 +62,7 @@ export const api = {
   updateUser: (id, fields) => apiFetch(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(fields) }),
   approveUser: (id, adminName) => apiFetch(`/users/${id}/approve`, { method: 'PATCH', body: JSON.stringify({ adminName }) }),
   rejectUser: (id, adminName) => apiFetch(`/users/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ adminName }) }),
+  retryTransactionalEmail: (id, type) => apiFetch(`/users/${id}/transactional-emails/${encodeURIComponent(type)}/retry`, { method: 'POST' }),
   resetPassword: (id, newPassword) => apiFetch(`/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   getPendingApplications: () => apiFetch('/users/pending/applications'),
   createApplication: (appData) => apiFetch('/users/applications', { method: 'POST', body: JSON.stringify(appData) }),
