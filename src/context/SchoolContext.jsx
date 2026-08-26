@@ -1245,6 +1245,14 @@ Dyrektor Cytadeli Durmstrang`
         setPointAuditLogs(auditsRes.data);
       }
 
+      // Load admin audit logs from DB
+      if (isAdminSession) {
+        const adminLogsRes = await api.getAuditLogs();
+        if (adminLogsRes.ok && adminLogsRes.data) {
+          setAuditLogs(adminLogsRes.data);
+        }
+      }
+
       // Load pending applications (admin only)
       if (isAdminSession) {
         const appsRes = await api.getPendingApplications();
@@ -1661,32 +1669,47 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   // Add Currency (Skirniry) to User & Bank
-  const addCurrency = (amount, reason = 'Nagroda z aktywności') => {
+  const addCurrency = async (amount, reason = 'Nagroda z aktywności') => {
     if (!currentUser || !amount) return;
     const currentCurr = currentUser.currency || 0;
     const newCurr = currentCurr + amount;
 
     updateCurrentUser({ currency: newCurr });
-    setBankAccount(prev => ({
-      ...prev,
-      balance: (prev.balance || 0) + amount
-    }));
+    setBankAccount(prev => ({ ...prev, balance: (prev.balance || 0) + amount }));
 
-    const newTx = {
+    const optimisticTx = {
       id: `tx-bank-${Date.now()}`,
       userId: currentUser.id,
       userName: currentUser.fullName,
-      amount: amount,
+      amount,
       type: 'deposit',
       title: reason,
       date: new Date().toISOString().slice(0, 10),
       balanceAfter: newCurr
     };
-    setBankTransactions(prev => [newTx, ...prev]);
+    setBankTransactions(prev => [optimisticTx, ...prev]);
+
+    if (backendAvailable) {
+      try {
+        const res = await api.depositCurrency({
+          userId: currentUser.id,
+          amount,
+          type: 'inflow',
+          title: reason,
+          category: 'nagroda'
+        });
+        if (res.ok && res.data?.transaction) {
+          setBankTransactions(prev => [res.data.transaction, ...prev.filter(t => t.id !== optimisticTx.id)]);
+          setBankAccount(prev => ({ ...prev, balance: res.data.newBalance }));
+        }
+      } catch (err) {
+        console.error('[addCurrency] Backend error:', err);
+      }
+    }
   };
 
   // Deduct Currency (Skirniry) from User & Bank
-  const deductCurrency = (amount, reason = 'Wydatek') => {
+  const deductCurrency = async (amount, reason = 'Wydatek') => {
     if (!currentUser || !amount) return false;
     const currentCurr = currentUser.currency || 0;
     if (currentCurr < amount) {
@@ -1696,12 +1719,9 @@ Dyrektor Cytadeli Durmstrang`
     const newCurr = currentCurr - amount;
 
     updateCurrentUser({ currency: newCurr });
-    setBankAccount(prev => ({
-      ...prev,
-      balance: Math.max(0, (prev.balance || 0) - amount)
-    }));
+    setBankAccount(prev => ({ ...prev, balance: Math.max(0, (prev.balance || 0) - amount) }));
 
-    const newTx = {
+    const optimisticTx = {
       id: `tx-bank-${Date.now()}`,
       userId: currentUser.id,
       userName: currentUser.fullName,
@@ -1711,7 +1731,26 @@ Dyrektor Cytadeli Durmstrang`
       date: new Date().toISOString().slice(0, 10),
       balanceAfter: newCurr
     };
-    setBankTransactions(prev => [newTx, ...prev]);
+    setBankTransactions(prev => [optimisticTx, ...prev]);
+
+    if (backendAvailable) {
+      try {
+        const res = await api.depositCurrency({
+          userId: currentUser.id,
+          amount: -amount,
+          type: 'outflow',
+          title: reason,
+          category: 'wydatek'
+        });
+        if (res.ok && res.data?.transaction) {
+          setBankTransactions(prev => [res.data.transaction, ...prev.filter(t => t.id !== optimisticTx.id)]);
+          setBankAccount(prev => ({ ...prev, balance: res.data.newBalance }));
+        }
+      } catch (err) {
+        console.error('[deductCurrency] Backend error:', err);
+      }
+    }
+
     return true;
   };
 
@@ -1749,9 +1788,10 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   // Submit Application from Character Creation Modal
-  const submitApplication = (appData) => {
+  const submitApplication = async (appData) => {
+    const appId = `app-${Date.now()}`;
     const newApp = {
-      id: `app-${Date.now()}`,
+      id: appId,
       studentId: `stud-${Date.now().toString().slice(-4)}`,
       name: `${appData.name} ${appData.surname}`,
       house: appData.preferredHouse || 'reinhall',
@@ -1771,6 +1811,27 @@ Dyrektor Cytadeli Durmstrang`
     try {
       localStorage.setItem('durmstrang_apps', JSON.stringify(nextApps));
     } catch (_) {}
+
+    // Zapis do bazy
+    if (backendAvailable) {
+      try {
+        await api.createApplication({
+          id: appId,
+          name: appData.name,
+          surname: appData.surname,
+          email: appData.email || '',
+          role: appData.role || 'student',
+          origin: appData.origin || '',
+          wand: appData.wand || '',
+          patronus: appData.patronus || '',
+          companion: appData.companion || '',
+          appearance: appData.appearance || '',
+          backstory: appData.backstory || ''
+        });
+      } catch (err) {
+        console.error('[submitApplication] Backend error:', err);
+      }
+    }
 
     // Send confirmation raven email
     const confirmationEmail = {
@@ -2412,17 +2473,15 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   // React to News
-  const reactToNews = (newsId, reactionType = 'admiration') => {
+  const reactToNews = async (newsId, reactionType = 'admiration') => {
+    // Optimistic local update
     setNews(prev => {
       const updated = prev.map(item => {
         if (item.id === newsId) {
           const currentReactions = item.reactions || { admiration: 0, awe: 0, fire: 0, skull: 0 };
           return {
             ...item,
-            reactions: {
-              ...currentReactions,
-              [reactionType]: (currentReactions[reactionType] || 0) + 1
-            }
+            reactions: { ...currentReactions, [reactionType]: (currentReactions[reactionType] || 0) + 1 }
           };
         }
         return item;
@@ -2432,6 +2491,19 @@ Dyrektor Cytadeli Durmstrang`
       } catch (_) {}
       return updated;
     });
+
+    if (backendAvailable) {
+      try {
+        const res = await api.reactToNews(newsId, reactionType);
+        if (res.ok && res.data?.reactions) {
+          setNews(prev => prev.map(item =>
+            item.id === newsId ? { ...item, reactions: res.data.reactions } : item
+          ));
+        }
+      } catch (err) {
+        console.error('[reactToNews] Backend error:', err);
+      }
+    }
   };
 
   const [passwordRecoveryModalOpen, setPasswordRecoveryModalOpen] = useState(false);

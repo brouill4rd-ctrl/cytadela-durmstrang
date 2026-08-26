@@ -126,6 +126,24 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
   res.json(dbNewsToFrontend(row));
 });
 
+// PATCH /api/news/:id/react — add reaction to news item (zalogowani)
+router.patch('/:id/react', requireAuth, (req, res) => {
+  const { reactionType } = req.body;
+  if (!reactionType) return res.status(400).json({ error: 'Brak typu reakcji.' });
+
+  const row = db.prepare('SELECT reactions FROM news WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'News nie istnieje.' });
+
+  let reactions = {};
+  try { reactions = JSON.parse(row.reactions || '{}'); } catch {}
+
+  reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+
+  db.prepare('UPDATE news SET reactions = ? WHERE id = ?').run(JSON.stringify(reactions), req.params.id);
+
+  res.json({ reactions });
+});
+
 // DELETE /api/news/:id — tylko admin
 router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
   db.prepare('DELETE FROM news WHERE id = ?').run(req.params.id);

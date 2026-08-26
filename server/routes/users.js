@@ -204,4 +204,55 @@ router.get('/pending/applications', requireAuth, requireRole('admin'), (req, res
   res.json(rows.map(dbAppToFrontend));
 });
 
+// POST /api/users/applications — submit recruitment application (publiczny)
+router.post('/applications', (req, res) => {
+  const data = req.body;
+  if (!data.name || !data.surname) {
+    return res.status(400).json({ error: 'Imię i nazwisko są wymagane.' });
+  }
+
+  const appId = data.id || `app-${Date.now()}`;
+  const userId = data.studentId || data.userId || null;
+
+  db.prepare(`
+    INSERT OR IGNORE INTO pending_applications
+      (id, user_id, email, name, surname, role, origin, wand, patronus, companion, appearance, backstory, status, date_submitted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', date('now'))
+  `).run(
+    appId,
+    userId,
+    data.email || '',
+    data.name,
+    data.surname,
+    data.role || 'student',
+    data.origin || '',
+    data.wand || '',
+    data.patronus || '',
+    data.companion || '',
+    data.appearance || '',
+    data.backstory || ''
+  );
+
+  const created = db.prepare('SELECT * FROM pending_applications WHERE id = ?').get(appId);
+
+  // Automatycznie twórz email potwierdzający w bazie
+  const emailId = `mail-app-${Date.now()}`;
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
+  const toEmail = data.email || `${(data.name || 'adept').toLowerCase()}@durmstrang.edu`;
+  const fullName = `${data.name} ${data.surname}`;
+  db.prepare(`
+    INSERT OR IGNORE INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'system', ?)
+  `).run(
+    emailId, toEmail, fullName,
+    'rekrutacja@durmstrang.edu', 'Wrota Rekrutacji Cytadeli',
+    '[POTWIERDZENIE] Twoje podanie do Cytadeli Durmstrang zostało przyjęte',
+    dateStr,
+    `Witaj, ${fullName}!\n\nTwoje podanie rekrutacyjne zostało pomyślnie złożone do Rady Mistrzów Cytadeli Durmstrang.\n\nWyposażenie: ${data.wand || '—'}\nPatronus / Duch zwierzęcy: ${data.patronus || '—'}\n\nOczekuj na oficjalny dekret Arcymistrzyni i wezwanie przed Kamień Przysięgi na Ceremonię Przydziału!`
+  );
+
+  res.status(201).json(dbAppToFrontend(created));
+});
+
 export default router;

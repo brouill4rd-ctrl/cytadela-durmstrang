@@ -64,6 +64,7 @@ export const api = {
   rejectUser: (id, adminName) => apiFetch(`/users/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ adminName }) }),
   resetPassword: (id, newPassword) => apiFetch(`/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ newPassword }) }),
   getPendingApplications: () => apiFetch('/users/pending/applications'),
+  createApplication: (appData) => apiFetch('/users/applications', { method: 'POST', body: JSON.stringify(appData) }),
 
   // Pas Adepta
   getBelt: () => apiFetch('/belt'),
@@ -83,6 +84,7 @@ export const api = {
   updateNews: (id, newsData) => apiFetch(`/news/${id}`, { method: 'PUT', body: JSON.stringify(newsData) }),
   deleteNews: (id) => apiFetch(`/news/${id}`, { method: 'DELETE' }),
   seedNews: (items) => apiFetch('/news/seed', { method: 'POST', body: JSON.stringify(items) }),
+  reactToNews: (id, reactionType) => apiFetch(`/news/${id}/react`, { method: 'PATCH', body: JSON.stringify({ reactionType }) }),
   updateUserSignature: (userId, signaturePng) => apiFetch(`/users/${userId}`, { method: 'PUT', body: JSON.stringify({ signaturePng }) }),
 
   // ==================== DZIENNIKI LEKCYJNE & RANKINGI ====================
@@ -179,6 +181,7 @@ export const api = {
   deleteTimetableEntry: (id) => apiFetch(`/timetable/${id}`, { method: 'DELETE' }),
 
   // ==================== MODUŁ BANKU CYTADELI (SKÍRNISBANKI) ====================
+  depositCurrency: (data) => apiFetch('/bank/deposit', { method: 'POST', body: JSON.stringify(data) }),
   getBankAccount: (userId) => apiFetch(`/bank/account/${userId}`),
   getBankAccounts: () => apiFetch('/bank/accounts'),
   transferFunds: (data) => apiFetch('/bank/transfer', { method: 'POST', body: JSON.stringify(data) }),
@@ -507,6 +510,7 @@ export const api = {
   // Admin & System Diagnostics & Interactive Database Explorer
   createAdminAccount: (adminData) => apiFetch('/admin/create-account', { method: 'POST', body: JSON.stringify(adminData) }),
   getAuditLogs: () => apiFetch('/admin/audit-logs'),
+  addAuditLog: (data) => apiFetch('/admin/audit-logs', { method: 'POST', body: JSON.stringify(data) }),
   getSystemStats: () => apiFetch('/admin/system-stats'),
   getDatabaseBackup: () => apiFetch('/admin/backup-export'),
   importDatabaseBackup: (backup) => apiFetch('/admin/backup-import', { method: 'POST', body: JSON.stringify({ backup }) }),
@@ -593,7 +597,18 @@ export const api = {
   cancelAbsenceRequest: (id) => apiFetch(`/absences/${id}`, { method: 'DELETE' }),
   reviewAbsenceRequest: (id, data) => apiFetch(`/absences/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
   getLessonParticipantsWithExcuse: (lessonId) => apiFetch(`/absences/lesson/${encodeURIComponent(lessonId)}/participants`),
-  getTimetablePreviewForAbsence: (startAt, endAt) => apiFetch(`/absences/timetable-preview?startAt=${encodeURIComponent(startAt)}&endAt=${encodeURIComponent(endAt)}`)
+  getTimetablePreviewForAbsence: (startAt, endAt) => apiFetch(`/absences/timetable-preview?startAt=${encodeURIComponent(startAt)}&endAt=${encodeURIComponent(endAt)}`),
+
+  // ── Zapisy (Enrollment) ─────────────────────────────────────────────────────
+  getEnrollmentConfig: () => apiFetch('/enrollments/config'),
+  updateEnrollmentConfig: (data) => apiFetch('/enrollments/config', { method: 'PUT', body: JSON.stringify(data) }),
+  getEnrollmentStats: () => apiFetch('/enrollments/stats'),
+  getEnrolledProfessors: () => apiFetch('/enrollments/professors'),
+  getEnrollmentApplications: () => apiFetch('/enrollments/applications'),
+  applyForSubject: (data) => apiFetch('/enrollments/apply', { method: 'POST', body: JSON.stringify(data) }),
+  reviewEnrollmentApplication: (id, data) => apiFetch(`/enrollments/applications/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
+  cancelEnrollmentApplication: (id) => apiFetch(`/enrollments/applications/${id}`, { method: 'DELETE' }),
+  removeProfessorSubject: (profId, subjectId) => apiFetch(`/enrollments/professors/${profId}/subjects/${subjectId}`, { method: 'DELETE' })
 };
 
 export default api;

@@ -1532,11 +1532,45 @@ try {
   }
 } catch (_) {}
 
+// Migration: professor subject applications table
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS professor_subject_applications (
+      id TEXT PRIMARY KEY,
+      professor_id TEXT NOT NULL,
+      professor_name TEXT NOT NULL,
+      professor_avatar TEXT DEFAULT '',
+      subject_id TEXT NOT NULL,
+      subject_name TEXT NOT NULL,
+      class_year TEXT NOT NULL DEFAULT 'Klasa I',
+      note TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pending',
+      review_comment TEXT DEFAULT '',
+      reviewed_by TEXT DEFAULT '',
+      reviewed_at TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+} catch (e) {
+  console.warn('[DB] Migration professor_subject_applications:', e.message);
+}
+
+// Ensure enrollment_open config key exists
+try {
+  const eo = db.prepare(`SELECT value FROM school_config WHERE key = 'enrollment_open'`).get();
+  if (!eo) db.prepare(`INSERT INTO school_config (key, value) VALUES ('enrollment_open', '0')`).run();
+} catch (_) {}
+try {
+  const en = db.prepare(`SELECT value FROM school_config WHERE key = 'enrollment_note'`).get();
+  if (!en) db.prepare(`INSERT INTO school_config (key, value) VALUES ('enrollment_note', '')`).run();
+} catch (_) {}
+
 // ===================== SEED DATA =====================
 
 const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
 
-if (userCount === 0) {
+if (false && userCount === 0) {
   console.log('[DB] Seeding initial users...');
 
   const insertUser = db.prepare(`
@@ -1657,6 +1691,28 @@ Dyrektor Cytadeli Durmstrang`
   console.log('[DB] Seeded users + welcome email.');
 }
 
+// Always ensure the main admin account exists
+const ezraExists = db.prepare("SELECT COUNT(*) as count FROM users WHERE id = 'usr-ezra'").get().count;
+if (!ezraExists) {
+  const EZRA_HASH = bcrypt.hashSync('admin123', 10);
+  db.prepare(`
+    INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, class_year, origin, level, xp, next_level_xp, points, currency, wand, patronus, companion, appearance, backstory, taught_subject_ids, grades, inventory, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'usr-ezra', 'ezra', EZRA_HASH, 'ezrac4mhi@proton.me',
+    'Ezra', 'Camhi', 'Ezra Camhi',
+    'admin', 'approved', null,
+    'Arcymistrz Cytadeli',
+    '', null, null, null, null, null,
+    null, null,
+    1, 0, 500, 0, 150,
+    null, null, null, null, null,
+    '[]', '[]', '[]',
+    new Date().toISOString().split('T')[0]
+  );
+  console.log('[DB] Created admin account: Ezra Camhi');
+}
+
 // Seed default school config
 const configCount = db.prepare('SELECT COUNT(*) as count FROM school_config').get().count;
 if (configCount === 0) {
@@ -1755,7 +1811,7 @@ if (roleMappingsCount === 0) {
 
 // Seed initial lessons and point transactions
 const lessonCount = db.prepare('SELECT COUNT(*) as count FROM lessons').get().count;
-if (lessonCount === 0) {
+if (false && lessonCount === 0) {
   console.log('[DB] Seeding lessons, thread messages and point ledger...');
 
   const insertLesson = db.prepare(`
@@ -2200,7 +2256,7 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
 
   // Seed sample grades if none exist
   const gradesCount = db.prepare('SELECT COUNT(*) as count FROM grades').get().count;
-  if (gradesCount === 0) {
+  if (false && gradesCount === 0) {
     insertGrade.run('grade-1', 'czarna-magia', 'cat-czarna-magia-1', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Esej: Pieczęć Wstrzymująca', 'Perfekcyjna analiza mechaniki cienia i woli.', 'usr-morana', 'Prof. Morana Vane', '', '2026-08-18');
     insertGrade.run('grade-2', 'czarna-magia', 'cat-czarna-magia-3', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Aktywność na lekcji: Wiązanie Cieni', 'Wybitna aktywność i opanowanie techniki.', 'usr-morana', 'Prof. Morana Vane', 'les-czarna-magia-cienie-2026', '2026-08-20');
     insertGrade.run('grade-3', 'eliksiry', 'cat-eliksiry-4', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'P', 'Powyżej Oczekiwań (P)', 4, 'Quiz: Eliksir Wiggenowy', 'Trafna odpowiedź na pytanie o stabilizację.', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'les-eliksiry-wiggen-2026', '2026-08-22');
@@ -2213,7 +2269,7 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
 
   // ===================== SEED TIMETABLE ENTRIES =====================
   const timetableCount = db.prepare('SELECT COUNT(*) as count FROM timetable_entries').get().count;
-  if (timetableCount === 0) {
+  if (false && timetableCount === 0) {
     console.log('[DB] Seeding timetable entries...');
     const insertTT = db.prepare(`
       INSERT INTO timetable_entries (
@@ -2852,7 +2908,7 @@ export function dbLotteryTicketToFrontend(row) {
 // ===================== SEEDING FOR BANK, STORE, SHOPPING LISTS & LOTTERY =====================
 
 const bankAccountCount = db.prepare('SELECT COUNT(*) as count FROM bank_accounts').get().count;
-if (bankAccountCount === 0) {
+if (false && bankAccountCount === 0) {
   console.log('[DB] Seeding initial bank accounts and transactions...');
 
   const insertAccount = db.prepare(`
@@ -2879,7 +2935,7 @@ if (bankAccountCount === 0) {
 }
 
 const storeItemsCount = db.prepare('SELECT COUNT(*) as count FROM store_items').get().count;
-if (storeItemsCount === 0) {
+if (false && storeItemsCount === 0) {
   console.log('[DB] Seeding store catalog items...');
   const insertItem = db.prepare(`
     INSERT INTO store_items (id, name, category, category_slug, shop_id, shop_name, price, icon, house_exclusive, rarity, description, lore, placeholder_type)
@@ -2922,7 +2978,7 @@ if (storeItemsCount === 0) {
 }
 
 const shoppingListsCount = db.prepare('SELECT COUNT(*) as count FROM shopping_lists').get().count;
-if (shoppingListsCount === 0) {
+if (false && shoppingListsCount === 0) {
   console.log('[DB] Seeding shopping lists...');
   const insertList = db.prepare(`
     INSERT INTO shopping_lists (id, title, slug, subtitle, category, required_item_ids, reward_points, reward_skirnirs, icon, badge, lore)
@@ -2937,7 +2993,7 @@ if (shoppingListsCount === 0) {
 }
 
 const lotteryRoundsCount = db.prepare('SELECT COUNT(*) as count FROM lottery_rounds').get().count;
-if (lotteryRoundsCount === 0) {
+if (false && lotteryRoundsCount === 0) {
   console.log('[DB] Seeding lottery rounds and tickets...');
   const insertRound = db.prepare(`
     INSERT INTO lottery_rounds (id, round_number, title, description, ticket_price, jackpot, bonus_house_points, status, end_date, winning_runes, total_tickets_sold, participants_count, winners_summary)
@@ -2963,7 +3019,7 @@ if (lotteryRoundsCount === 0) {
 // ===================== SEEDING FOR DOCUMENTS, CMS, EVENTS, ETC. =====================
 
 const documentsCount = db.prepare('SELECT COUNT(*) as count FROM documents').get().count;
-if (documentsCount === 0) {
+if (false && documentsCount === 0) {
   console.log('[DB] Seeding official documents & edicts...');
   const insertDoc = db.prepare(`
     INSERT INTO documents (id, slug, category, category_label, number, title, subtitle, author, author_role, date, seal_type, icon_name, severity, summary, content, tags, is_official, is_pinned, cover_image, rune)
@@ -3157,7 +3213,7 @@ if (blockGraphicsCount === 0) {
 }
 
 const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
-if (eventsCount === 0) {
+if (false && eventsCount === 0) {
   console.log('[DB] Seeding calendar events...');
   const insertEvent = db.prepare(`
     INSERT INTO events (id, title, date, type, description)
@@ -3171,7 +3227,7 @@ if (eventsCount === 0) {
 }
 
 const ravenMsgCount = db.prepare('SELECT COUNT(*) as count FROM raven_messages').get().count;
-if (ravenMsgCount === 0) {
+if (false && ravenMsgCount === 0) {
   console.log('[DB] Seeding initial raven messages...');
   const insertRaven = db.prepare(`
     INSERT INTO raven_messages (id, sender_id, sender_name, sender_role, sender_avatar, recipient, subject, body, read, starred, tag, date)
@@ -3782,7 +3838,7 @@ if (gazetteSectionCount === 0) {
 
 // Seed inaugural gazette issue #1 if no issues exist
 const gazetteIssueCount = db.prepare('SELECT COUNT(*) as count FROM gazette_issues').get().count;
-if (gazetteIssueCount === 0) {
+if (false && gazetteIssueCount === 0) {
   console.log('[DB] Seeding inaugural gazette issue #1...');
   const issueId = 'issue-inaugural-01';
   
@@ -4163,7 +4219,7 @@ ZADANIE: Opisz krok po kroku, jak powinien zareagować adept, aby bezpiecznie ug
 }
 
 const sessionCount = db.prepare('SELECT COUNT(*) as count FROM exam_sessions').get().count;
-if (sessionCount === 0) {
+if (false && sessionCount === 0) {
   console.log('[DB] Seeding initial exam session & exam...');
   const sessionId = 'esess-2026-zimowa';
   db.prepare(`
@@ -4264,7 +4320,7 @@ insertHomeworkStudent.run(
 
 const homeworkCount = db.prepare('SELECT COUNT(*) as count FROM homework_assignments').get().count;
 
-if (homeworkCount === 0) {
+if (false && homeworkCount === 0) {
   console.log('[DB] Seeding initial Homework Assignments & Submissions...');
 
   const insertHw = db.prepare(`
@@ -5078,7 +5134,7 @@ export function dbExamGradingScaleToFrontend(row, entries = []) {
 
 const memoryYearCount = db.prepare('SELECT COUNT(*) as count FROM memory_school_years').get().count;
 
-if (memoryYearCount === 0) {
+if (false && memoryYearCount === 0) {
   console.log('[DB] Seeding Izba Pamięci historical archives (XVII, XVI, XV Rok Szkolny)...');
 
   const insertYear = db.prepare(`

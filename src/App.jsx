@@ -59,6 +59,7 @@ import { HomeworkGradingView } from './views/HomeworkGradingView';
 import { MemoryMainView } from './views/MemoryMainView';
 import { PrologueView } from './views/PrologueView';
 import { AbsenceChamberView } from './views/AbsenceChamberView';
+import { EnrollmentChamberView } from './views/EnrollmentChamberView';
 import { api } from './api';
 
 import { Sparkles, Info, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
@@ -249,6 +250,8 @@ export const App = () => {
         return <MemoryMainView />;
       case 'absence-chamber':
         return <AbsenceChamberView />;
+      case 'enrollment-chamber':
+        return <EnrollmentChamberView />;
       default:
         return <HomeView />;
     }

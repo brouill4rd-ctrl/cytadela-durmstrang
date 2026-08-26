@@ -57,8 +57,25 @@ router.post('/create-account', (req, res) => {
 
 // GET /api/admin/audit-logs
 router.get('/audit-logs', (req, res) => {
-  const rows = db.prepare('SELECT * FROM audit_logs ORDER BY rowid DESC LIMIT 100').all();
+  const rows = db.prepare('SELECT * FROM audit_logs ORDER BY rowid DESC LIMIT 200').all();
   res.json(rows);
+});
+
+// POST /api/admin/audit-logs — add manual audit log entry (admin)
+router.post('/audit-logs', (req, res) => {
+  const { action, detail } = req.body;
+  if (!action) return res.status(400).json({ error: 'Pole action jest wymagane.' });
+
+  const logId = `log-${Date.now()}`;
+  const adminName = req.user.fullName || req.user.username || 'Dyrekcja';
+
+  db.prepare(`
+    INSERT INTO audit_logs (id, timestamp, admin, action, detail)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(logId, new Date().toISOString(), adminName, action, detail || '');
+
+  const row = db.prepare('SELECT * FROM audit_logs WHERE id = ?').get(logId);
+  res.status(201).json(row);
 });
 
 // GET /api/admin/system-stats — Telemetry and counts for CMS

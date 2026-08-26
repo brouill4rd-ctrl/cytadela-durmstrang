@@ -1,5 +1,3 @@
-// Seed data for Scandinavian Lottery (Skandynawska Loteria Odyna / Skírnir Lotto)
-
 export const ELDER_FUTHARK_RUNES = [
   { id: 'fehu', rune: 'ᚠ', name: 'Fehu', meaning: 'Bogactwo, złoto i bydło', color: '#c59f4e' },
   { id: 'uruz', rune: 'ᚢ', name: 'Uruz', meaning: 'Siła pierwotna, żubr lodowy', color: '#e58f65' },
@@ -27,80 +25,6 @@ export const ELDER_FUTHARK_RUNES = [
   { id: 'othala', rune: 'ᛟ', name: 'Othala', meaning: 'Dziedzictwo krwi, Cytadela', color: '#d97706' }
 ];
 
-export const SEED_LOTTERY_ROUNDS = [
-  {
-    id: 'round-current',
-    roundNumber: 42,
-    title: 'Wielkie Losowanie Zorzy Północnej (Nocne Przesilenie)',
-    description: 'Wybierz 3 runy z prastarego Futharku Starszego. Traf wszystkie 3, aby zdobyć Główny Skarbiec Odyna!',
-    ticketPrice: 20, // 20 Skirnirów za los
-    jackpot: 2850, // Pula Skirnirów
-    bonusHousePoints: 100, // Punkty dla domu za trafienie 3 run
-    status: 'active', // 'active' | 'drawing' | 'completed'
-    endDate: '2026-08-30T21:00:00.000Z',
-    winningRunes: [], // Empty until drawn
-    totalTicketsSold: 85,
-    participantsCount: 28
-  },
-  {
-    id: 'round-41',
-    roundNumber: 41,
-    title: 'Święto Ognia Kuźni Brokkura',
-    description: 'Losowanie na otwarcie jarmarku jesiennego.',
-    ticketPrice: 20,
-    jackpot: 2400,
-    bonusHousePoints: 100,
-    status: 'completed',
-    endDate: '2026-08-15T20:00:00.000Z',
-    winningRunes: ['thurisaz', 'algiz', 'fehu'],
-    totalTicketsSold: 72,
-    participantsCount: 24,
-    winnersSummary: [
-      {
-        tier: 'I Miejsce (3 Runy)',
-        winnerName: 'Einar Lodowy Cień',
-        house: 'ravnheim',
-        prizeSkirnirs: 1440,
-        prizePoints: 100,
-        runes: ['thurisaz', 'algiz', 'fehu']
-      },
-      {
-        tier: 'II Miejsce (2 Runy)',
-        winnerName: 'Valdemar Krag-Hansen',
-        house: 'ravnheim',
-        prizeSkirnirs: 120,
-        prizePoints: 40,
-        runes: ['thurisaz', 'algiz', 'kenaz']
-      },
-      {
-        tier: 'II Miejsce (2 Runy)',
-        winnerName: 'Astrid Reinhall',
-        house: 'reinhall',
-        prizeSkirnirs: 120,
-        prizePoints: 40,
-        runes: ['algiz', 'fehu', 'ansuz']
-      }
-    ]
-  }
-];
+export const SEED_LOTTERY_ROUNDS = [];
 
-export const SEED_LOTTERY_USER_TICKETS = [
-  {
-    id: 'ticket-valdemar-1',
-    roundId: 'round-current',
-    userId: 'usr-valdemar',
-    userName: 'Valdemar Krag-Hansen',
-    house: 'ravnheim',
-    chosenRunes: ['ansuz', 'perthro', 'algiz'],
-    purchasedAt: '2026-08-21 16:30'
-  },
-  {
-    id: 'ticket-valdemar-2',
-    roundId: 'round-current',
-    userId: 'usr-valdemar',
-    userName: 'Valdemar Krag-Hansen',
-    house: 'ravnheim',
-    chosenRunes: ['fehu', 'sowilo', 'dagaz'],
-    purchasedAt: '2026-08-22 10:15'
-  }
-];
+export const SEED_LOTTERY_USER_TICKETS = [];

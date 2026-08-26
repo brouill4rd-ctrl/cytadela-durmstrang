@@ -332,4 +332,64 @@ router.get('/salaries', requireAuth, requireRole('admin'), (req, res) => {
   res.json(rows.map(dbTeacherSalaryToFrontend));
 });
 
+// POST /api/bank/deposit — direct currency deposit/withdrawal for rewards & penalties (zalogowani)
+// Używane przez: nagrody z gier, loteria, misje, sekrety, alkemia itp.
+router.post('/deposit', requireAuth, (req, res) => {
+  const { userId, amount, type = 'inflow', title, category = 'nagroda' } = req.body;
+  const numAmount = parseInt(amount, 10);
+
+  if (!userId || isNaN(numAmount) || numAmount === 0) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane depozytu.' });
+  }
+
+  // Tylko własne konto lub admin
+  if (userId !== req.user.id && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Brak uprawnień do modyfikacji cudzej skrytki.' });
+  }
+
+  const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
+
+  const isDeposit = type === 'inflow' || numAmount > 0;
+  const absAmount = Math.abs(numAmount);
+  const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+  const txId = `tx-dep-${Date.now()}`;
+  const refCode = `SKR-DEP-${Math.floor(10000 + Math.random() * 90000)}`;
+
+  const execute = db.transaction(() => {
+    if (isDeposit) {
+      db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(absAmount, userId);
+      db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(absAmount, userId);
+    } else {
+      db.prepare('UPDATE users SET currency = MAX(0, currency - ?) WHERE id = ?').run(absAmount, userId);
+      db.prepare('UPDATE bank_accounts SET balance = MAX(0, balance - ?) WHERE user_id = ?').run(absAmount, userId);
+    }
+
+    db.prepare(`
+      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
+      VALUES (?, 'cytadela-treasury', 'Skarbiec Cytadeli', ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, datetime('now'))
+    `).run(
+      txId,
+      userId, userRow.full_name,
+      isDeposit ? absAmount : -absAmount,
+      isDeposit ? 'inflow' : 'outflow',
+      category,
+      title || (isDeposit ? 'Nagroda z aktywności' : 'Opłata / Wydatek'),
+      '',
+      refCode, nowStr
+    );
+  });
+
+  execute();
+
+  const updatedUser = db.prepare('SELECT currency FROM users WHERE id = ?').get(userId);
+  const tx = db.prepare('SELECT * FROM bank_transactions WHERE id = ?').get(txId);
+
+  res.json({
+    success: true,
+    newBalance: updatedUser.currency,
+    transaction: dbBankTransactionToFrontend(tx)
+  });
+});
+
 export default router;

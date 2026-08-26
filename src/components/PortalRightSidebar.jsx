@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { RunicDuelModal } from './RunicDuelModal';
@@ -29,7 +30,8 @@ import {
   Swords,
   BookOpen,
   Send,
-  Shield
+  Shield,
+  ClipboardList
 } from 'lucide-react';
 
 export const PortalRightSidebar = ({
@@ -55,6 +57,15 @@ export const PortalRightSidebar = ({
 
   const [duelModalOpen, setDuelModalOpen] = useState(false);
   const [rankingTab, setRankingTab] = useState('students'); // 'students' | 'staff'
+  const [enrollmentData, setEnrollmentData] = useState(null);
+
+  useEffect(() => {
+    Promise.all([api.getEnrollmentConfig(), api.getEnrollmentStats()]).then(([cfgR, statsR]) => {
+      if (cfgR.ok && statsR.ok) {
+        setEnrollmentData({ config: cfgR.data, stats: statsR.data });
+      }
+    }).catch(() => {});
+  }, []);
 
   const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
@@ -253,6 +264,87 @@ export const PortalRightSidebar = ({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          1.5. BLOK: KANCELARIA ZAPISÓW
+          ========================================================================= */}
+      <div className="menuBlock">
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('enrollments')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('enrollments').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('enrollments')?.rune || 'ᛜ'}</div>
+          <ClipboardList size={36} color="rgba(197,159,78,0.6)" style={{ position: 'relative', zIndex: 2 }} />
+        </div>
+
+        <div className="menuBlockTitle">
+          <span className="rune-bracket">ᛞ</span>
+          <span>Kancelaria Zapisów</span>
+          <span className="rune-bracket">ᛞ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          {enrollmentData ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {/* Status */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.7rem',
+                borderRadius: 5,
+                border: `1px solid ${enrollmentData.config.enrollmentOpen ? '#4ade8055' : '#ef444455'}`,
+                background: enrollmentData.config.enrollmentOpen ? 'rgba(74,222,128,0.08)' : 'rgba(239,68,68,0.08)'
+              }}>
+                <span style={{ fontSize: '0.65rem', width: 8, height: 8, borderRadius: '50%', background: enrollmentData.config.enrollmentOpen ? '#4ade80' : '#ef4444', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: enrollmentData.config.enrollmentOpen ? '#4ade80' : '#f87171', letterSpacing: '0.05em' }}>
+                  {enrollmentData.config.enrollmentOpen ? 'ZAPISY OTWARTE' : 'ZAPISY ZAMKNIĘTE'}
+                </span>
+              </div>
+
+              {/* Stats grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', fontSize: '0.72rem' }}>
+                {[
+                  { label: 'Uczniów', value: enrollmentData.stats.studentsEnrolled, sub: `+${enrollmentData.stats.studentsPending} ocz.`, color: '#e5e7eb' },
+                  { label: 'Profesorów', value: enrollmentData.stats.professorsEnrolled, sub: `${enrollmentData.stats.professorsPending} podań`, color: '#e5e7eb' }
+                ].map(s => (
+                  <div key={s.label} style={{ background: 'rgba(8,12,18,0.7)', border: '1px solid rgba(197,159,78,0.15)', borderRadius: 4, padding: '0.4rem 0.5rem', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-heading)', color: 'var(--gold-ancient)', fontSize: '1.2rem', fontWeight: 700, lineHeight: 1 }}>{s.value}</div>
+                    <div style={{ color: '#9ca3af', marginTop: '0.15rem' }}>{s.label}</div>
+                    <div style={{ color: '#6b7280', fontSize: '0.65rem' }}>{s.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Link */}
+              <button
+                onClick={() => handleNav('enrollment-chamber')}
+                style={{
+                  width: '100%',
+                  padding: '0.4rem',
+                  background: 'rgba(197,159,78,0.08)',
+                  border: '1px solid rgba(197,159,78,0.25)',
+                  borderRadius: 4,
+                  color: 'var(--gold-ancient)',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                ✦ Przejdź do Kancelarii Zapisów
+              </button>
+            </div>
+          ) : (
+            <div style={{ color: '#6b7280', fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>Ładowanie...</div>
+          )}
         </div>
       </div>
 

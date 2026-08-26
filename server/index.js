@@ -34,6 +34,7 @@ import prologueRoutes from './routes/prologue.js';
 import beltRoutes from './routes/belt.js';
 import ordersRoutes from './routes/orders.js';
 import absencesRoutes from './routes/absences.js';
+import enrollmentsRoutes from './routes/enrollments.js';
 import { discordBot } from './discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -99,6 +100,7 @@ app.use('/api/prologue', prologueRoutes);
 app.use('/api/belt', beltRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/absences', absencesRoutes);
+app.use('/api/enrollments', enrollmentsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

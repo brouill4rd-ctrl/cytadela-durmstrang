@@ -1133,6 +1133,25 @@ export const Navbar = () => {
               📋 Izba Przyjęć & Usprawiedliwień
             </button>
           )}
+          {currentUser && (
+            <button
+              onClick={() => handleNavClick('enrollment-chamber')}
+              style={{
+                padding: '0.65rem 0.8rem',
+                background: activeView === 'enrollment-chamber' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
+                border: activeView === 'enrollment-chamber' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
+                borderRadius: '4px',
+                color: '#f7dca0',
+                textAlign: 'left',
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              📜 Kancelaria Zapisów
+            </button>
+          )}
           <button
             onClick={() => handleNavClick('rules-guide')}
             style={{
