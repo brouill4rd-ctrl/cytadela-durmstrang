@@ -850,6 +850,16 @@ export const LessonDetailView = () => {
                           <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                             {p.isPresent ? (
                               <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.9rem' }}>✓</span>
+                            ) : p.excuseStatus === 'approved' ? (
+                              <span title="Usprawiedliwiona nieobecność" style={{ color: '#3b82f6', fontWeight: 800, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+                                <span>✗</span>
+                                <span style={{ fontSize: '0.65rem', color: '#60a5fa', letterSpacing: '0.03em', fontWeight: 700 }}>USPRAW.</span>
+                              </span>
+                            ) : p.excuseStatus === 'pending' ? (
+                              <span title="Usprawiedliwienie oczekuje" style={{ color: '#c59f4e', fontWeight: 800, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+                                <span>✗</span>
+                                <span style={{ fontSize: '0.65rem', color: '#c59f4e', letterSpacing: '0.03em', fontWeight: 700 }}>◷ OCZEKUJE</span>
+                              </span>
                             ) : (
                               <span style={{ color: '#ef4444', fontWeight: 800, fontSize: '0.9rem' }}>✗</span>
                             )}

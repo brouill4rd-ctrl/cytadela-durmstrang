@@ -1456,7 +1456,81 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (school_year_id) REFERENCES memory_school_years(id) ON DELETE CASCADE
   );
+
+  -- ==================== IZBA PRZYJĘĆ I USPRAWIEDLIWIEŃ ====================
+
+  CREATE TABLE IF NOT EXISTS absence_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    house TEXT DEFAULT '',
+    class_year TEXT DEFAULT '',
+    type TEXT NOT NULL DEFAULT 'post_factum', -- 'planned' | 'post_factum'
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    extra_info TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected' | 'cancelled' | 'invalid'
+    review_comment TEXT DEFAULT '',
+    reviewed_by TEXT DEFAULT '',
+    reviewed_by_name TEXT DEFAULT '',
+    submitted_at TEXT NOT NULL,
+    reviewed_at TEXT DEFAULT '',
+    school_year TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS absence_request_lessons (
+    id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL,
+    lesson_id TEXT DEFAULT '',
+    timetable_entry_id TEXT DEFAULT '',
+    subject_id TEXT DEFAULT '',
+    subject_name TEXT DEFAULT '',
+    professor_id TEXT DEFAULT '',
+    professor_name TEXT DEFAULT '',
+    lesson_date TEXT DEFAULT '',
+    lesson_start TEXT DEFAULT '',
+    lesson_end TEXT DEFAULT '',
+    participant_id TEXT DEFAULT '',
+    FOREIGN KEY (request_id) REFERENCES absence_requests(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS absence_audit_logs (
+    id TEXT PRIMARY KEY,
+    request_id TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    actor_name TEXT NOT NULL,
+    actor_role TEXT NOT NULL,
+    action TEXT NOT NULL,
+    detail TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (request_id) REFERENCES absence_requests(id) ON DELETE CASCADE
+  );
 `);
+
+// ===================== MIGRATIONS — IZBA PRZYJĘĆ ====================
+
+try {
+  const partCols = db.pragma('table_info(lesson_participants)');
+  if (partCols.length > 0 && !partCols.some(c => c.name === 'excuse_status')) {
+    db.exec(`ALTER TABLE lesson_participants ADD COLUMN excuse_status TEXT DEFAULT NULL;`);
+    db.exec(`ALTER TABLE lesson_participants ADD COLUMN excuse_request_id TEXT DEFAULT '';`);
+    console.log('[DB] Migration: added excuse_status, excuse_request_id to lesson_participants');
+  }
+} catch (e) {
+  console.warn('[DB] Migration excuse_status:', e.message);
+}
+
+// Ensure school_config has default absence deadline
+try {
+  const existing = db.prepare(`SELECT value FROM school_config WHERE key = 'absenceExcuseDeadlineDays'`).get();
+  if (!existing) {
+    db.prepare(`INSERT INTO school_config (key, value) VALUES ('absenceExcuseDeadlineDays', '7')`).run();
+  }
+} catch (_) {}
 
 // ===================== SEED DATA =====================
 
@@ -5702,6 +5776,69 @@ export function dbMemoryCustomAchievementToFrontend(row) {
     imageUrl: row.image_url,
     icon: row.icon,
     createdAt: row.created_at
+  };
+}
+
+// ==================== IZBA PRZYJĘĆ — SERIALIZERS ====================
+
+export function dbAbsenceRequestToFrontend(row, lessons = []) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    house: row.house || '',
+    classYear: row.class_year || '',
+    type: row.type,
+    startAt: row.start_at,
+    endAt: row.end_at,
+    reason: row.reason,
+    extraInfo: row.extra_info || '',
+    status: row.status,
+    reviewComment: row.review_comment || '',
+    reviewedBy: row.reviewed_by || '',
+    reviewedByName: row.reviewed_by_name || '',
+    submittedAt: row.submitted_at,
+    reviewedAt: row.reviewed_at || '',
+    schoolYear: row.school_year || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lessons
+  };
+}
+
+export function dbAbsenceRequestLessonToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    lessonId: row.lesson_id || '',
+    timetableEntryId: row.timetable_entry_id || '',
+    subjectId: row.subject_id || '',
+    subjectName: row.subject_name || '',
+    professorId: row.professor_id || '',
+    professorName: row.professor_name || '',
+    lessonDate: row.lesson_date || '',
+    lessonStart: row.lesson_start || '',
+    lessonEnd: row.lesson_end || '',
+    participantId: row.participant_id || ''
+  };
+}
+
+export function dbParticipantToFrontendWithExcuse(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    lessonId: row.lesson_id,
+    studentId: row.student_id || '',
+    studentName: row.student_name,
+    house: row.house,
+    isPresent: !!row.is_present,
+    pointsAwarded: row.points_awarded || 0,
+    comment: row.comment || '',
+    role: row.role || 'student',
+    excuseStatus: row.excuse_status || null,
+    excuseRequestId: row.excuse_request_id || ''
   };
 }
 

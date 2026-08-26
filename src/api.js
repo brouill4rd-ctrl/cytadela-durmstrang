@@ -572,7 +572,28 @@ export const api = {
   createMemoryAward: (aw) => apiFetch('/memory/awards', { method: 'POST', body: JSON.stringify(aw) }),
   deleteMemoryAward: (id) => apiFetch(`/memory/awards/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   createMemoryAchievement: (ach) => apiFetch('/memory/custom-achievements', { method: 'POST', body: JSON.stringify(ach) }),
-  deleteMemoryAchievement: (id) => apiFetch(`/memory/custom-achievements/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  deleteMemoryAchievement: (id) => apiFetch(`/memory/custom-achievements/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // ==================== IZBA PRZYJĘĆ I USPRAWIEDLIWIEŃ ====================
+  getAbsenceRequests: (filters = {}) => {
+    const p = new URLSearchParams();
+    if (filters.status) p.append('status', filters.status);
+    if (filters.type) p.append('type', filters.type);
+    const q = p.toString() ? `?${p.toString()}` : '';
+    return apiFetch(`/absences${q}`);
+  },
+  getAbsenceQueue: () => apiFetch('/absences/queue'),
+  getAbsenceStats: () => apiFetch('/absences/stats'),
+  getUnexcusedAbsences: () => apiFetch('/absences/unexcused'),
+  getAbsenceConfig: () => apiFetch('/absences/config'),
+  updateAbsenceConfig: (data) => apiFetch('/absences/config', { method: 'PUT', body: JSON.stringify(data) }),
+  getAbsenceRequest: (id) => apiFetch(`/absences/${id}`),
+  createAbsenceRequest: (data) => apiFetch('/absences', { method: 'POST', body: JSON.stringify(data) }),
+  updateAbsenceRequest: (id, data) => apiFetch(`/absences/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  cancelAbsenceRequest: (id) => apiFetch(`/absences/${id}`, { method: 'DELETE' }),
+  reviewAbsenceRequest: (id, data) => apiFetch(`/absences/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
+  getLessonParticipantsWithExcuse: (lessonId) => apiFetch(`/absences/lesson/${encodeURIComponent(lessonId)}/participants`),
+  getTimetablePreviewForAbsence: (startAt, endAt) => apiFetch(`/absences/timetable-preview?startAt=${encodeURIComponent(startAt)}&endAt=${encodeURIComponent(endAt)}`)
 };
 
 export default api;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { api } from '../api';
 import {
@@ -446,8 +446,13 @@ export const GazetteFlipbook = () => {
   const [zoom, setZoom] = useState(1);
   const [singlePage, setSinglePage] = useState(window.innerWidth < 768);
   const [flipping, setFlipping] = useState(null); // 'next' | 'prev' | null
+  const [flipContent, setFlipContent] = useState(null); // { front: page, back: page, dir: string }
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [interactiveState, setInteractiveState] = useState({ quizzes: {}, crosswords: {}, goToPage: null });
+
+  const reducedMotion = useMemo(() =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  , []);
 
   const bookRef = useRef(null);
   const touchStartRef = useRef(null);
@@ -536,26 +541,53 @@ export const GazetteFlipbook = () => {
     } catch (_) {}
   };
 
+  const FLIP_DURATION = reducedMotion ? 0 : 650;
+
   const goNext = useCallback(() => {
     if (currentSpread >= maxSpread || flipping) return;
-    setFlipping('next');
     playFlipSound();
+
+    if (!reducedMotion) {
+      // Capture content for the flip overlay
+      const nextSpread = currentSpread + 1;
+      const frontIdx = singlePage ? currentSpread : currentSpread * 2 + 1;
+      const backIdx  = singlePage ? nextSpread  : nextSpread * 2;
+      const frontPage = pages[frontIdx];
+      const backPage  = pages[backIdx];
+      const dir = singlePage ? 'snext' : 'next';
+      setFlipContent({ front: frontPage, back: backPage, dir });
+    }
+
+    setFlipping('next');
     setTimeout(() => {
       setCurrentSpread(prev => Math.min(prev + 1, maxSpread));
       setFlipping(null);
+      setFlipContent(null);
       api.logGazetteAnalytics({ issueId: activeGazetteIssueId, action: 'page_view', pageNumber: currentSpread + 1 });
-    }, 400);
-  }, [currentSpread, maxSpread, flipping, soundEnabled]);
+    }, FLIP_DURATION);
+  }, [currentSpread, maxSpread, flipping, pages, singlePage, reducedMotion, soundEnabled]);
 
   const goPrev = useCallback(() => {
     if (currentSpread <= 0 || flipping) return;
-    setFlipping('prev');
     playFlipSound();
+
+    if (!reducedMotion) {
+      const prevSpread = currentSpread - 1;
+      const frontIdx = singlePage ? currentSpread : currentSpread * 2;
+      const backIdx  = singlePage ? prevSpread  : prevSpread * 2 + 1;
+      const frontPage = pages[frontIdx];
+      const backPage  = pages[backIdx];
+      const dir = singlePage ? 'sprev' : 'prev';
+      setFlipContent({ front: frontPage, back: backPage, dir });
+    }
+
+    setFlipping('prev');
     setTimeout(() => {
       setCurrentSpread(prev => Math.max(prev - 1, 0));
       setFlipping(null);
-    }, 400);
-  }, [currentSpread, flipping, soundEnabled]);
+      setFlipContent(null);
+    }, FLIP_DURATION);
+  }, [currentSpread, flipping, pages, singlePage, reducedMotion, soundEnabled]);
 
   const goToSpread = (idx) => {
     const clamped = Math.max(0, Math.min(idx, maxSpread));
@@ -750,7 +782,7 @@ export const GazetteFlipbook = () => {
               <div className="gzfb-page-content">
                 {renderPageContent(page, issue, articles, quizzes, crosswords, secrets, interactiveState, setInteractiveState)}
               </div>
-              <div className="gzfb-page-number">{page.pageNumber}</div>
+              <div className="gzfb-page-number">— {page.pageNumber} —</div>
               {/* Corner fold hint */}
               {idx === (singlePage ? 0 : 1) && currentSpread < maxSpread && (
                 <div className="gzfb-corner-fold" onClick={goNext} />
@@ -761,6 +793,30 @@ export const GazetteFlipbook = () => {
 
         {/* Right navigation zone */}
         <div className="gzfb-click-zone gzfb-click-right" onClick={goNext} />
+
+        {/* ═══ 3D FLIP OVERLAY ═══ */}
+        {flipping && flipContent && !reducedMotion && (
+          <div className={`gzfb-flip-overlay gzfb-flip-overlay--${flipContent.dir}`}>
+            <div className="gzfb-flip-card">
+              <div className="gzfb-flip-front">
+                <div className="gzfb-flip-face-content">
+                  {flipContent.front && renderPageContent(
+                    flipContent.front, issue, articles, quizzes, crosswords, secrets,
+                    interactiveState, () => {}
+                  )}
+                </div>
+              </div>
+              <div className="gzfb-flip-back">
+                <div className="gzfb-flip-face-content">
+                  {flipContent.back && renderPageContent(
+                    flipContent.back, issue, articles, quizzes, crosswords, secrets,
+                    interactiveState, () => {}
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═══════ BOTTOM NAV ═══════ */}

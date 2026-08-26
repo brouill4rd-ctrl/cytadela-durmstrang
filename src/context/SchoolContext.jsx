@@ -144,6 +144,13 @@ const ROUTE_ALIASES = {
   '/homework-grading': 'homework-grading',
   '/zadaj-prace': 'homework-creator',
   '/sprawdzaj-prace': 'homework-grading',
+  // Izba Przyjęć i Usprawiedliwień
+  '/izba-przyjec': 'absence-chamber',
+  '/usprawiedliwienia': 'absence-chamber',
+  '/nieobecnosci': 'absence-chamber',
+  '/absence': 'absence-chamber',
+  '/absence-chamber': 'absence-chamber',
+  '/izba-usprawiedliwien': 'absence-chamber',
   // Izba Pamięci
   '/izba-pamieci': 'memory',
   '/pamiec': 'memory',
@@ -370,6 +377,12 @@ export const SchoolProvider = ({ children }) => {
     setMemoryTab('order');
     setActiveView('memory');
     window.location.hash = `#/izba-pamieci/zakon/${houseKey}`;
+  };
+
+  // Izba Przyjęć i Usprawiedliwień — Navigation
+  const navigateToAbsenceChamber = () => {
+    setActiveView('absence-chamber');
+    window.location.hash = '#/izba-przyjec';
   };
 
   // Żelazne Pióro — Navigation helpers
@@ -1306,15 +1319,35 @@ Dyrektor Cytadeli Durmstrang`
         setDocuments(docsRes.data);
       }
 
-      // Load CMS Banners & Blocks
+      // Load CMS Banners & Blocks — merge z defaults, preferując lokalne ścieżki
       const bannersRes = await api.getCmsBanners();
       if (bannersRes.ok && bannersRes.data.length > 0) {
-        setCategoryBanners(bannersRes.data);
+        const defaultIds = new Set(CATEGORY_BANNERS.map(b => b.id));
+        const merged = CATEGORY_BANNERS.map(def => {
+          const backend = bannersRes.data.find(b => b.id === def.id);
+          if (!backend) return def;
+          const resolvedBg = def.bgImage?.startsWith('/')
+            ? def.bgImage
+            : (backend.bgImage || def.bgImage);
+          return { ...def, ...backend, bgImage: resolvedBg };
+        });
+        const backendOnly = bannersRes.data.filter(b => !defaultIds.has(b.id));
+        setCategoryBanners([...merged, ...backendOnly]);
       }
 
       const blocksRes = await api.getCmsBlocks();
       if (blocksRes.ok && blocksRes.data.length > 0) {
-        setBlockGraphics(blocksRes.data);
+        const defaultIds = new Set(DEFAULT_BLOCK_GRAPHICS.map(b => b.id));
+        const merged = DEFAULT_BLOCK_GRAPHICS.map(def => {
+          const backend = blocksRes.data.find(b => b.id === def.id);
+          if (!backend) return def;
+          const resolvedBg = def.bgImage?.startsWith('/')
+            ? def.bgImage
+            : (backend.bgImage || def.bgImage);
+          return { ...def, ...backend, bgImage: resolvedBg };
+        });
+        const backendOnly = blocksRes.data.filter(b => !defaultIds.has(b.id));
+        setBlockGraphics([...merged, ...backendOnly]);
       }
 
       // Load Calendar Events
@@ -3840,7 +3873,9 @@ Dyrektor Cytadeli Durmstrang`
         navigateToMemory,
         navigateToMemoryYear,
         navigateToMemoryPerson,
-        navigateToMemoryOrder
+        navigateToMemoryOrder,
+        // Izba Przyjęć i Usprawiedliwień
+        navigateToAbsenceChamber
       }}
     >
       {children}
