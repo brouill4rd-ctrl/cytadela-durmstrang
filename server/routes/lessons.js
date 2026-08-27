@@ -4,9 +4,17 @@ import db, {
   dbMessageToFrontend,
   dbParticipantToFrontend,
   dbPointTxToFrontend,
-  calculateHouseRankings
+  calculateHouseRankings,
+  isProfessorOfSubject
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import {
+  awardPoints,
+  deductPoints,
+  correctTransaction,
+  revokePointsForLesson,
+  recalculateUserPoints
+} from '../services/pointsService.js';
 
 const router = express.Router();
 
@@ -179,7 +187,7 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
     const {
       id = `les-${Date.now()}`,
       subjectId = 'eliksiry',
-      subjectName = 'Eliksiry i Destylacja Soli',
+      subjectName,
       classYear = 'Klasa I',
       topic = 'Nowa lekcja',
       description = '',
@@ -196,13 +204,22 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
       messages = []
     } = req.body;
 
+    // Subject ownership check
+    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, subjectId)) {
+      return res.status(403).json({ error: 'Możesz tworzyć lekcje tylko dla przedmiotów, które prowadzisz.' });
+    }
+
+    // Resolve subject name from database
+    const subjectRow = db.prepare('SELECT name FROM subjects WHERE id = ?').get(subjectId);
+    const resolvedSubjectName = subjectName || subjectRow?.name || 'Przedmiot';
+
     const insertLesson = db.prepare(`
       INSERT INTO lessons (id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, professor_avatar, date, status, discord_thread_id, discord_channel_id, discord_guild_id, discord_thread_url, total_points, participants_count, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
 
     insertLesson.run(
-      id, subjectId, subjectName, classYear, topic, description, professorId,
+      id, subjectId, resolvedSubjectName, classYear, topic, description, professorId,
       professorName, professorAvatar, date, status, discordThreadId,
       discordChannelId, discordGuildId, discordThreadUrl, 0, participants.length
     );
@@ -357,46 +374,36 @@ router.post('/:id/publish', requireAuth, requireRole('admin', 'professor'), (req
 
     // Begin SQLite Transaction for atomic ledger publication
     const publishTransaction = db.transaction(() => {
-      // 1. Remove any previous unrevoked transactions for this lesson (in case of re-publish)
-      db.prepare('DELETE FROM point_transactions WHERE lesson_id = ?').run(id);
+      // 1. Remove any previous transactions for this lesson (in case of re-publish)
+      revokePointsForLesson(id);
 
       let totalCalculatedPoints = 0;
 
-      // 2. Insert point transactions into the ledger for all participants with points awarded
-      const insertTx = db.prepare(`
-        INSERT INTO point_transactions (id, student_id, student_name, house, points, source, lesson_id, professor_id, professor_name, date, comment, is_revoked, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
-      `);
-
+      // 2. Insert point transactions via central service
       for (const p of participants) {
         const pts = parseInt(p.points_awarded, 10) || 0;
         if (pts > 0 && p.is_present) {
           totalCalculatedPoints += pts;
-          const txId = `tx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-          insertTx.run(
-            txId,
-            p.student_id || null,
-            p.student_name,
-            p.house.toLowerCase(),
-            pts,
-            `${lesson.subject_name} — ${lesson.topic}`,
-            id,
-            lesson.professor_id,
-            lesson.professor_name,
-            lesson.date,
-            p.comment || 'Udział i aktywność w lekcji'
-          );
-
-          // Update student points in users table if user exists
-          if (p.student_id) {
-            db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(pts, pts * 10, p.student_id);
-          }
+          awardPoints({
+            studentId: p.student_id || null,
+            studentName: p.student_name,
+            house: p.house,
+            points: pts,
+            source: `${lesson.subject_name} — ${lesson.topic}`,
+            sourceType: 'LESSON',
+            sourceId: id,
+            lessonId: id,
+            actorId: lesson.professor_id,
+            actorName: lesson.professor_name,
+            comment: p.comment || 'Udział i aktywność w lekcji',
+            idempotencyKey: `lesson-${id}-${p.student_id || p.student_name}`
+          });
         }
       }
 
       // 3. Update lesson status to 'published'
       db.prepare(`
-        UPDATE lessons 
+        UPDATE lessons
         SET status = 'published', total_points = ?, published_at = datetime('now'), updated_at = datetime('now')
         WHERE id = ?
       `).run(totalCalculatedPoints, id);
@@ -442,50 +449,14 @@ router.post('/ledger/correct', requireAuth, requireRole('admin'), (req, res) => 
       return res.status(400).json({ error: 'Wymagane parametry: transactionId, newPoints, reason.' });
     }
 
-    const tx = db.prepare('SELECT * FROM point_transactions WHERE id = ?').get(transactionId);
-    if (!tx) {
-      return res.status(404).json({ error: 'Rekord punktowy nie został odnaleziony.' });
-    }
-
-    const prevPoints = tx.points;
-    const diff = parseInt(newPoints, 10) - prevPoints;
-
-    const correctTx = db.transaction(() => {
-      // 1. Update transaction
-      db.prepare('UPDATE point_transactions SET points = ?, comment = ? WHERE id = ?').run(
-        parseInt(newPoints, 10),
-        `${tx.comment || ''} [Korekta: ${reason}]`,
-        transactionId
-      );
-
-      // 2. Insert audit log
-      db.prepare(`
-        INSERT INTO point_audit_logs (id, point_transaction_id, previous_points, new_points, modified_by, reason, lesson_id, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `).run(
-        `audit-${Date.now()}`,
-        transactionId,
-        prevPoints,
-        parseInt(newPoints, 10),
-        modifiedBy,
-        reason,
-        tx.lesson_id
-      );
-
-      // 3. Adjust user points if student exists
-      if (tx.student_id) {
-        db.prepare('UPDATE users SET points = MAX(0, points + ?) WHERE id = ?').run(diff, tx.student_id);
-      }
-    });
-
-    correctTx();
+    const result = correctTransaction(transactionId, newPoints, req.user.id, modifiedBy, reason);
 
     const updatedTx = db.prepare('SELECT * FROM point_transactions WHERE id = ?').get(transactionId);
     const rankings = calculateHouseRankings('overall');
 
     res.json({
       success: true,
-      message: `Pomyślnie skorygowano punkty z ${prevPoints} na ${newPoints}. Zmiana została zaprotokołowana w audycie.`,
+      message: `Pomyślnie skorygowano punkty z ${result.prevPoints} na ${result.newPoints}. Zmiana została zaprotokołowana w audycie.`,
       transaction: dbPointTxToFrontend(updatedTx),
       rankings
     });
@@ -528,23 +499,18 @@ router.post('/points/award', requireAuth, (req, res) => {
       }
     }
 
-    const txId = `tx-act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    db.prepare(`
-      INSERT INTO point_transactions (id, student_id, student_name, house, points, source, lesson_id, professor_id, professor_name, date, comment, is_revoked, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, NULL, 'system', 'Cytadela Durmstrang', date('now'), ?, 0, datetime('now'))
-    `).run(
-      txId,
-      studentId || null,
-      studentName || 'Adept',
-      house.toLowerCase(),
+    const txId = awardPoints({
+      studentId: studentId || null,
+      studentName: studentName || 'Adept',
+      house,
       points,
-      reason || 'Grywalizacja & Aktywność w Cytadeli',
-      reason || 'Grywalizacja'
-    );
-
-    if (studentId) {
-      db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(points, points * 10, studentId);
-    }
+      source: reason || 'Grywalizacja & Aktywność w Cytadeli',
+      sourceType: 'ACTIVITY',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'System',
+      comment: reason || 'Grywalizacja',
+      idempotencyKey: req.body.idempotencyKey || ''
+    });
 
     const rankings = calculateHouseRankings('overall');
     res.json({ success: true, txId, rankings });
@@ -564,10 +530,10 @@ router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
     }
 
     const deleteTx = db.transaction(() => {
-      // 1. Revoke / delete ledger transactions
-      db.prepare('DELETE FROM point_transactions WHERE lesson_id = ?').run(id);
+      // 1. Revoke ledger transactions and recalculate affected users
+      revokePointsForLesson(id);
 
-      // 2. Delete messages and participants (CASCADE via DB or explicit)
+      // 2. Delete messages and participants
       db.prepare('DELETE FROM lesson_messages WHERE lesson_id = ?').run(id);
       db.prepare('DELETE FROM lesson_participants WHERE lesson_id = ?').run(id);
 

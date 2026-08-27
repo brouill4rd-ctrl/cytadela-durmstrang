@@ -34,7 +34,7 @@ export const ProfessorJournalEditor = () => {
   const [formData, setFormData] = useState({
     id: `les-${Date.now()}`,
     subjectId: 'eliksiry',
-    subjectName: 'Eliksiry i Destylacja Soli',
+    subjectName: 'Eliksiry',
     classYear: 'Klasa II',
     topic: '',
     description: '',
@@ -59,7 +59,7 @@ export const ProfessorJournalEditor = () => {
           setFormData({
             id: data.id,
             subjectId: data.subjectId || 'eliksiry',
-            subjectName: data.subjectName || 'Eliksiry i Destylacja Soli',
+            subjectName: data.subjectName || 'Eliksiry',
             classYear: data.classYear || 'Klasa II',
             topic: data.topic || '',
             description: data.description || '',

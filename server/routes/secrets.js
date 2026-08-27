@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import db, { dbSecretToFrontend, dbUserToFrontend, calculateHouseRankings } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
+import { credit as creditSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
 
@@ -44,20 +46,31 @@ router.post('/discover', requireAuth, (req, res) => {
 
       const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
       if (userRow) {
-        db.prepare('UPDATE users SET points = points + ?, currency = currency + ? WHERE id = ?').run(points, currency, userId);
+        const idemKey = `secret-${userId}-${secretId}`;
         if (points > 0 && userRow.house) {
-          db.prepare(`
-            INSERT INTO point_transactions (id, student_id, student_name, house, points, source, date, comment, is_revoked, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, date('now'), ?, 0, datetime('now'))
-          `).run(
-            `pt-sec-${Date.now()}`,
-            userId,
-            userRow.full_name,
-            userRow.house,
+          awardPoints({
+            studentId: userId,
+            studentName: userRow.full_name,
+            house: userRow.house,
             points,
-            `Odkrycie Sekretu: ${secretId}`,
-            'Znalezienie tajemnej runy w Cytadeli'
-          );
+            source: `Odkrycie Sekretu: ${secretId}`,
+            sourceType: 'SECRET',
+            sourceId: secretId,
+            comment: 'Znalezienie tajemnej runy w Cytadeli',
+            idempotencyKey: `pt-${idemKey}`
+          });
+        }
+        if (currency > 0) {
+          creditSkirnir({
+            userId,
+            userName: userRow.full_name,
+            amount: currency,
+            category: 'sekret',
+            title: `Skarb z sekretu: ${secretId}`,
+            sourceType: 'SECRET',
+            sourceId: secretId,
+            idempotencyKey: `skr-${idemKey}`
+          });
         }
       }
 

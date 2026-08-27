@@ -36,12 +36,26 @@ import ordersRoutes from './routes/orders.js';
 import absencesRoutes from './routes/absences.js';
 import enrollmentsRoutes from './routes/enrollments.js';
 import emailPreviewRoutes from './routes/emailPreview.js';
+import housesRoutes from './routes/houses.js';
+import locationsRoutes from './routes/locations.js';
+import ceremonyRoutes from './routes/ceremony.js';
 import { discordBot } from './discordBot.js';
+import { initPointsService, recalculateAllUserPoints, backfillSchoolYear } from './services/pointsService.js';
+import { initSkirnirService, recalculateAllBalances } from './services/skirnirService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Initialize central ledger services (runs migrations)
+initPointsService(db);
+initSkirnirService(db);
+
+// Sync caches with ledger (source of truth)
+backfillSchoolYear();
+recalculateAllUserPoints();
+recalculateAllBalances();
 const distPath = path.join(__dirname, '..', 'dist');
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.SERVER_PORT || 3001;
 
 // Allowed CORS origins
 const allowedOrigins = process.env.CORS_ORIGIN 
@@ -103,6 +117,9 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/absences', absencesRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
 app.use('/api/email-preview', emailPreviewRoutes);
+app.use('/api/houses', housesRoutes);
+app.use('/api/locations', locationsRoutes);
+app.use('/api/ceremony', ceremonyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

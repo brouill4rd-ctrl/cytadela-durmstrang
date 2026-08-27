@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { SEED_LOCATIONS } from './seed/locationsData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'durmstrang.db');
@@ -1528,6 +1529,112 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (request_id) REFERENCES absence_requests(id) ON DELETE CASCADE
   );
+
+  -- ==================== DANE DOMENOWE (ZAKONY, LOKACJE, RUNY, CEREMONIA, SKLEPY, LOTERIA) ====================
+
+  CREATE TABLE IF NOT EXISTS houses (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    full_name TEXT DEFAULT '',
+    symbol_animal TEXT DEFAULT '',
+    crest_icon TEXT DEFAULT '',
+    crest_image TEXT DEFAULT '',
+    element TEXT DEFAULT '',
+    founder TEXT DEFAULT '',
+    colors TEXT DEFAULT '{}',
+    gem_name TEXT DEFAULT '',
+    motto TEXT DEFAULT '',
+    latin_motto TEXT DEFAULT '',
+    traits TEXT DEFAULT '[]',
+    common_room TEXT DEFAULT '',
+    relic TEXT DEFAULT '',
+    head_of_house TEXT DEFAULT '',
+    prefect TEXT DEFAULT '',
+    members_count INTEGER DEFAULT 0,
+    starting_points INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS locations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    nordic_name TEXT DEFAULT '',
+    floor INTEGER DEFAULT 0,
+    x REAL DEFAULT 50,
+    y REAL DEFAULT 50,
+    icon TEXT DEFAULT '📍',
+    house TEXT,
+    type TEXT DEFAULT '',
+    region TEXT DEFAULT '',
+    image TEXT DEFAULT '',
+    short_desc TEXT DEFAULT '',
+    full_lore TEXT DEFAULT '',
+    npcs TEXT DEFAULT '[]',
+    actions TEXT DEFAULT '[]',
+    secret_clue TEXT DEFAULT '',
+    quests TEXT DEFAULT '[]',
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS runes_catalog (
+    id TEXT PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    name TEXT NOT NULL,
+    meaning TEXT DEFAULT '',
+    element TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    default_count INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS rune_formulas (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    runes TEXT DEFAULT '[]',
+    catalyst TEXT DEFAULT '',
+    house_bonus TEXT,
+    reward_xp INTEGER DEFAULT 0,
+    reward_points INTEGER DEFAULT 0,
+    reward_currency INTEGER DEFAULT 0,
+    lore_reward TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ceremony_questions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    scenario TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS ceremony_options (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    house TEXT NOT NULL,
+    reason TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    FOREIGN KEY (question_id) REFERENCES ceremony_questions(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS shops (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon TEXT DEFAULT '🛍️',
+    category_slug TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS futhark_runes (
+    id TEXT PRIMARY KEY,
+    rune_char TEXT NOT NULL,
+    name TEXT NOT NULL,
+    meaning TEXT DEFAULT '',
+    color TEXT DEFAULT '#c59f4e',
+    sort_order INTEGER DEFAULT 0
+  );
 `);
 
 // ===================== MIGRATIONS — IZBA PRZYJĘĆ ====================
@@ -1585,6 +1692,77 @@ try {
   if (!en) db.prepare(`INSERT INTO school_config (key, value) VALUES ('enrollment_note', '')`).run();
 } catch (_) {}
 
+// Migration: teacher_subject_assignments — M:N join table (single source of truth)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS teacher_subject_assignments (
+      id TEXT PRIMARY KEY,
+      professor_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject_id TEXT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'primary',
+      school_year TEXT NOT NULL DEFAULT 'XIX Rok Szkolny (2026/2027)',
+      assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT DEFAULT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      assigned_by TEXT DEFAULT '',
+      UNIQUE(professor_id, subject_id, school_year)
+    );
+  `);
+
+  // Migrate existing data from the three parallel systems into this table
+  const assignmentCount = db.prepare('SELECT COUNT(*) as c FROM teacher_subject_assignments').get().c;
+  if (assignmentCount === 0) {
+    const schoolYear = db.prepare("SELECT value FROM school_config WHERE key = 'school_year'").get()?.value || 'XIX Rok Szkolny (2026/2027)';
+    const migrateAssignments = db.transaction(() => {
+      const seenPairs = new Set();
+
+      // Source 1: subjects.professor_id (where not empty)
+      const subjectsWithProf = db.prepare(`SELECT id, professor_id FROM subjects WHERE professor_id IS NOT NULL AND professor_id != ''`).all();
+      for (const s of subjectsWithProf) {
+        const key = `${s.professor_id}::${s.id}`;
+        if (!seenPairs.has(key)) {
+          seenPairs.add(key);
+          db.prepare(`INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status) VALUES (?, ?, ?, 'primary', ?, 'active')`)
+            .run(`tsa-${s.professor_id}-${s.id}`, s.professor_id, s.id, schoolYear);
+        }
+      }
+
+      // Source 2: users.taught_subject_ids JSON arrays
+      const profsWithIds = db.prepare(`SELECT id, taught_subject_ids FROM users WHERE role IN ('professor','admin') AND taught_subject_ids != '[]' AND taught_subject_ids IS NOT NULL`).all();
+      for (const p of profsWithIds) {
+        let ids = [];
+        try { ids = JSON.parse(p.taught_subject_ids || '[]'); } catch {}
+        for (const subjectId of ids) {
+          const subjectExists = db.prepare('SELECT id FROM subjects WHERE id = ?').get(subjectId);
+          if (!subjectExists) continue;
+          const key = `${p.id}::${subjectId}`;
+          if (!seenPairs.has(key)) {
+            seenPairs.add(key);
+            db.prepare(`INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status) VALUES (?, ?, ?, 'primary', ?, 'active')`)
+              .run(`tsa-${p.id}-${subjectId}`, p.id, subjectId, schoolYear);
+          }
+        }
+      }
+
+      // Source 3: approved professor_subject_applications
+      const approvedApps = db.prepare(`SELECT professor_id, subject_id FROM professor_subject_applications WHERE status = 'approved'`).all();
+      for (const a of approvedApps) {
+        const key = `${a.professor_id}::${a.subject_id}`;
+        if (!seenPairs.has(key)) {
+          seenPairs.add(key);
+          db.prepare(`INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status) VALUES (?, ?, ?, 'primary', ?, 'active')`)
+            .run(`tsa-${a.professor_id}-${a.subject_id}`, a.professor_id, a.subject_id, schoolYear);
+        }
+      }
+
+      console.log(`[DB] Migration: created ${seenPairs.size} teacher_subject_assignments from existing data`);
+    });
+    migrateAssignments();
+  }
+} catch (e) {
+  console.warn('[DB] Migration teacher_subject_assignments:', e.message);
+}
+
 // ===================== SEED DATA =====================
 
 const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
@@ -1615,9 +1793,9 @@ if (false && userCount === 0) {
     'Pochodzi ze starego skandynawskiego rodu badaczy run i pieczęci cienia.',
     '[]',
     JSON.stringify([
-      { subjectId: 'czarna-magia', subjectName: 'Czarna Magia i Nekromancja', lessonTitle: 'Wiązanie Cieni', grade: 'Wybitny (W)', professor: 'Prof. Morana Vane' },
-      { subjectId: 'starozytne-runy', subjectName: 'Starożytne Runy Północy', lessonTitle: 'Futhark Starszy', grade: 'Powyżej Oczekiwań (P)', professor: 'Prof. Sigrid Hällström' },
-      { subjectId: 'klatwy-i-uroki', subjectName: 'Klątwy i Magia Bojowa', lessonTitle: 'Tarcza Żelaza', grade: 'Wybitny (W)', professor: 'Prof. Gunnar Vargson' }
+      { subjectId: 'czarna-magia', subjectName: 'Czarna Magia', lessonTitle: 'Wiązanie Cieni', grade: 'Wybitny (W)', professor: '' },
+      { subjectId: 'starozytne-runy', subjectName: 'Starożytne Runy', lessonTitle: 'Futhark Starszy', grade: 'Powyżej Oczekiwań (P)', professor: '' },
+      { subjectId: 'klatwy-i-uroki', subjectName: 'Klątwy i Magia Bojowa', lessonTitle: 'Tarcza Żelaza', grade: 'Wybitny (W)', professor: '' }
     ]),
     JSON.stringify([
       { id: 'item-1', name: 'Zimowa Opończa z Wilczym Kołnierzem', category: 'robes', rarity: 'rare', icon: '🧥', price: 150 },
@@ -1630,7 +1808,7 @@ if (false && userCount === 0) {
   // Prof. Morana Vane
   insertUser.run(
     'usr-morana', 'morana', DEFAULT_HASH, 'morana@durmstrang.edu',
-    'Morana', 'Vane', 'Prof. Morana Vane',
+    'Morana', 'Vane', '',
     'professor', 'approved', 'ravnheim',
     'Opiekunka Zakonu Ravnheim • Katedra Czarnej Magii',
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
@@ -1638,14 +1816,14 @@ if (false && userCount === 0) {
     'Wieża Nocnych Szeptów, Sala Cienia IV',
     'Nekromancja Północna, Pętanie Eteryczne i Wiązanie Cieni',
     null, null, 1, 0, 500, 0, 0, null, null, null, null, null,
-    JSON.stringify(['czarna-magia', 'astronomia-i-zorze']),
+    JSON.stringify(['czarna-magia', 'psychologia-magiczna']),
     '[]', '[]', '2026-07-15'
   );
 
   // Prof. Gunnar Vargson
   insertUser.run(
     'usr-gunnar', 'gunnar', DEFAULT_HASH, 'gunnar@durmstrang.edu',
-    'Gunnar', 'Vargson', 'Prof. Gunnar Vargson',
+    'Gunnar', 'Vargson', '',
     'professor', 'approved', 'bjornhall',
     'Mistrz Szermierki Runicznej • Opiekun Zakonu Björnhall',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
@@ -1653,14 +1831,14 @@ if (false && userCount === 0) {
     'Twierdza Żelaznego Kręgu, Zbrojownia Północy',
     'Magia Bojowa, Tarcze Runiczne i Pojedynki Lodowe',
     null, null, 1, 0, 500, 0, 0, null, null, null, null, null,
-    JSON.stringify(['klatwy-i-uroki', 'zielarstwo-i-toksyny']),
+    JSON.stringify(['klatwy-i-uroki', 'zielarstwo']),
     '[]', '[]', '2026-07-20'
   );
 
   // Prof. Astrid Vinter (Eliksiry)
   insertUser.run(
     'usr-astrid-vinter', 'vinter', DEFAULT_HASH, 'vinter@durmstrang.edu',
-    'Astrid', 'Vinter', 'Prof. Astrid Vinter',
+    'Astrid', 'Vinter', '',
     'professor', 'approved', 'reinhall',
     'Mistrzyni Alchemii i Eliksirów • Katedra Eliksirów',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
@@ -1668,7 +1846,7 @@ if (false && userCount === 0) {
     'Krypta Kotłów Skandzy, Sala Podziemna II',
     'Eliksiry Uzdrowicielskie, Trucizny Arktyczne i Destylacja Soli',
     null, null, 1, 0, 500, 0, 0, null, null, null, null, null,
-    JSON.stringify(['eliksiry-i-destylacja', 'zielarstwo-i-toksyny']),
+    JSON.stringify(['eliksiry', 'trucizny']),
     '[]', '[]', '2026-07-10'
   );
 
@@ -1857,13 +2035,13 @@ if (false && lessonCount === 0) {
   const lesson1Id = 'les-eliksiry-wiggen-2026';
   insertLesson.run(
     lesson1Id,
-    'eliksiry-i-destylacja',
-    'Eliksiry i Destylacja Soli',
+    'eliksiry',
+    'Eliksiry',
     'Klasa II',
     'Eliksir Wiggenowy — Stabilizacja i Warzenie Północne',
     'Podczas zajęć adepci poznali arktyczną odmianę Eliksiru Wiggenowego z dodatkiem kory jarzębiny śnieżnej oraz śluzu żądłoskoczka tundrowego. Przeanalizowano proces neutralizacji toksyn i szybką regenerację ran ciętych.',
     'usr-astrid-vinter',
-    'Prof. Astrid Vinter',
+    '',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
     '2026-08-22',
     'published',
@@ -1890,7 +2068,7 @@ if (false && lessonCount === 0) {
       discordId: 'dmsg-1001',
       userId: 'usr-astrid-vinter',
       authorName: 'Astrid Vinter',
-      authorDisplayName: 'Prof. Astrid Vinter',
+      authorDisplayName: '',
       authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
       authorHouse: 'reinhall',
       content: 'Rozpoczynamy zajęcia z Eliksirów. Kociołki z białego żelaza na paleniska. Dziś omawiamy stabilizację Eliksiru Wiggenowego w warunkach północnych.',
@@ -1908,7 +2086,7 @@ if (false && lessonCount === 0) {
       discordId: 'dmsg-1002',
       userId: 'usr-astrid-vinter',
       authorName: 'Astrid Vinter',
-      authorDisplayName: 'Prof. Astrid Vinter',
+      authorDisplayName: '',
       authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
       authorHouse: 'reinhall',
       content: 'Spójrzcie na rycinę preparatu. Czy ktoś potrafi wskazać, który składnik stabilizuje wywar przed wrzeniem?',
@@ -1928,7 +2106,7 @@ if (false && lessonCount === 0) {
           storageUrl: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=800&auto=format&fit=crop&q=80',
           width: 800,
           height: 533,
-          author: 'Prof. Astrid Vinter',
+          author: '',
           messageId: 'dmsg-1002'
         }
       ]),
@@ -1946,11 +2124,11 @@ if (false && lessonCount === 0) {
       timestamp: '2026-08-22 18:37:12',
       orderIndex: 3,
       replyToId: 'dmsg-1002',
-      replyToAuthor: 'Prof. Astrid Vinter',
+      replyToAuthor: '',
       replyToContent: 'Czy ktoś potrafi wskazać, który składnik stabilizuje wywar przed wrzeniem?',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
-      reactions: JSON.stringify([{ emoji: '👍', count: 4, users: ['Prof. Astrid Vinter', 'Freja Lund'] }, { emoji: '🐻', count: 2, users: ['Erik Nilsen'] }]),
+      reactions: JSON.stringify([{ emoji: '👍', count: 4, users: ['', 'Freja Lund'] }, { emoji: '🐻', count: 2, users: ['Erik Nilsen'] }]),
       attachments: '[]',
       isEdited: 0, editHistory: '[]', isDeleted: 0
     },
@@ -1970,7 +2148,7 @@ if (false && lessonCount === 0) {
       replyToContent: 'Kora jarzębiny arktycznej, starta na miedzianej tarce pod kątem prostym?',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
-      reactions: JSON.stringify([{ emoji: '✨', count: 5, users: ['Prof. Astrid Vinter'] }, { emoji: '🦌', count: 4, users: ['Astrid Vinter'] }]),
+      reactions: JSON.stringify([{ emoji: '✨', count: 5, users: [''] }, { emoji: '🦌', count: 4, users: ['Astrid Vinter'] }]),
       attachments: '[]',
       isEdited: 0, editHistory: '[]', isDeleted: 0
     },
@@ -1989,7 +2167,7 @@ if (false && lessonCount === 0) {
       isBot: 1, isSystem: 0, isCommand: 1,
       commandData: JSON.stringify({
         name: '/quiz',
-        author: 'Prof. Astrid Vinter',
+        author: '',
         params: { temat: 'Eliksiry Klasa II', pytania: 1 },
         result: 'Rozpoczęto oficjalny błyskawiczny quiz alchemiczny Katedry.'
       }),
@@ -2028,7 +2206,7 @@ if (false && lessonCount === 0) {
       replyToContent: 'QUIZ ELIKSIRÓW: Który składnik stabilizuje Eliksir Wiggenowy...',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
-      reactions: JSON.stringify([{ emoji: '🐦', count: 4, users: ['Freja Lund', 'Valdemar Krag-Hansen'] }, { emoji: '⭐', count: 3, users: ['Prof. Astrid Vinter'] }]),
+      reactions: JSON.stringify([{ emoji: '🐦', count: 4, users: ['Freja Lund', 'Valdemar Krag-Hansen'] }, { emoji: '⭐', count: 3, users: [''] }]),
       attachments: '[]',
       isEdited: 0, editHistory: '[]', isDeleted: 0
     },
@@ -2055,7 +2233,7 @@ if (false && lessonCount === 0) {
       discordId: 'dmsg-1008',
       userId: 'usr-astrid-vinter',
       authorName: 'Astrid Vinter',
-      authorDisplayName: 'Prof. Astrid Vinter',
+      authorDisplayName: '',
       authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
       authorHouse: 'reinhall',
       content: 'Znakomicie. Wszyscy wykazali się należytą wiedzą. Wygaszamy paleniska, zlewamy próbki do flakonów z pieczęcią. Lekcja zakończona.',
@@ -2064,7 +2242,7 @@ if (false && lessonCount === 0) {
       replyToId: '', replyToAuthor: '', replyToContent: '',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
-      reactions: JSON.stringify([{ emoji: '👏', count: 6, users: ['Astrid Vinter', 'Erik Nilsen', 'Freja Lund'] }, { emoji: '🏰', count: 4, users: ['Prof. Astrid Vinter'] }]),
+      reactions: JSON.stringify([{ emoji: '👏', count: 6, users: ['Astrid Vinter', 'Erik Nilsen', 'Freja Lund'] }, { emoji: '🏰', count: 4, users: [''] }]),
       attachments: '[]',
       isEdited: 1,
       editHistory: JSON.stringify([{ content: 'Wygaszamy paleniska. Lekcja zakończona.', timestamp: '2026-08-22 18:47:00' }]),
@@ -2083,21 +2261,21 @@ if (false && lessonCount === 0) {
   }
 
   // Wpisy do Księgi Transakcji Punktowych (Single Source of Truth) dla Lekcji 1
-  insertPointTx.run('tx-1-1', 'usr-astrid-stud', 'Astrid Vinter', 'reinhall', 15, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', 'Prof. Astrid Vinter', '2026-08-22', 'Wybitna aktywność', 0, '2026-08-22 19:50:00');
-  insertPointTx.run('tx-1-2', 'usr-erik', 'Erik Nilsen', 'bjornhall', 10, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', 'Prof. Astrid Vinter', '2026-08-22', 'Aktywny udział w dyskusji', 0, '2026-08-22 19:50:00');
-  insertPointTx.run('tx-1-3', 'usr-freja', 'Freja Lund', 'ravnheim', 10, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', 'Prof. Astrid Vinter', '2026-08-22', 'Prawidłowa odpowiedź w quizie', 0, '2026-08-22 19:50:00');
+  insertPointTx.run('tx-1-1', 'usr-astrid-stud', 'Astrid Vinter', 'reinhall', 15, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', '', '2026-08-22', 'Wybitna aktywność', 0, '2026-08-22 19:50:00');
+  insertPointTx.run('tx-1-2', 'usr-erik', 'Erik Nilsen', 'bjornhall', 10, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', '', '2026-08-22', 'Aktywny udział w dyskusji', 0, '2026-08-22 19:50:00');
+  insertPointTx.run('tx-1-3', 'usr-freja', 'Freja Lund', 'ravnheim', 10, 'Eliksiry — Eliksir Wiggenowy', lesson1Id, 'usr-astrid-vinter', '', '2026-08-22', 'Prawidłowa odpowiedź w quizie', 0, '2026-08-22 19:50:00');
 
   // ==================== LEKCJA 2: CZARNA MAGIA - WIĄZANIE CIENI ====================
   const lesson2Id = 'les-czarna-magia-cienie-2026';
   insertLesson.run(
     lesson2Id,
     'czarna-magia',
-    'Czarna Magia i Nekromancja Północna',
+    'Czarna Magia Północna',
     'Klasa IV',
     'Wiązanie Cieni i Eteryczne Pętanie Eirika',
     'Wprowadzenie do zaawansowanych technik manipulacji materią cienia. Analiza manuskryptu Mistrza Eirika Krwawego Rogu oraz ćwiczenie formowania eterycznych więzów ochronnych w mrozie.',
     'usr-morana',
-    'Prof. Morana Vane',
+    '',
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
     '2026-08-20',
     'published',
@@ -2122,7 +2300,7 @@ if (false && lessonCount === 0) {
       discordId: 'dmsg-2001',
       userId: 'usr-morana',
       authorName: 'Morana Vane',
-      authorDisplayName: 'Prof. Morana Vane',
+      authorDisplayName: '',
       authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
       authorHouse: 'ravnheim',
       content: 'Gasimy znicze. Niech przemówi Wieża Nocnych Szeptów. Otwórzcie rozdział o Wiązaniu Cieni.',
@@ -2147,11 +2325,11 @@ if (false && lessonCount === 0) {
       timestamp: '2026-08-20 20:10:45',
       orderIndex: 2,
       replyToId: 'dmsg-2001',
-      replyToAuthor: 'Prof. Morana Vane',
+      replyToAuthor: '',
       replyToContent: 'Gasimy znicze. Niech przemówi Wieża Nocnych Szeptów...',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
-      reactions: JSON.stringify([{ emoji: '✨', count: 4, users: ['Prof. Morana Vane'] }]),
+      reactions: JSON.stringify([{ emoji: '✨', count: 4, users: [''] }]),
       attachments: '[]',
       isEdited: 0, editHistory: '[]', isDeleted: 0
     }
@@ -2167,9 +2345,9 @@ if (false && lessonCount === 0) {
     );
   }
 
-  insertPointTx.run('tx-2-1', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 20, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', 'Prof. Morana Vane', '2026-08-20', 'Wybitne opanowanie cieni', 0, '2026-08-20 21:20:00');
-  insertPointTx.run('tx-2-2', 'usr-magnus', 'Magnus Blom', 'reinhall', 15, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', 'Prof. Morana Vane', '2026-08-20', 'Stabilna bariera cieniowa', 0, '2026-08-20 21:20:00');
-  insertPointTx.run('tx-2-3', 'usr-sigrun', 'Sigrun Lindqvist', 'otergard', 10, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', 'Prof. Morana Vane', '2026-08-20', 'Rozproszenie anomalii', 0, '2026-08-20 21:20:00');
+  insertPointTx.run('tx-2-1', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 20, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', '', '2026-08-20', 'Wybitne opanowanie cieni', 0, '2026-08-20 21:20:00');
+  insertPointTx.run('tx-2-2', 'usr-magnus', 'Magnus Blom', 'reinhall', 15, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', '', '2026-08-20', 'Stabilna bariera cieniowa', 0, '2026-08-20 21:20:00');
+  insertPointTx.run('tx-2-3', 'usr-sigrun', 'Sigrun Lindqvist', 'otergard', 10, 'Czarna Magia — Wiązanie Cieni', lesson2Id, 'usr-morana', '', '2026-08-20', 'Rozproszenie anomalii', 0, '2026-08-20 21:20:00');
 
   console.log('[DB] Seeded initial lessons and point transactions.');
 }
@@ -2199,29 +2377,29 @@ const insertSubject = db.prepare(`
 
   const subjectsData = [
     // --- KLASA I (Fundamenty Magii) & KLASA I & II ---
-    { id: 'zaklecia', name: 'Zaklęcia Użytkowe i Transgresja', code: 'SPELL-103', icon: '✨', category: 'Magia Praktyczna', description: 'Inkantacje manipulacji grawitacją, tworzenie ścieżek świetlnych i transgresja w zamieci.', classroom: 'Korytarz Wichrów', profId: '', profName: 'Prof. Olaf Sörensen', gradient: 'linear-gradient(135deg, #1a2030 0%, #060810 100%)', classYears: ['Klasa I'], sort: 1 },
-    { id: 'transmutacja', name: 'Transmutacja i Przemiana Materii', code: 'TRANS-104', icon: '🔮', category: 'Modyfikacja Materii', description: 'Krystalizacja cieczy, animacja kamiennych obelisków i kowalska transmutacja metali.', classroom: 'Wieża Krystalizacji', profId: '', profName: 'Prof. Freja Lindqvist', gradient: 'linear-gradient(135deg, #1a1428 0%, #060410 100%)', classYears: ['Klasa I'], sort: 2 },
-    { id: 'eliksiry', name: 'Eliksiry i Toksyny', code: 'POT-105', icon: '🧪', category: 'Alchemia & Warzenie', description: 'Sztuka destylacji rzadkich esencji arktycznych, syntezy jadów lodowcowych i uniwersalnych odtrutek.', classroom: 'Laboratorium Lodowych Cieplic', profId: 'usr-astrid-vinter', profName: 'Prof. Astrid Vinter', gradient: 'linear-gradient(135deg, #0e1c30 0%, #04080e 100%)', classYears: ['Klasa I'], sort: 3 },
-    { id: 'zielarstwo', name: 'Zielarstwo Mrozoodporne', code: 'HERB-106', icon: '🌿', category: 'Przyroda Magiczna', description: 'Hodowla mchu świetlistego, lodowej mandragory i korzeni yggdrasila karłowatego.', classroom: 'Szklarnie Wiecznej Zmarzliny', profId: '', profName: 'Prof. Birgit Thorsen', gradient: 'linear-gradient(135deg, #0e2216 0%, #030805 100%)', classYears: ['Klasa I'], sort: 4 },
-    { id: 'magizoologia', name: 'Magizoologia Północy', code: 'BEAST-107', icon: '🐺', category: 'Przyroda Magiczna', description: 'Badanie i oswajanie stworzeń arktycznych: smoków, wilków mroźnych, kelpie z fiordów i trolli górskich.', classroom: 'Wybiegi Skandynawskie i Zakazany Bór', profId: '', profName: 'Prof. Astrid Helle', gradient: 'linear-gradient(135deg, #1a2a1a 0%, #060a06 100%)', classYears: ['Klasa I'], sort: 5 },
-    { id: 'obrona-przed-ciemnymi-mocami', name: 'Obrona Przed Ciemnymi Mocami', code: 'DEF-108', icon: '🛡️', category: 'Obrona & Przetrwanie', description: 'Neutralizacja klątw, obrona przed istotami cmentarnymi i demonami mrozu.', classroom: 'Sala Skalistych Bastionów', profId: '', profName: 'Prof. Viktor Storm', gradient: 'linear-gradient(135deg, #18202c 0%, #06080e 100%)', classYears: ['Klasa I'], sort: 6 },
-    { id: 'historia-magii', name: 'Historia Magii i Wojen Północy', code: 'HIST-109', icon: '📜', category: 'Historia & Kroniki', description: 'Wielka schizma z 1294 roku, powstanie Cytadeli i historia czterech założycieli.', classroom: 'Wielkie Archiwum Skandzy', profId: '', profName: 'Prof. Torben Ebbesen', gradient: 'linear-gradient(135deg, #201a10 0%, #060604 100%)', classYears: ['Klasa I'], sort: 7 },
-    { id: 'astronomia', name: 'Astronomia i Zorze Polarne', code: 'ASTRO-110', icon: '🌌', category: 'Kosmologia', description: 'Obserwacja koniunkcji ciał niebieskich i pływy zórz jako nośnika energii rytualnej.', classroom: 'Obserwatorium Północnej Iglicy', profId: '', profName: 'Prof. Stellan Nyström', gradient: 'linear-gradient(135deg, #101a2c 0%, #04060c 100%)', classYears: ['Klasa I'], sort: 8 },
-    { id: 'wrozbiarstwo', name: 'Wróżbiarstwo z Kości i Dymu', code: 'DIV-111', icon: '🦴', category: 'Sztuki Tajemne', description: 'Odczytywanie znaków z rzutów kośćmi völvy, interpretacja dymu palonych ziół arktycznych.', classroom: 'Komnata Trzech Norn', profId: '', profName: 'Prof. Dagmar Vane', gradient: 'linear-gradient(135deg, #1e142a 0%, #08040e 100%)', classYears: ['Klasa I'], sort: 9 },
-    { id: 'numerologia', name: 'Numerologia Runiczna i Arithmancja', code: 'NUM-112', icon: '📐', category: 'Nauki Ścisłe Magii', description: 'Matematyczne podstawy zaklęć, wagi liczb 3, 9 i 24 w mitologii nordyckiej.', classroom: 'Kancelaria Obliczeń Runicznych', profId: '', profName: 'Prof. Henrik Lind', gradient: 'linear-gradient(135deg, #14182a 0%, #04050c 100%)', classYears: ['Klasa I'], sort: 10 },
-    { id: 'starozytne-runy', name: 'Starożytne Runy Północy', code: 'RUNE-113', icon: 'ᚱ', category: 'Języki i Inskrypcje', description: 'Wykrawanie, aktywacja i łączenie prastarych run Futharku Starszego. Wiązanie magii w kamieniu, kości i stali.', classroom: 'Komnata Wyrytych Monolitów', profId: '', profName: 'Prof. Sigrid Hällström', gradient: 'linear-gradient(135deg, #0a2422 0%, #030808 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 11 },
-    { id: 'latanie', name: 'Latanie Bojowe i Nawigacja Powietrzna', code: 'FLY-114', icon: '🧹', category: 'Sztuka Bojowa', description: 'Manewry w huraganowym wietrze, loty formacyjne i akrobacje bojowe w fiordach.', classroom: 'Urwisko Jaskółek i Płyta Wiatru', profId: '', profName: 'Prof. Janusz Karkov', gradient: 'linear-gradient(135deg, #1a2838 0%, #060a10 100%)', classYears: ['Klasa I'], sort: 12 },
-    { id: 'biala-magia', name: 'Biała Magia i Rytuały Przenikania', code: 'WHITE-102', icon: '🕊️', category: 'Magia Pierwotna', description: 'Leczenie ran magicznych, pieczętowanie pęknięć aury i manipulacja światłem zorzy.', classroom: 'Świątynia Słonecznego Kręgu', profId: '', profName: 'Prof. Helga Lind', gradient: 'linear-gradient(135deg, #1a1a24 0%, #0a0a10 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 13 },
-    { id: 'czarna-magia', name: 'Czarna Magia', code: 'DARK-101', icon: '💀', category: 'Sztuki Zakazane', description: 'Zaawansowane studium pradawnych energii mroku, pętania cieni, klątw rodowych oraz kontrolowanego użycia sił pierwotnych.', classroom: 'Krypta Szeptów (Poziom -3)', profId: 'usr-morana', profName: 'Prof. Morana Vane', gradient: 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 14 },
+    { id: 'zaklecia', name: 'Zaklęcia', code: 'SPELL-103', icon: '✨', category: 'Magia Praktyczna', description: 'Inkantacje manipulacji grawitacją, tworzenie ścieżek świetlnych i transgresja w zamieci.', classroom: 'Korytarz Wichrów', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1a2030 0%, #060810 100%)', classYears: ['Klasa I'], sort: 1 },
+    { id: 'transmutacja', name: 'Transmutacja', code: 'TRANS-104', icon: '🔮', category: 'Modyfikacja Materii', description: 'Krystalizacja cieczy, animacja kamiennych obelisków i kowalska transmutacja metali.', classroom: 'Wieża Krystalizacji', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1a1428 0%, #060410 100%)', classYears: ['Klasa I'], sort: 2 },
+    { id: 'eliksiry', name: 'Eliksiry', code: 'POT-105', icon: '🧪', category: 'Alchemia & Warzenie', description: 'Sztuka destylacji rzadkich esencji arktycznych, syntezy jadów lodowcowych i uniwersalnych odtrutek.', classroom: 'Laboratorium Lodowych Cieplic', profId: '', profName: '', gradient: 'linear-gradient(135deg, #0e1c30 0%, #04080e 100%)', classYears: ['Klasa I'], sort: 3 },
+    { id: 'zielarstwo', name: 'Zielarstwo', code: 'HERB-106', icon: '🌿', category: 'Przyroda Magiczna', description: 'Hodowla mchu świetlistego, lodowej mandragory i korzeni yggdrasila karłowatego.', classroom: 'Szklarnie Wiecznej Zmarzliny', profId: '', profName: '', gradient: 'linear-gradient(135deg, #0e2216 0%, #030805 100%)', classYears: ['Klasa I'], sort: 4 },
+    { id: 'magizoologia', name: 'Magizoologia', code: 'BEAST-107', icon: '🐺', category: 'Przyroda Magiczna', description: 'Badanie i oswajanie stworzeń arktycznych: smoków, wilków mroźnych, kelpie z fiordów i trolli górskich.', classroom: 'Wybiegi Skandynawskie i Zakazany Bór', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1a2a1a 0%, #060a06 100%)', classYears: ['Klasa I'], sort: 5 },
+    { id: 'obrona-przed-ciemnymi-mocami', name: 'Obrona przed Ciemnymi Mocami', code: 'DEF-108', icon: '🛡️', category: 'Obrona & Przetrwanie', description: 'Neutralizacja klątw, obrona przed istotami cmentarnymi i demonami mrozu.', classroom: 'Sala Skalistych Bastionów', profId: '', profName: '', gradient: 'linear-gradient(135deg, #18202c 0%, #06080e 100%)', classYears: ['Klasa I'], sort: 6 },
+    { id: 'historia-magii', name: 'Historia Magii', code: 'HIST-109', icon: '📜', category: 'Historia & Kroniki', description: 'Wielka schizma z 1294 roku, powstanie Cytadeli i historia czterech założycieli.', classroom: 'Wielkie Archiwum Skandzy', profId: '', profName: '', gradient: 'linear-gradient(135deg, #201a10 0%, #060604 100%)', classYears: ['Klasa I'], sort: 7 },
+    { id: 'astronomia', name: 'Astronomia', code: 'ASTRO-110', icon: '🌌', category: 'Kosmologia', description: 'Obserwacja koniunkcji ciał niebieskich i pływy zórz jako nośnika energii rytualnej.', classroom: 'Obserwatorium Północnej Iglicy', profId: '', profName: '', gradient: 'linear-gradient(135deg, #101a2c 0%, #04060c 100%)', classYears: ['Klasa I'], sort: 8 },
+    { id: 'wrozbiarstwo', name: 'Wróżbiarstwo', code: 'DIV-111', icon: '🦴', category: 'Sztuki Tajemne', description: 'Odczytywanie znaków z rzutów kośćmi völvy, interpretacja dymu palonych ziół arktycznych.', classroom: 'Komnata Trzech Norn', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1e142a 0%, #08040e 100%)', classYears: ['Klasa I'], sort: 9 },
+    { id: 'numerologia', name: 'Numerologia', code: 'NUM-112', icon: '📐', category: 'Nauki Ścisłe Magii', description: 'Matematyczne podstawy zaklęć, wagi liczb 3, 9 i 24 w mitologii nordyckiej.', classroom: 'Kancelaria Obliczeń Runicznych', profId: '', profName: '', gradient: 'linear-gradient(135deg, #14182a 0%, #04050c 100%)', classYears: ['Klasa I'], sort: 10 },
+    { id: 'starozytne-runy', name: 'Starożytne Runy', code: 'RUNE-113', icon: 'ᚱ', category: 'Języki i Inskrypcje', description: 'Wykrawanie, aktywacja i łączenie prastarych run Futharku Starszego. Wiązanie magii w kamieniu, kości i stali.', classroom: 'Komnata Wyrytych Monolitów', profId: '', profName: '', gradient: 'linear-gradient(135deg, #0a2422 0%, #030808 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 11 },
+    { id: 'latanie', name: 'Latanie na Miotle', code: 'FLY-114', icon: '🧹', category: 'Sztuka Bojowa', description: 'Manewry w huraganowym wietrze, loty formacyjne i akrobacje bojowe w fiordach.', classroom: 'Urwisko Jaskółek i Płyta Wiatru', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1a2838 0%, #060a10 100%)', classYears: ['Klasa I'], sort: 12 },
+    { id: 'biala-magia', name: 'Biała Magia', code: 'WHITE-102', icon: '🕊️', category: 'Magia Pierwotna', description: 'Leczenie ran magicznych, pieczętowanie pęknięć aury i manipulacja światłem zorzy.', classroom: 'Świątynia Słonecznego Kręgu', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1a1a24 0%, #0a0a10 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 13 },
+    { id: 'czarna-magia', name: 'Czarna Magia', code: 'DARK-101', icon: '💀', category: 'Sztuki Zakazane', description: 'Zaawansowane studium pradawnych energii mroku, pętania cieni, klątw rodowych oraz kontrolowanego użycia sił pierwotnych.', classroom: 'Krypta Szeptów (Poziom -3)', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)', classYears: ['Klasa I', 'Klasa II'], sort: 14 },
 
     // --- KLASA II (Magia Zaawansowana) ---
-    { id: 'klatwy-i-uroki', name: 'Klątwy i Uroki', code: 'DUEL-201', icon: '⚔️', category: 'Sztuka Bojowa', description: 'Zaawansowane techniki klątw ciśnieniowych, przełamywania tarcz wroga i walki taktycznej na mroźnej arenie.', classroom: 'Arena Żelaznego Kręgu', profId: 'usr-gunnar', profName: 'Prof. Gunnar Vargson', gradient: 'linear-gradient(135deg, #2c0e0e 0%, #080303 100%)', classYears: ['Klasa II'], sort: 15 },
-    { id: 'smokologia', name: 'Smokologia i Drakologia Północna', code: 'DRAG-202', icon: '🐉', category: 'Przyroda Magiczna', description: 'Zaawansowane studium gatunków smoków Północy. Tresura, komunikacja i pozyskiwanie surowców smokowych.', classroom: 'Smocze Urwisko Północy', profId: '', profName: 'Prof. Astrid Helle', gradient: 'linear-gradient(135deg, #2e1808 0%, #0d0602 100%)', classYears: ['Klasa II'], sort: 16 },
-    { id: 'rytualistyka', name: 'Rytualistyka Północna', code: 'RITU-203', icon: '🕯️', category: 'Sztuki Tajemne', description: 'Konstruowanie i prowadzenie wieloosobowych rytuałów magicznych opartych na tradycji nordyckiej.', classroom: 'Krąg Kamiennych Gigantów', profId: '', profName: 'Prof. Dagmar Vane', gradient: 'linear-gradient(135deg, #281424 0%, #0a0409 100%)', classYears: ['Klasa II'], sort: 17 },
-    { id: 'psychologia-magiczna', name: 'Psychologia Magiczna', code: 'PSY-204', icon: '🧠', category: 'Nauki Ścisłe Magii', description: 'Mechanizmy wpływu zaklęć na psychikę — obrona przed Legillimensją, Oklumencja i kontrola umysłu.', classroom: 'Sala Luster Poznania', profId: 'usr-morana', profName: 'Prof. Morana Vane', gradient: 'linear-gradient(135deg, #1c1830 0%, #06050e 100%)', classYears: ['Klasa II'], sort: 18 },
-    { id: 'trucizny', name: 'Trucizny i Kontrtoksyny', code: 'TOX-205', icon: '☠️', category: 'Alchemia & Warzenie', description: 'Zaawansowana synteza jadów magicznych, trucizn kontaktowych i opracowywanie uniwersalnych odtrutek.', classroom: 'Laboratorium Czerwonego Dymu', profId: 'usr-astrid-vinter', profName: 'Prof. Astrid Vinter', gradient: 'linear-gradient(135deg, #1e0e24 0%, #060208 100%)', classYears: ['Klasa II'], sort: 19 },
-    { id: 'mity-polnocy', name: 'Mity i Legendy Północy', code: 'MYTH-206', icon: '📖', category: 'Historia & Kroniki', description: 'Analiza nordyckiej mitologii jako realnego zapisu historii magicznej: od wojen Asów z Wanami po Ragnarök.', classroom: 'Wielkie Archiwum Skandzy — Sala Sag', profId: '', profName: 'Prof. Torben Ebbesen', gradient: 'linear-gradient(135deg, #241c10 0%, #080603 100%)', classYears: ['Klasa II'], sort: 20 },
-    { id: 'stworzenia-nocy', name: 'Stworzenia Nocy', code: 'NIGHT-207', icon: '🦇', category: 'Przyroda Magiczna', description: 'Istoty manifestujące się nocą lub w nocy polarnej: wampiry lodowe, upiory cieni, Draugr i demony ciemności.', classroom: 'Podziemna Sala Cienia (Poziom -2)', profId: '', profName: 'Prof. Viktor Storm', gradient: 'linear-gradient(135deg, #14141e 0%, #040408 100%)', classYears: ['Klasa II'], sort: 21 }
+    { id: 'klatwy-i-uroki', name: 'Klątwy i Uroki', code: 'DUEL-201', icon: '⚔️', category: 'Sztuka Bojowa', description: 'Zaawansowane techniki klątw ciśnieniowych, przełamywania tarcz wroga i walki taktycznej na mroźnej arenie.', classroom: 'Arena Żelaznego Kręgu', profId: '', profName: '', gradient: 'linear-gradient(135deg, #2c0e0e 0%, #080303 100%)', classYears: ['Klasa II'], sort: 15 },
+    { id: 'smokologia', name: 'Smokologia', code: 'DRAG-202', icon: '🐉', category: 'Przyroda Magiczna', description: 'Zaawansowane studium gatunków smoków Północy. Tresura, komunikacja i pozyskiwanie surowców smokowych.', classroom: 'Smocze Urwisko Północy', profId: '', profName: '', gradient: 'linear-gradient(135deg, #2e1808 0%, #0d0602 100%)', classYears: ['Klasa II'], sort: 16 },
+    { id: 'rytualistyka', name: 'Rytualistyka', code: 'RITU-203', icon: '🕯️', category: 'Sztuki Tajemne', description: 'Konstruowanie i prowadzenie wieloosobowych rytuałów magicznych opartych na tradycji nordyckiej.', classroom: 'Krąg Kamiennych Gigantów', profId: '', profName: '', gradient: 'linear-gradient(135deg, #281424 0%, #0a0409 100%)', classYears: ['Klasa II'], sort: 17 },
+    { id: 'psychologia-magiczna', name: 'Psychologia Magiczna', code: 'PSY-204', icon: '🧠', category: 'Nauki Ścisłe Magii', description: 'Mechanizmy wpływu zaklęć na psychikę — obrona przed Legillimensją, Oklumencja i kontrola umysłu.', classroom: 'Sala Luster Poznania', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1c1830 0%, #06050e 100%)', classYears: ['Klasa II'], sort: 18 },
+    { id: 'trucizny', name: 'Trucizny', code: 'TOX-205', icon: '☠️', category: 'Alchemia & Warzenie', description: 'Zaawansowana synteza jadów magicznych, trucizn kontaktowych i opracowywanie uniwersalnych odtrutek.', classroom: 'Laboratorium Czerwonego Dymu', profId: '', profName: '', gradient: 'linear-gradient(135deg, #1e0e24 0%, #060208 100%)', classYears: ['Klasa II'], sort: 19 },
+    { id: 'mity-polnocy', name: 'Mity i Legendy', code: 'MYTH-206', icon: '📖', category: 'Historia & Kroniki', description: 'Analiza nordyckiej mitologii jako realnego zapisu historii magicznej: od wojen Asów z Wanami po Ragnarök.', classroom: 'Wielkie Archiwum Skandzy — Sala Sag', profId: '', profName: '', gradient: 'linear-gradient(135deg, #241c10 0%, #080603 100%)', classYears: ['Klasa II'], sort: 20 },
+    { id: 'stworzenia-nocy', name: 'Stworzenia Nocy', code: 'NIGHT-207', icon: '🦇', category: 'Przyroda Magiczna', description: 'Istoty manifestujące się nocą lub w nocy polarnej: wampiry lodowe, upiory cieni, Draugr i demony ciemności.', classroom: 'Podziemna Sala Cienia (Poziom -2)', profId: '', profName: '', gradient: 'linear-gradient(135deg, #14141e 0%, #040408 100%)', classYears: ['Klasa II'], sort: 21 }
   ];
 
   const defaultCategories = [
@@ -2269,19 +2447,23 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
         insertGradeCat.run(catId, s.id, cat.name, cat.weight, cat.icon, cat.sort);
       }
     } else {
-      updateSubjectClassYears.run(JSON.stringify(s.classYears), s.sort, s.id);
+      db.prepare(`
+        UPDATE subjects SET name = ?, code = ?, icon = ?, category = ?, description = ?, classroom = ?,
+          professor_id = '', professor_name = '', class_years = ?, sort_order = ?
+        WHERE id = ?
+      `).run(s.name, s.code, s.icon, s.category, s.description, s.classroom, JSON.stringify(s.classYears), s.sort, s.id);
     }
   }
 
   // Seed sample grades if none exist
   const gradesCount = db.prepare('SELECT COUNT(*) as count FROM grades').get().count;
   if (false && gradesCount === 0) {
-    insertGrade.run('grade-1', 'czarna-magia', 'cat-czarna-magia-1', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Esej: Pieczęć Wstrzymująca', 'Perfekcyjna analiza mechaniki cienia i woli.', 'usr-morana', 'Prof. Morana Vane', '', '2026-08-18');
-    insertGrade.run('grade-2', 'czarna-magia', 'cat-czarna-magia-3', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Aktywność na lekcji: Wiązanie Cieni', 'Wybitna aktywność i opanowanie techniki.', 'usr-morana', 'Prof. Morana Vane', 'les-czarna-magia-cienie-2026', '2026-08-20');
-    insertGrade.run('grade-3', 'eliksiry', 'cat-eliksiry-4', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'P', 'Powyżej Oczekiwań (P)', 4, 'Quiz: Eliksir Wiggenowy', 'Trafna odpowiedź na pytanie o stabilizację.', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'les-eliksiry-wiggen-2026', '2026-08-22');
-    insertGrade.run('grade-4', 'czarna-magia', 'cat-czarna-magia-1', 'usr-magnus', 'Magnus Blom', 'reinhall', 'P', 'Powyżej Oczekiwań (P)', 4, 'Esej: Bariera Cieniowa', 'Solidna praca z drobnymi niedociągnięciami.', 'usr-morana', 'Prof. Morana Vane', '', '2026-08-19');
-    insertGrade.run('grade-5', 'eliksiry', 'cat-eliksiry-3', 'usr-erik', 'Erik Nilsen', 'bjornhall', 'Z', 'Zadowalający (Z)', 3, 'Aktywność: Eliksir Wiggenowy', 'Prawidłowe rozpoznanie właściwości bezoaru.', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'les-eliksiry-wiggen-2026', '2026-08-22');
-    insertGrade.run('grade-6', 'eliksiry', 'cat-eliksiry-3', 'usr-freja', 'Freja Lund', 'ravnheim', 'P', 'Powyżej Oczekiwań (P)', 4, 'Aktywność: Eliksir Wiggenowy', 'Wzorowa odpowiedź w quizie klasowym.', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'les-eliksiry-wiggen-2026', '2026-08-22');
+    insertGrade.run('grade-1', 'czarna-magia', 'cat-czarna-magia-1', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Esej: Pieczęć Wstrzymująca', 'Perfekcyjna analiza mechaniki cienia i woli.', 'usr-morana', '', '', '2026-08-18');
+    insertGrade.run('grade-2', 'czarna-magia', 'cat-czarna-magia-3', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'W', 'Wybitny (W)', 5, 'Aktywność na lekcji: Wiązanie Cieni', 'Wybitna aktywność i opanowanie techniki.', 'usr-morana', '', 'les-czarna-magia-cienie-2026', '2026-08-20');
+    insertGrade.run('grade-3', 'eliksiry', 'cat-eliksiry-4', 'usr-valdemar', 'Valdemar Krag-Hansen', 'ravnheim', 'P', 'Powyżej Oczekiwań (P)', 4, 'Quiz: Eliksir Wiggenowy', 'Trafna odpowiedź na pytanie o stabilizację.', 'usr-astrid-vinter', '', 'les-eliksiry-wiggen-2026', '2026-08-22');
+    insertGrade.run('grade-4', 'czarna-magia', 'cat-czarna-magia-1', 'usr-magnus', 'Magnus Blom', 'reinhall', 'P', 'Powyżej Oczekiwań (P)', 4, 'Esej: Bariera Cieniowa', 'Solidna praca z drobnymi niedociągnięciami.', 'usr-morana', '', '', '2026-08-19');
+    insertGrade.run('grade-5', 'eliksiry', 'cat-eliksiry-3', 'usr-erik', 'Erik Nilsen', 'bjornhall', 'Z', 'Zadowalający (Z)', 3, 'Aktywność: Eliksir Wiggenowy', 'Prawidłowe rozpoznanie właściwości bezoaru.', 'usr-astrid-vinter', '', 'les-eliksiry-wiggen-2026', '2026-08-22');
+    insertGrade.run('grade-6', 'eliksiry', 'cat-eliksiry-3', 'usr-freja', 'Freja Lund', 'ravnheim', 'P', 'Powyżej Oczekiwań (P)', 4, 'Aktywność: Eliksir Wiggenowy', 'Wzorowa odpowiedź w quizie klasowym.', 'usr-astrid-vinter', '', 'les-eliksiry-wiggen-2026', '2026-08-22');
   }
 
   console.log('[DB] Synchronized all 21 subjects and categories.');
@@ -2302,32 +2484,32 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
 
     const SEED_ENTRIES = [
       // Poniedziałek
-      ['tt-mon-1', 'czarna-magia', 'Czarna Magia i Nekromancja', 'DARK-101', '💀', 'Sztuki Zakazane', 1, 'Poniedziałek', '08:30', '10:00', 'Krypta Szeptów (Poziom -3)', 'usr-morana', 'Prof. Morana Vane', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wiązanie cieni i bariery eteryczne w krypcie', 'Wymagany czarny atrament i rękawice ze skóry salamandry.', 'scheduled', '', '', '', '', '', 1, 1],
-      ['tt-mon-2', 'klatwy-i-uroki', 'Klątwy i Uroki', 'DUEL-201', '⚔️', 'Sztuka Bojowa', 1, 'Poniedziałek', '10:15', '11:45', 'Arena Żelaznego Kręgu', 'usr-gunnar', 'Prof. Gunnar Vargson', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Tarcza Żelaza i kontrataki w zamieci', 'Obowiązkowe zbroje runiczne i ochrona klatki piersiowej.', 'scheduled', '', '', '', '', '', 1, 2],
-      ['tt-mon-3', 'eliksiry', 'Eliksiry i Toksyny', 'POT-105', '🧪', 'Alchemia & Warzenie', 1, 'Poniedziałek', '12:00', '13:30', 'Laboratorium Lodowych Cieplic', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Destylacja esencji mrozu i odtrutki arktyczne', 'Kociołki miedziane lub z lanego żelaza.', 'scheduled', '', '', '', '', '', 1, 3],
-      ['tt-mon-4', 'latanie', 'Latanie Bojowe i Nawigacja Powietrzna', 'FLY-114', '🧹', 'Sztuka Bojowa', 1, 'Poniedziałek', '14:30', '16:00', 'Urwisko Jaskółek i Płyta Wiatru', '', 'Prof. Janusz Karkov', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Nawigacja w szkwałach lodowcowych i loty formacyjne', 'Zajęcia na otwartym urwisku — ciepła odzież runiczna.', 'cancelled', 'Prof. Janusz Karkov', '', '', '', 'Huragan śnieżny kategorii IV nad fiordami — zakaz lotów na miotłach.', 1, 4],
-      ['tt-mon-5', 'astronomia', 'Astronomia i Zorze Polarne', 'ASTRO-110', '🌌', 'Kosmologia', 1, 'Poniedziałek', '20:00', '21:30', 'Obserwatorium Północnej Iglicy', '', 'Prof. Stellan Nyström', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Pomiary spektralne fioletowej zorzy Yggdrasila', 'Lunety mosiężne z filtrem z kryształu górskiego.', 'scheduled', '', '', '', '', '', 1, 5],
+      ['tt-mon-1', 'czarna-magia', 'Czarna Magia', 'DARK-101', '💀', 'Sztuki Zakazane', 1, 'Poniedziałek', '08:30', '10:00', 'Krypta Szeptów (Poziom -3)', 'usr-morana', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wiązanie cieni i bariery eteryczne w krypcie', 'Wymagany czarny atrament i rękawice ze skóry salamandry.', 'scheduled', '', '', '', '', '', 1, 1],
+      ['tt-mon-2', 'klatwy-i-uroki', 'Klątwy i Uroki', 'DUEL-201', '⚔️', 'Sztuka Bojowa', 1, 'Poniedziałek', '10:15', '11:45', 'Arena Żelaznego Kręgu', 'usr-gunnar', '', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Tarcza Żelaza i kontrataki w zamieci', 'Obowiązkowe zbroje runiczne i ochrona klatki piersiowej.', 'scheduled', '', '', '', '', '', 1, 2],
+      ['tt-mon-3', 'eliksiry', 'Eliksiry', 'POT-105', '🧪', 'Alchemia & Warzenie', 1, 'Poniedziałek', '12:00', '13:30', 'Laboratorium Lodowych Cieplic', 'usr-astrid-vinter', '', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Destylacja esencji mrozu i odtrutki arktyczne', 'Kociołki miedziane lub z lanego żelaza.', 'scheduled', '', '', '', '', '', 1, 3],
+      ['tt-mon-4', 'latanie', 'Latanie na Miotle', 'FLY-114', '🧹', 'Sztuka Bojowa', 1, 'Poniedziałek', '14:30', '16:00', 'Urwisko Jaskółek i Płyta Wiatru', '', '', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Nawigacja w szkwałach lodowcowych i loty formacyjne', 'Zajęcia na otwartym urwisku — ciepła odzież runiczna.', 'cancelled', '', '', '', '', 'Huragan śnieżny kategorii IV nad fiordami — zakaz lotów na miotłach.', 1, 4],
+      ['tt-mon-5', 'astronomia', 'Astronomia', 'ASTRO-110', '🌌', 'Kosmologia', 1, 'Poniedziałek', '20:00', '21:30', 'Obserwatorium Północnej Iglicy', '', '', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Pomiary spektralne fioletowej zorzy Yggdrasila', 'Lunety mosiężne z filtrem z kryształu górskiego.', 'scheduled', '', '', '', '', '', 1, 5],
       // Wtorek
-      ['tt-tue-1', 'starozytne-runy', 'Starożytne Runy Północy', 'RUNE-113', 'ᚱ', 'Języki i Inskrypcje', 2, 'Wtorek', '08:30', '10:00', 'Komnata Wyrytych Monolitów', '', 'Prof. Sigrid Hällström', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wykrawanie runy Thurisaz w bazalcie lodowcowym', 'Dłuta z hartowanej stali krasnoludzkiej.', 'scheduled', '', '', '', '', '', 1, 1],
-      ['tt-tue-2', 'transmutacja', 'Transmutacja i Przemiana Materii', 'TRANS-104', '🔮', 'Modyfikacja Materii', 2, 'Wtorek', '10:15', '11:45', 'Wieża Krystalizacji', '', 'Prof. Freja Lindqvist', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Krystalizacja cieczy w kryształy wiecznego lodu', 'Przygotować fiolki z wodą ze stopionego lodowca Jostedal.', 'substitution', 'Prof. Freja Lindqvist', 'usr-morana', 'Prof. Morana Vane', 'Prof. Freja Lindqvist prowadzi badania anomalii krystalicznej w Głębi Niflheimu — zastępstwo objęła Prof. Morana Vane.', '', 1, 2],
-      ['tt-tue-3', 'zielarstwo', 'Zielarstwo Mrozoodporne', 'HERB-106', '🌿', 'Przyroda Magiczna', 2, 'Wtorek', '12:00', '13:30', 'Szklarnie Wiecznej Zmarzliny', '', 'Prof. Birgit Thorsen', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Zbieranie zarodników mchu świetlistego w temperaturze -20°C', 'Rękawice z ociepleniem runicznym.', 'scheduled', '', '', '', '', '', 1, 3],
-      ['tt-tue-4', 'magizoologia', 'Magizoologia Północy', 'BEAST-107', '🐺', 'Przyroda Magiczna', 2, 'Wtorek', '14:30', '16:00', 'Wybiegi Skandynawskie i Zakazany Bór', '', 'Prof. Astrid Helle', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Karmienie i uspokajanie szczeniąt wilków lodowcowych', 'Zakaz używania ostrych zaklęć świetlnych.', 'scheduled', '', '', '', '', '', 1, 4],
+      ['tt-tue-1', 'starozytne-runy', 'Starożytne Runy', 'RUNE-113', 'ᚱ', 'Języki i Inskrypcje', 2, 'Wtorek', '08:30', '10:00', 'Komnata Wyrytych Monolitów', '', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wykrawanie runy Thurisaz w bazalcie lodowcowym', 'Dłuta z hartowanej stali krasnoludzkiej.', 'scheduled', '', '', '', '', '', 1, 1],
+      ['tt-tue-2', 'transmutacja', 'Transmutacja', 'TRANS-104', '🔮', 'Modyfikacja Materii', 2, 'Wtorek', '10:15', '11:45', 'Wieża Krystalizacji', '', '', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Krystalizacja cieczy w kryształy wiecznego lodu', 'Przygotować fiolki z wodą ze stopionego lodowca Jostedal.', 'substitution', '', 'usr-morana', '', 'Prof. Freja Lindqvist prowadzi badania anomalii krystalicznej w Głębi Niflheimu — zastępstwo objęła Prof. Morana Vane.', '', 1, 2],
+      ['tt-tue-3', 'zielarstwo', 'Zielarstwo', 'HERB-106', '🌿', 'Przyroda Magiczna', 2, 'Wtorek', '12:00', '13:30', 'Szklarnie Wiecznej Zmarzliny', '', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Zbieranie zarodników mchu świetlistego w temperaturze -20°C', 'Rękawice z ociepleniem runicznym.', 'scheduled', '', '', '', '', '', 1, 3],
+      ['tt-tue-4', 'magizoologia', 'Magizoologia', 'BEAST-107', '🐺', 'Przyroda Magiczna', 2, 'Wtorek', '14:30', '16:00', 'Wybiegi Skandynawskie i Zakazany Bór', '', '', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Karmienie i uspokajanie szczeniąt wilków lodowcowych', 'Zakaz używania ostrych zaklęć świetlnych.', 'scheduled', '', '', '', '', '', 1, 4],
       // Środa
-      ['tt-wed-1', 'zaklecia', 'Zaklęcia Użytkowe i Transgresja', 'SPELL-103', '✨', 'Magia Praktyczna', 3, 'Środa', '08:30', '10:00', 'Korytarz Wichrów', '', 'Prof. Olaf Sörensen', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Tworzenie mostów termicznych w gęstej mgle', 'Ćwiczenia precyzyjnej modulacji głosu.', 'scheduled', '', '', '', '', '', 1, 1],
-      ['tt-wed-2', 'smokologia', 'Smokologia i Drakologia Północna', 'DRAG-202', '🐉', 'Przyroda Magiczna', 3, 'Środa', '10:15', '11:45', 'Smocze Urwisko Północy', '', 'Prof. Astrid Helle', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Pozyskiwanie łusek Żelazobrzucha Norweskiego podczas snu', 'Zakaz wydawania dźwięków powyżej 20 decybeli.', 'scheduled', '', '', '', '', '', 1, 2],
-      ['tt-wed-3', 'wrozbiarstwo', 'Wróżbiarstwo z Kości i Dymu', 'DIV-111', '🦴', 'Sztuki Tajemne', 3, 'Środa', '12:00', '13:30', 'Komnata Trzech Norn', '', 'Prof. Dagmar Vane', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Rzuty kośćmi morsów i interpretacja szeptu norn', 'Kadzidła z szałwii arktycznej przygotowane przez katedrę.', 'substitution', 'Prof. Dagmar Vane', 'usr-gunnar', 'Prof. Gunnar Vargson', 'Prof. Dagmar Vane uczestniczy w Wielkim Wiecu Völv w Uppsala — zastępstwo taktyczne prowadzi Prof. Gunnar Vargson.', '', 1, 3],
-      ['tt-wed-4', 'obrona-przed-ciemnymi-mocami', 'Obrona Przed Ciemnymi Mocami', 'DEF-108', '🛡️', 'Obrona & Przetrwanie', 3, 'Środa', '14:30', '16:00', 'Sala Skalistych Bastionów', '', 'Prof. Viktor Storm', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Rozpraszanie upiorów lodowych i zaklęcia ochronne aegishjalmur', 'Tarcze runiczne rozdawane przed wejściem.', 'scheduled', '', '', '', '', '', 1, 4],
+      ['tt-wed-1', 'zaklecia', 'Zaklęcia', 'SPELL-103', '✨', 'Magia Praktyczna', 3, 'Środa', '08:30', '10:00', 'Korytarz Wichrów', '', '', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Tworzenie mostów termicznych w gęstej mgle', 'Ćwiczenia precyzyjnej modulacji głosu.', 'scheduled', '', '', '', '', '', 1, 1],
+      ['tt-wed-2', 'smokologia', 'Smokologia', 'DRAG-202', '🐉', 'Przyroda Magiczna', 3, 'Środa', '10:15', '11:45', 'Smocze Urwisko Północy', '', '', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Pozyskiwanie łusek Żelazobrzucha Norweskiego podczas snu', 'Zakaz wydawania dźwięków powyżej 20 decybeli.', 'scheduled', '', '', '', '', '', 1, 2],
+      ['tt-wed-3', 'wrozbiarstwo', 'Wróżbiarstwo', 'DIV-111', '🦴', 'Sztuki Tajemne', 3, 'Środa', '12:00', '13:30', 'Komnata Trzech Norn', '', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Rzuty kośćmi morsów i interpretacja szeptu norn', 'Kadzidła z szałwii arktycznej przygotowane przez katedrę.', 'substitution', '', 'usr-gunnar', '', 'Prof. Dagmar Vane uczestniczy w Wielkim Wiecu Völv w Uppsala — zastępstwo taktyczne prowadzi Prof. Gunnar Vargson.', '', 1, 3],
+      ['tt-wed-4', 'obrona-przed-ciemnymi-mocami', 'Obrona przed Ciemnymi Mocami', 'DEF-108', '🛡️', 'Obrona & Przetrwanie', 3, 'Środa', '14:30', '16:00', 'Sala Skalistych Bastionów', '', '', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Rozpraszanie upiorów lodowych i zaklęcia ochronne aegishjalmur', 'Tarcze runiczne rozdawane przed wejściem.', 'scheduled', '', '', '', '', '', 1, 4],
       // Czwartek
-      ['tt-thu-1', 'historia-magii', 'Historia Magii i Wojen Północy', 'HIST-109', '📜', 'Historia & Kroniki', 4, 'Czwartek', '08:30', '10:00', 'Wielkie Archiwum Skandzy', '', 'Prof. Torben Ebbesen', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wielka schizma z 1294 roku i zapieczętowanie Paktu Czterech Bastionów', 'Zapisy na pergaminie cieni.', 'scheduled', '', '', '', '', '', 1, 1],
-      ['tt-thu-2', 'rytualistyka', 'Rytualistyka Północna', 'RITU-203', '🕯️', 'Sztuki Tajemne', 4, 'Czwartek', '10:15', '11:45', 'Krąg Kamiennych Gigantów', '', 'Prof. Dagmar Vane', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Formowanie kręgów ochronnych wokół menhirów', 'Zajęcia na dziedzińcu zewnętrznym.', 'scheduled', '', '', '', '', '', 1, 2],
-      ['tt-thu-3', 'numerologia', 'Numerologia Runiczna i Arithmancja', 'NUM-112', '📐', 'Nauki Ścisłe Magii', 4, 'Czwartek', '12:00', '13:30', 'Kancelaria Obliczeń Runicznych', '', 'Prof. Henrik Lind', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Macierze 24 run starszego Futharku i obliczanie siły zaklęć', 'Tabliczki woskowe i rysiki.', 'scheduled', '', '', '', '', '', 1, 3],
-      ['tt-thu-4', 'psychologia-magiczna', 'Psychologia Magiczna i Oklumencja', 'PSY-204', '🧠', 'Nauki Ścisłe Magii', 4, 'Czwartek', '14:30', '16:00', 'Sala Luster Poznania', 'usr-morana', 'Prof. Morana Vane', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Wznoszenie barier myślowych przed Legillimensją', 'Wymagane pełne skupienie i wyciszenie.', 'scheduled', '', '', '', '', '', 1, 4],
+      ['tt-thu-1', 'historia-magii', 'Historia Magii', 'HIST-109', '📜', 'Historia & Kroniki', 4, 'Czwartek', '08:30', '10:00', 'Wielkie Archiwum Skandzy', '', '', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Wielka schizma z 1294 roku i zapieczętowanie Paktu Czterech Bastionów', 'Zapisy na pergaminie cieni.', 'scheduled', '', '', '', '', '', 1, 1],
+      ['tt-thu-2', 'rytualistyka', 'Rytualistyka', 'RITU-203', '🕯️', 'Sztuki Tajemne', 4, 'Czwartek', '10:15', '11:45', 'Krąg Kamiennych Gigantów', '', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Formowanie kręgów ochronnych wokół menhirów', 'Zajęcia na dziedzińcu zewnętrznym.', 'scheduled', '', '', '', '', '', 1, 2],
+      ['tt-thu-3', 'numerologia', 'Numerologia', 'NUM-112', '📐', 'Nauki Ścisłe Magii', 4, 'Czwartek', '12:00', '13:30', 'Kancelaria Obliczeń Runicznych', '', '', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Macierze 24 run starszego Futharku i obliczanie siły zaklęć', 'Tabliczki woskowe i rysiki.', 'scheduled', '', '', '', '', '', 1, 3],
+      ['tt-thu-4', 'psychologia-magiczna', 'Psychologia Magiczna', 'PSY-204', '🧠', 'Nauki Ścisłe Magii', 4, 'Czwartek', '14:30', '16:00', 'Sala Luster Poznania', 'usr-morana', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Wznoszenie barier myślowych przed Legillimensją', 'Wymagane pełne skupienie i wyciszenie.', 'scheduled', '', '', '', '', '', 1, 4],
       // Piątek
-      ['tt-fri-1', 'biala-magia', 'Biała Magia i Rytuały Przenikania', 'WHITE-102', '🕊️', 'Magia Pierwotna', 5, 'Piątek', '08:30', '10:00', 'Świątynia Słonecznego Kręgu', '', 'Prof. Helga Lind', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Pieczętowanie ran magicznych światłem zorzy polarnej', 'Kryształy górskie do skupiania wiązki.', 'scheduled', '', '', '', '', '', 1, 1],
-      ['tt-fri-2', 'trucizny', 'Trucizny i Kontrtoksyny', 'TOX-205', '☠️', 'Alchemia & Warzenie', 5, 'Piątek', '10:15', '11:45', 'Laboratorium Czerwonego Dymu', 'usr-astrid-vinter', 'Prof. Astrid Vinter', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Synteza jadu lodowej żmii i opracowywanie uniwersalnej odtrutki', 'Izolowane maski runiczne obowiązkowe.', 'cancelled', 'Prof. Astrid Vinter', '', '', '', 'Nieszczelność filtru wyciągowego w Laboratorium Czerwonego Dymu — kwarantanna do soboty.', 1, 2],
-      ['tt-fri-3', 'klatwy-i-uroki', 'Liga Bojowa i Hólmganga', 'DUEL-201', '⚔️', 'Sztuka Bojowa', 5, 'Piątek', '14:30', '16:30', 'Arena Żelaznego Kręgu', 'usr-gunnar', 'Prof. Gunnar Vargson', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Wszyscy', 'all', 'Pojedynki międzyzakonne o Puchar Północy: Reinhall vs Ravnheim', 'Sędziuje Arcymistrzyni Valgerda Storm.', 'scheduled', '', '', '', '', '', 1, 3],
+      ['tt-fri-1', 'biala-magia', 'Biała Magia', 'WHITE-102', '🕊️', 'Magia Pierwotna', 5, 'Piątek', '08:30', '10:00', 'Świątynia Słonecznego Kręgu', '', '', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa I', 'all', 'Pieczętowanie ran magicznych światłem zorzy polarnej', 'Kryształy górskie do skupiania wiązki.', 'scheduled', '', '', '', '', '', 1, 1],
+      ['tt-fri-2', 'trucizny', 'Trucizny', 'TOX-205', '☠️', 'Alchemia & Warzenie', 5, 'Piątek', '10:15', '11:45', 'Laboratorium Czerwonego Dymu', 'usr-astrid-vinter', '', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80', 'Klasa II', 'all', 'Synteza jadu lodowej żmii i opracowywanie uniwersalnej odtrutki', 'Izolowane maski runiczne obowiązkowe.', 'cancelled', '', '', '', '', 'Nieszczelność filtru wyciągowego w Laboratorium Czerwonego Dymu — kwarantanna do soboty.', 1, 2],
+      ['tt-fri-3', 'klatwy-i-uroki', 'Klątwy i Uroki', 'DUEL-201', '⚔️', 'Sztuka Bojowa', 5, 'Piątek', '14:30', '16:30', 'Arena Żelaznego Kręgu', 'usr-gunnar', '', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80', 'Wszyscy', 'all', 'Pojedynki międzyzakonne o Puchar Północy: Reinhall vs Ravnheim', 'Sędziuje Arcymistrzyni Valgerda Storm.', 'scheduled', '', '', '', '', '', 1, 3],
       // Sobota
-      ['tt-sat-1', 'starozytne-runy', 'Warsztat Runiczny (Galdrastofa)', 'RUNE-113', 'ᚱ', 'Języki i Inskrypcje', 6, 'Sobota', '10:00', '13:00', 'Komnata Wyrytych Monolitów', '', 'Prof. Sigrid Hällström', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Wszyscy', 'all', 'Kucie amuletów i zaklinanie stali na nadchodzące mrozy', 'Konsultacje otwarte dla wszystkich adeptów.', 'scheduled', '', '', '', '', '', 1, 1]
+      ['tt-sat-1', 'starozytne-runy', 'Starożytne Runy', 'RUNE-113', 'ᚱ', 'Języki i Inskrypcje', 6, 'Sobota', '10:00', '13:00', 'Komnata Wyrytych Monolitów', '', '', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80', 'Wszyscy', 'all', 'Kucie amuletów i zaklinanie stali na nadchodzące mrozy', 'Konsultacje otwarte dla wszystkich adeptów.', 'scheduled', '', '', '', '', '', 1, 1]
     ];
 
     for (const row of SEED_ENTRIES) {
@@ -2335,6 +2517,171 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
     }
     console.log(`[DB] Seeded ${SEED_ENTRIES.length} timetable entries.`);
   }
+
+// ===================== SEED DOMAIN DATA (HOUSES, LOCATIONS, RUNES, CEREMONY, SHOPS, LOTTERY) =====================
+
+{
+  const housesCount = db.prepare('SELECT COUNT(*) as c FROM houses').get().c;
+  if (housesCount === 0) {
+    console.log('[DB] Seeding houses...');
+    const ins = db.prepare(`INSERT INTO houses (id, name, full_name, symbol_animal, crest_icon, crest_image, element, founder, colors, gem_name, motto, latin_motto, traits, common_room, relic, head_of_house, prefect, members_count, starting_points, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    ins.run('reinhall','Reinhall','Zakon Reinhall (Ordo Rangiferi)','Renifer Północy (Rangifer)','ᚦ','/crest_stag.jpg','Krew i Wieczna Zmarzlina','Eirik Krwawy Róg (Eiríkr Blóðhorn)',JSON.stringify({primary:'#7a1818',secondary:'#c59f4e',border:'rgba(197, 159, 78, 0.6)',glow:'rgba(197, 159, 78, 0.35)',text:'#f7e6c4',gem:'#d97706'}),'Rubiny Krwi i Złoty Pył','„Krew nie kłamie, mróz nie wybacza."','Sanguis non mentitur, gelu non parcit.',JSON.stringify(['Wytrwałość','Duma rodowa','Magia krwi','Lojalność paktu','Pradawna tradycja']),'Sala Rodowa Skandzy — wyciosana w litej granitowej skale pod zachodnim skrzydłem, z wiecznym paleniskiem z kości mamuta tundrowego i gobelinami haftowanymi złotą nicią.','Kielich Przymierza Krwi (Blóðkálkr) — naczynie ze srebra i rogu, w którym założyciele pieczętowali Pakt Czterech Koron w 1294 roku.','Prof. Sigrid Hällström','Magnus Blom',63,480,1);
+    ins.run('bjornhall','Björnhall','Zakon Björnhall (Ordo Ursi)','Niedźwiedź Jaskiniowy (Ursus Spelaeus)','ᛉ','/crest_bear.jpg','Żelazo i Pęknięta Skala','Torvald Żelaznoręki (Torvaldr Járnhönd)',JSON.stringify({primary:'#202530',secondary:'#c02b2b',border:'rgba(192, 43, 43, 0.6)',glow:'rgba(192, 43, 43, 0.35)',text:'#ffbaba',gem:'#dc2626'}),'Okruchy Czarnego Żelaza i Krwawe Granaty','„Pancerz z woli, miecz z wiedzy."','Lorica ex voluntate, gladius ex scientia.',JSON.stringify(['Siła woli','Magia bojowa','Niezłomność','Klątwy niszczące','Dyscyplina wojenna']),'Bastion Żelaza — warowna wieża z widokiem na wzburzony fiord, wyposażona w prywatną arenę pojedynkową, stojaki z runicznymi puklerzami i kowadło alchemiczne.','Puklerz Pękniętego Żelaza (Járnskjöldr) — stalowa tarcza odbijająca najczarniejsze uroki niszczące.','Prof. Gunnar Vargson','Astrid Vargadottir',68,520,2);
+    ins.run('ravnheim','Ravnheim','Zakon Ravnheim (Ordo Corvi)','Kruk Mądrości (Corvus Corax)','ᚱ','/crest_raven.jpg','Cień i Astralna Noc','Morana Cień-Krocząca (Morana Skuggaganga)',JSON.stringify({primary:'#1c132e',secondary:'#a77de0',border:'rgba(167, 125, 224, 0.6)',glow:'rgba(167, 125, 224, 0.35)',text:'#e6d8ff',gem:'#9333ea'}),'Ametysty Nocy i Odłamki Obsydianu','„W ciszy cienia kryje się potęga."','In umbrae silentio potestas latet.',JSON.stringify(['Tajemnica','Nekromancja','Wróżbiarstwo z kości','Opanowanie','Astralna intuicja']),'Wieża Nocnych Szeptów — najwyższy punkt Cytadeli, gdzie okna z ciemnego kryształu wychodzą na zorzę polarną, a pod sufitem krążą astralne kruki posłańcze.','Astrolabium Siedmiu Gwiazd (Himinúrfang) — mechanizm pozwalający przepowiadać zaćmienia i ruchy cieni.','Prof. Morana Vane','Valdemar Krag-Hansen',72,510,3);
+    ins.run('otergard','Otergard','Zakon Otergard (Ordo Lutrae)','Wydra Polarna (Lutra Borealis)','ᛞ','/crest_otter.jpg','Lodowcowe Wody i Toksyny','Astrid Złotooka (Astrid Gullauga)',JSON.stringify({primary:'#0d2d33',secondary:'#2ec4b6',border:'rgba(46, 196, 182, 0.6)',glow:'rgba(46, 196, 182, 0.35)',text:'#b2f5ea',gem:'#0d9488'}),'Szmaragdy Fiordu i Akwamaryny','„Płyń pod lodem, uderzaj bez śladu."','Sub glacie natato, sine vestigio percutito.',JSON.stringify(['Spryt alchemiczny','Warzenie toksyn','Transmutacja lodu','Elastyczność','Analityczny umysł']),'Ogrody Lodowych Cieplic — podziemne atrium zasilane podwodnymi gorącymi źródłami fiordu, wypełnione rzadkimi arktycznymi mchami i retortami alchemicznymi.','Alembik Nieskończonej Destylacji (Algildi) — naczynie ze smoczego szkła, potrafiące wyekstrahować esencję z każdego żywiołu.','Prof. Klaus Lindqvist','Sigrun Lindqvist',65,495,4);
+    console.log('[DB] Seeded 4 houses.');
+  }
+}
+
+{
+  const locationsCount = db.prepare('SELECT COUNT(*) as c FROM locations').get().c;
+  if (locationsCount === 0) {
+    console.log('[DB] Seeding locations...');
+    const ins = db.prepare('INSERT INTO locations (id, name, nordic_name, floor, x, y, icon, house, type, region, image, short_desc, full_lore, npcs, actions, secret_clue, quests, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    for (const loc of SEED_LOCATIONS) {
+      ins.run(loc.id, loc.name, loc.nordic_name, loc.floor, loc.x, loc.y, loc.icon, loc.house, loc.type, loc.region, loc.image, loc.short_desc, loc.full_lore, loc.npcs, loc.actions, loc.secret_clue, loc.quests, loc.sort_order);
+    }
+    console.log(`[DB] Seeded ${SEED_LOCATIONS.length} locations.`);
+  }
+}
+
+{
+  const runesCatCount = db.prepare('SELECT COUNT(*) as c FROM runes_catalog').get().c;
+  if (runesCatCount === 0) {
+    console.log('[DB] Seeding runes catalog...');
+    const ins = db.prepare('INSERT INTO runes_catalog (id, symbol, name, meaning, element, description, default_count, sort_order) VALUES (?,?,?,?,?,?,?,?)');
+    ins.run('rune-fehu','ᚠ','Fehu','Bogactwo & Pierwotna Energia','Złoto / Ogień','Runa obfitości i przepływu energii. Otwiera kanały materialne i przyciąga pomyślność w transakcjach na Rynku.',3,1);
+    ins.run('rune-ansuz','ᚨ','Ansuz','Mądrość & Głos Przodków','Wiatr / Myśl','Święty znak Odyna i wieszczek północy. Odsłania ukryte znaczenia w zakazanych grimuarach i wzmacnia inkantacje.',2,2);
+    ins.run('rune-tiwaz','ᛏ','Tiwaz','Sprawiedliwość & Wola Wojownika','Żelazo / Gwiazda Polarna','Runa przewodnia pojedynków Hólmganga. Zapewnia nieugięty hart ducha i precyzję w rzucaniu tarcz bojowych.',2,3);
+    ins.run('rune-algiz','ᛉ','Algiz','Tarcza & Święta Ochrona','Poroże / Aura','Potężny znak ochronny Zakonu Renifera. Odbija uroki manipulacji umysłem i chroni przed klątwami niszczącymi.',3,4);
+    ins.run('rune-kaunan','ᚲ','Kaunan (Kenaz)','Płomień Wiedzy & Prześwietlenie','Płomień / Cień','Runa wewnętrznego ognia i transformacji. Rozprasza ciemność i pozwala widzieć to, co zostało ukryte pod lodem.',2,5);
+    ins.run('rune-isa','ᛁ','Isa','Wieczny Lód & Zatrzymanie Czasu','Lód / Zmarzlina','Runa bezruchu i skupienia. Zatrzymuje rozprzestrzenianie się toksyn w ciele i zamraża wrogie zaklęcia.',2,6);
+    ins.run('rune-raidho','ᚱ','Raidho','Wędrówka & Droga Przeznaczenia','Ścieżka / Rytm','Wytycza bezpieczny szlak przez najgorszą arktyczną zamieć i przyspiesza transgresję magiczną.',2,7);
+    ins.run('rune-dagaz','ᛞ','Dagaz','Świt Północy & Przebudzenie Cytadeli','Zorza Polarna / Światło','Najpotężniejszy znak Cytadeli Durmstrang. Symbolizuje równowagę pomiędzy mrokiem a światłem oraz narodziny nowej potęgi.',1,8);
+    console.log('[DB] Seeded 8 runes catalog entries.');
+  }
+}
+
+{
+  const formulasCount = db.prepare('SELECT COUNT(*) as c FROM rune_formulas').get().c;
+  if (formulasCount === 0) {
+    console.log('[DB] Seeding rune formulas...');
+    const ins = db.prepare('INSERT INTO rune_formulas (id, name, runes, catalyst, house_bonus, reward_xp, reward_points, reward_currency, lore_reward, description, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    ins.run('formula-blood-shield','Pieczęć Krwawego Przymierza (Blóð-Skjöldr)',JSON.stringify(['rune-algiz','rune-tiwaz']),'Krew Renifera','renifer',180,45,60,'Odkryto zapiskę Eirika Krwawego Rogu o nienaruszalnej tarczy rodowej.','Łączy niezłomną wolę Tiwaz ze świętą ochroną Algiz, tworząc barierę pochłaniającą klątwy uderzeniowe.',1);
+    ins.run('formula-shadow-whisper','Wiązanie Cienistego Szeptu (Skugga-Galdr)',JSON.stringify(['rune-ansuz','rune-kaunan']),'Cień Kruka','kruk',200,50,70,'Odblokowano dostęp do Pierwszej Kroniki Wieży Nocnych Szeptów.','Przekształca wiedzę Ansuz i płomień Kaunan w astralny wzrok zdolny odczytywać zatarte inskrypcje w katakumbach.',2);
+    ins.run('formula-glacial-transmute','Alembik Wiecznej Zmarzliny (Jökul-Galdr)',JSON.stringify(['rune-isa','rune-fehu']),'Woda Lodowcowa','wydra',190,40,80,'Odblokowano recepturę na Esencję Płynnego Cienia.','Związanie lodu Isa z obfitością Fehu pozwala na krystalizację rzadkich minerałów alchemicznych z fiordu.',3);
+    ins.run('formula-iron-fury','Znak Pękniętego Żelaza (Járn-Brot)',JSON.stringify(['rune-tiwaz','rune-kaunan']),'Pył Meteorytowy','niedzwiedz',220,55,65,'Odkryto sekret kowalski Torvalda Żelaznorękiego.','Wojenny splot rozpalający broń i różdżki adepta bojowym płomieniem kruszącym granitowe mury.',4);
+    ins.run('formula-aurora-awakening','Święta Fuzja Świtów (Dagaz-Galdr)',JSON.stringify(['rune-dagaz','rune-ansuz','rune-fehu']),'Pył Zorzy Polarnej',null,350,100,150,'ODKRYTO FRAGMENT SERCA POD WIECZNĄ ZMARZLINĄ!','Mistyczna triada przebudzenia Cytadeli. Manifestuje czyste światło zorzy polarnej, zdejmując pradawne pieczęcie.',5);
+    console.log('[DB] Seeded 5 rune formulas.');
+  }
+}
+
+{
+  const ceremonyCount = db.prepare('SELECT COUNT(*) as c FROM ceremony_questions').get().c;
+  if (ceremonyCount === 0) {
+    console.log('[DB] Seeding ceremony questions...');
+    const insQ = db.prepare('INSERT INTO ceremony_questions (id, title, scenario, sort_order) VALUES (?,?,?,?)');
+    const insO = db.prepare('INSERT INTO ceremony_options (id, question_id, text, house, reason, sort_order) VALUES (?,?,?,?,?,?)');
+
+    insQ.run('cq-1','Próba Lodowego Wichru: Pradawny Manuskrypt','Podczas eksploracji zamarzniętych krypt pod Cytadelą znajdujesz zamkniętą żelazną kasetę z runiczną pieczęcią krwi. Wiesz, że zawiera ona zakazany traktat o manipulacji żywiołami. Co robisz?',1);
+    insO.run('co-1-1','cq-1','Nacinasz opuszki palców i skrapiasz pieczęć własną krwią — starożytne więzy krwi wymagają szacunku i ofiary.','reinhall','Oddanie przymierzom krwi i starożytnym prawom rodowym.',1);
+    insO.run('co-1-2','cq-1','Wypowiadasz bezlitosne zaklęcie kruszące — liczy się potęga i żelazna determinacja, by posiąść wiedzę.','bjornhall','Niezłomna wola, odwaga bojowa i brak lęku przed ryzykiem.',2);
+    insO.run('co-1-3','cq-1','Cierpliwie badasz geometrię run cienia i rozplątujesz astralne sploty zaklęcia w milczeniu nocy.','ravnheim','Dyskrecja, głęboka analiza tajemnic i opanowanie umysłu.',3);
+    insO.run('co-1-4','cq-1','Smarujesz pieczęć kwasem z arktycznego porostu, rozpuszczając metal bez naruszania struktury pergaminu.','otergard','Alchemiczny spryt, precyzja i adaptacja do sytuacji.',4);
+
+    insQ.run('cq-2','Próba Paktu: Konflikt na Murach','Podczas nocnej warty na wałach obronnych dostrzegasz intruza przekraczającego barierę fiordu. To adept z innego rodu, który złamał zakaz opuszczania zamku. Jak reagujesz?',2);
+    insO.run('co-2-1','cq-2','Wymagasz od niego przysięgi na honor rodu i odprowadzasz go przed oblicze Opiekuna Zakonu.','reinhall','Hierarchia, honor i wierność dyscyplinie Cytadeli.',1);
+    insO.run('co-2-2','cq-2','Wyzywasz go na natychmiastowy pojedynek Hólmganga — słabość na murach musi zostać ukarana siłą.','bjornhall','Bojowy duch i bezpośrednia konfrontacja.',2);
+    insO.run('co-2-3','cq-2','Śledzisz go w cieniu, by poznać jego prawdziwy motyw — wiedza o jego sekrecie jest cenniejsza niż kara.','ravnheim','Strategiczne myślenie, zbieranie sekretów i dyskrecja.',3);
+    insO.run('co-2-4','cq-2','Oferujesz mu pomoc w zatarciu śladów w zamian za rzadki składnik alchemiczny lub przysługę.','otergard','Praktycyzm, korzyść taktyczna i elastyczność moralna.',4);
+
+    insQ.run('cq-3','Próba Ołtarza: Źródło Mocy','Gdybyś miał wybrać jedno mistyczne narzędzie do związania swojej duszy na całe życie w Cytadeli, byłoby to:',3);
+    insO.run('co-3-1','cq-3','Róg Przodków inkrustowany złotem, przechowujący pamięć i krew dawnych mistrzów.','reinhall','Kult tradycji i ciągłość pokoleń.',1);
+    insO.run('co-3-2','cq-3','Runiczny miecz lub różdżka z rdzeniem z kła bazyliszka północy, gotowa do druzgotania barier.','bjornhall','Potęga ofensywna i dominacja w starciu.',2);
+    insO.run('co-3-3','cq-3','Zwierciadło z ciemnego obsydianu, ukazujące echa przeszłości i astralne ścieżki zaświatów.','ravnheim','Mistyczne wglądy i tajemna wiedza.',3);
+    insO.run('co-3-4','cq-3','Kryształowa fiola z wiecznie wrzącą esencją, zdolna przemienić ołów w złoto i truciznę w antidotum.','otergard','Mistrzostwo materii i transformacja żywiołów.',4);
+
+    insQ.run('cq-4','Próba Przesilenia: Pokusa Północy','W Noc Krwawej Zorzy pradawny duch Cytadeli oferuje ci dar w zamian za część twojego wspomnienia. Co wybierzesz?',4);
+    insO.run('co-4-1','cq-4','Nieugiętą odporność na mróz i ból, godną nieśmiertelnych władców tundry.','reinhall','Niezłomna wytrzymałość i duma.',1);
+    insO.run('co-4-2','cq-4','Zaklęcie bojowe zdolne zburzyć fortecę jednym uderzeniem różdżki.','bjornhall','Niepowstrzymana siła uderzeniowa.',2);
+    insO.run('co-4-3','cq-4','Zdolność czytania w myślach i słyszenia szeptów umarłych.','ravnheim','Dominacja informacyjna i nekromantyczna mądrość.',3);
+    insO.run('co-4-4','cq-4','Sekretną recepturę na Eliksir Wiecznej Młodości i transmutacji.','otergard','Triumf alchemii i przekroczenie barier natury.',4);
+
+    console.log('[DB] Seeded 4 ceremony questions with 16 options.');
+  }
+}
+
+{
+  const shopsCount = db.prepare('SELECT COUNT(*) as c FROM shops').get().c;
+  if (shopsCount === 0) {
+    console.log('[DB] Seeding shops...');
+    const ins = db.prepare('INSERT INTO shops (id, name, icon, category_slug, description, sort_order) VALUES (?,?,?,?,?,?)');
+    ins.run('all','Wszystkie Kramy','🛍️','','Pełny asortyment rynku Kaupangr.',0);
+    ins.run('wands-brokkur','Kuźnia Różdżek Brokkura & Oivinda','🪄','wands','Mistrzowskie różdżki nordyckie strugane z cisów cmentarnych, hebanu i arktycznych jesionów.',1);
+    ins.run('tailor-robes','Dom Krawiecki Nordyckich Opończy & Szat','🧥','robes','Szaty ceremonialne, opończe podbite wilczym futrem oraz pancerze runiczne.',2);
+    ins.run('antiquarian-books','Antykwariat Run i Zakazanych Ksiąg Snorriego','📖','books','Święte kodeksy Futharku, zwoje nekromancji i unikatowe grimuary dawnych mistrzów.',3);
+    ins.run('apothecary-potions','Apteka Alchemiczna i Składnica Ziół Północy','🧪','potions','Destylaty z krwi chimery, eliksiry zórz polarnych, kociołki z kutego żelaza i kryształowe fiolki.',4);
+    ins.run('armory-equipment','Zbrojownia Północy & Wyposażenie Pojedynkowe','⚔️','equipment','Rękawice pojedynkowe ze skóry mantikory, buty z łusek smoka i pasy eliksirnika.',5);
+    ins.run('companions-den','Kram Dzikich Towarzyszy & Chowańców','🦅','companions','Magiczne kruki Hrafn, puchacze śnieżne, lisy polarne oraz lodowe chowańce.',6);
+    ins.run('vault-artifacts','Skarbiec Artefaktów i Amuletów Odyna','💍','artifacts','Relikty wczesnego średniowiecza, pierścienie walkirii i kompasy energii magicznej.',7);
+    console.log('[DB] Seeded 8 shops.');
+  }
+}
+
+{
+  const futharkCount = db.prepare('SELECT COUNT(*) as c FROM futhark_runes').get().c;
+  if (futharkCount === 0) {
+    console.log('[DB] Seeding futhark runes...');
+    const ins = db.prepare('INSERT INTO futhark_runes (id, rune_char, name, meaning, color, sort_order) VALUES (?,?,?,?,?,?)');
+    const runes = [
+      ['fehu','ᚠ','Fehu','Bogactwo, złoto i bydło','#c59f4e'],
+      ['uruz','ᚢ','Uruz','Siła pierwotna, żubr lodowy','#e58f65'],
+      ['thurisaz','ᚦ','Thurisaz','Cierń olbrzyma, burza','#c02b2b'],
+      ['ansuz','ᚨ','Ansuz','Głos Odyna, mądrość bogów','#a77de0'],
+      ['raidho','ᚱ','Raidho','Wyprawa drakkarem, podróż','#2ec4b6'],
+      ['kenaz','ᚲ','Kenaz','Pochodnia, ogień kuźni','#eab308'],
+      ['gebo','ᚷ','Gebo','Dar, więź braterstwa','#60a5fa'],
+      ['wunjo','ᚹ','Wunjo','Radość i triumf klanu','#34d399'],
+      ['hagalaz','ᚺ','Hagalaz','Arktyczny grad, przełamanie','#93c5fd'],
+      ['nauthiz','ᚾ','Nauthiz','Przetrwanie w mrozie, wola','#f87171'],
+      ['isa','ᛁ','Isa','Wieczny lód, skupienie','#38bdf8'],
+      ['jera','ᛃ','Jera','Pomyślny cykl, zbiory','#4ade80'],
+      ['eihwaz','ᛇ','Eihwaz','Święty cis, przejście dusz','#818cf8'],
+      ['perthro','ᛈ','Perthro','Kości losu, tajemnica Wyrd','#c084fc'],
+      ['algiz','ᛉ','Algiz','Rogi renifera, tarcza ochronna','#facc15'],
+      ['sowilo','ᛊ','Sowilo','Słoneczne światło zórz','#fb923c'],
+      ['tiwaz','ᛏ','Tiwaz','Sprawiedliwość Tyra, honor','#ef4444'],
+      ['berkano','ᛒ','Berkano','Pąki brzozy, nowe życie','#a3e635'],
+      ['ehwaz','ᛖ','Ehwaz','Wierny wierzchowiec, lojalność','#38bdf8'],
+      ['mannaz','ᛗ','Mannaz','Społeczność czarodziejów','#fbbf24'],
+      ['laguz','ᛚ','Laguz','Głębiny fiordu, intuicja','#06b6d4'],
+      ['ingwaz','ᛜ','Ingwaz','Ziarno mocy, płodność ziemi','#86efac'],
+      ['dagaz','ᛞ','Dagaz','Świt polarny, transformacja','#fef08a'],
+      ['othala','ᛟ','Othala','Dziedzictwo krwi, Cytadela','#d97706']
+    ];
+    for (let i = 0; i < runes.length; i++) {
+      ins.run(runes[i][0], runes[i][1], runes[i][2], runes[i][3], runes[i][4], i + 1);
+    }
+    console.log('[DB] Seeded 24 futhark runes.');
+  }
+}
+
+// Salary config into school_config
+{
+  const salaryKeys = [
+    ['salary_lesson_base_rate', '200'],
+    ['salary_bonus_high_participation', '50'],
+    ['salary_monthly_allowance', '600'],
+    ['salary_currency_symbol', 'Skirnirów'],
+    ['salary_currency_rune', 'ᛋ']
+  ];
+  for (const [key, val] of salaryKeys) {
+    const existing = db.prepare('SELECT value FROM school_config WHERE key = ?').get(key);
+    if (!existing) {
+      db.prepare('INSERT INTO school_config (key, value) VALUES (?, ?)').run(key, val);
+    }
+  }
+}
 
 // ===================== HELPER FUNCTIONS =====================
 
@@ -2419,6 +2766,7 @@ export function dbNewsToFrontend(row) {
     house: row.house || '',
     tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
     readTime: row.read_time || '',
+    subjectId: row.subject_id || '',
     pinned: !!row.pinned,
     date: row.date,
     reactions: JSON.parse(row.reactions || '{}'),
@@ -2591,8 +2939,38 @@ export function dbSubjectAchievementToFrontend(row) {
   };
 }
 
+export function getSubjectProfessors(subjectId) {
+  return db.prepare(`
+    SELECT tsa.id as assignment_id, tsa.role, tsa.school_year, tsa.assigned_at, tsa.status,
+           u.id, u.full_name, u.avatar, u.department_name, u.specialization
+    FROM teacher_subject_assignments tsa
+    JOIN users u ON u.id = tsa.professor_id
+    WHERE tsa.subject_id = ? AND tsa.status = 'active'
+    ORDER BY CASE tsa.role WHEN 'primary' THEN 0 WHEN 'assistant' THEN 1 ELSE 2 END
+  `).all(subjectId);
+}
+
+export function getProfessorSubjects(professorId) {
+  return db.prepare(`
+    SELECT tsa.id as assignment_id, tsa.role, tsa.school_year, tsa.assigned_at, tsa.status,
+           s.id, s.name, s.code, s.icon, s.category, s.class_years
+    FROM teacher_subject_assignments tsa
+    JOIN subjects s ON s.id = tsa.subject_id
+    WHERE tsa.professor_id = ? AND tsa.status = 'active'
+    ORDER BY s.sort_order
+  `).all(professorId);
+}
+
+export function isProfessorOfSubject(professorId, subjectId) {
+  return !!db.prepare(`
+    SELECT 1 FROM teacher_subject_assignments
+    WHERE professor_id = ? AND subject_id = ? AND status = 'active'
+  `).get(professorId, subjectId);
+}
+
 export function dbSubjectToFrontend(row, categories = [], grades = [], recentLessons = [], stats = {}) {
   if (!row) return null;
+  const professors = getSubjectProfessors(row.id);
   return {
     id: row.id,
     name: row.name,
@@ -2603,6 +2981,14 @@ export function dbSubjectToFrontend(row, categories = [], grades = [], recentLes
     classroom: row.classroom || '',
     professorId: row.professor_id || '',
     professorName: row.professor_name || '',
+    professors: professors.map(p => ({
+      id: p.id,
+      fullName: p.full_name,
+      avatar: p.avatar || '',
+      role: p.role,
+      departmentName: p.department_name || '',
+      specialization: p.specialization || ''
+    })),
     bannerUrl: row.banner_url || '',
     bannerGradient: row.banner_gradient || '',
     syllabus: row.syllabus || '',
@@ -2938,8 +3324,8 @@ if (false && bankAccountCount === 0) {
   `);
 
   insertAccount.run('vault-valdemar', 'usr-valdemar', 'Valdemar Krag-Hansen', 'SKR-782-RAVN', 'Skrytka Adepta Kręgu IV', 340, 'Maksymalny', 'Pieczęć Algiz & Kenaz', 'Górski Troll Granitowy (Brokk)', '2.5% rocznie', '2026-08-01');
-  insertAccount.run('vault-morana', 'usr-morana', 'Prof. Morana Vane', 'SKR-204-PROF', 'Krypta Profesorska Katedry Czarnej Magii', 1450, 'Rada Mistrzów', 'Pieczęć Thurisaz & Eihwaz', 'Zjawa Lodowcowa Strażnika Cieni', '4.0% rocznie', '2026-07-15');
-  insertAccount.run('vault-gunnar', 'usr-gunnar', 'Prof. Gunnar Vargson', 'SKR-205-PROF', 'Zbrojownia Bankowa Ligi Bojowej', 1200, 'Rada Mistrzów', 'Pieczęć Tiwaz & Sowilo', 'Żelazny Golem Północy', '4.0% rocznie', '2026-07-20');
+  insertAccount.run('vault-morana', 'usr-morana', '', 'SKR-204-PROF', 'Krypta Profesorska Katedry Czarnej Magii', 1450, 'Rada Mistrzów', 'Pieczęć Thurisaz & Eihwaz', 'Zjawa Lodowcowa Strażnika Cieni', '4.0% rocznie', '2026-07-15');
+  insertAccount.run('vault-gunnar', 'usr-gunnar', '', 'SKR-205-PROF', 'Zbrojownia Bankowa Ligi Bojowej', 1200, 'Rada Mistrzów', 'Pieczęć Tiwaz & Sowilo', 'Żelazny Golem Północy', '4.0% rocznie', '2026-07-20');
   insertAccount.run('vault-valgerda', 'usr-valgerda', 'Arcymistrzyni Valgerda Storm', 'SKR-001-DIR', 'Najwyższy Skarbiec Dyrekcji Durmstrang', 15400, 'Pakt 1294 (Nienaruszalny)', 'Pierwotna Pieczęć Othala & Dagaz', 'Pradawny Smok Szwedzki Krótkopyski', '6.0% rocznie', '2026-06-01');
 
   const insertTx = db.prepare(`
@@ -2949,8 +3335,8 @@ if (false && bankAccountCount === 0) {
 
   insertTx.run('tx-skr-101', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-valdemar', 'Valdemar Krag-Hansen', 150, 'inflow', 'stypendium', 'Stypendium Naukowe Katedry Czarnej Magii', 'Nagroda za wzorowe opanowanie wiązania cieni.', 'completed', 'SKR-TX-84920', '2026-08-20 14:30', '2026-08-20 14:30');
   insertTx.run('tx-skr-102', 'usr-valdemar', 'Valdemar Krag-Hansen', 'shop-brokkur', 'Kuźnia Różdżek Brokkura & Oivinda', 280, 'outflow', 'zakup', 'Zakup: Różdżka Cisowa (Wilcze Serce)', 'Płatność na rynku Kaupangr.', 'completed', 'SKR-TX-84711', '2026-08-19 11:15', '2026-08-19 11:15');
-  insertTx.run('tx-skr-103', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-morana', 'Prof. Morana Vane', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Wiązanie Cieni', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84602', '2026-08-18 16:45', '2026-08-18 16:45');
-  insertTx.run('tx-skr-104', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-gunnar', 'Prof. Gunnar Vargson', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Pojedynki na Lodzie', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84590', '2026-08-17 17:00', '2026-08-17 17:00');
+  insertTx.run('tx-skr-103', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-morana', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Wiązanie Cieni', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84602', '2026-08-18 16:45', '2026-08-18 16:45');
+  insertTx.run('tx-skr-104', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-gunnar', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Pojedynki na Lodzie', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84590', '2026-08-17 17:00', '2026-08-17 17:00');
   insertTx.run('tx-skr-105', 'lottery-pool', 'Skandynawska Loteria Odyna', 'usr-valdemar', 'Valdemar Krag-Hansen', 120, 'inflow', 'loteria', 'Wygrana II Stopnia — Losowanie Letniego Przesilenia', 'Trafienie 2 run Futharku: Thurisaz i Algiz.', 'completed', 'SKR-TX-84310', '2026-08-15 20:00', '2026-08-15 20:00');
   insertTx.run('tx-skr-106', 'cytadela-treasury', 'Rada Dyrekcji Cytadeli', 'usr-valdemar', 'Valdemar Krag-Hansen', 100, 'inflow', 'nagroda_wyprawka', 'Nagroda za skompletowanie: Wyprawka Adepta Roku I', 'Premia za pomyślne przygotowanie do roku szkolnego.', 'completed', 'SKR-TX-84102', '2026-08-10 12:00', '2026-08-10 12:00');
 }
@@ -3273,7 +3659,7 @@ if (false && ravenMsgCount === 0) {
   insertRaven.run(
     'msg-2',
     'usr-morana',
-    'Prof. Morana Vane',
+    '',
     'Profesor',
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
     'Valdemar Krag-Hansen',
@@ -3584,6 +3970,119 @@ export function dbCraftedFormulaToFrontend(row) {
   };
 }
 
+export function dbHouseToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    fullName: row.full_name,
+    symbolAnimal: row.symbol_animal,
+    crestIcon: row.crest_icon,
+    crestImage: row.crest_image,
+    element: row.element,
+    founder: row.founder,
+    colors: JSON.parse(row.colors || '{}'),
+    gemName: row.gem_name,
+    motto: row.motto,
+    latinMotto: row.latin_motto,
+    traits: JSON.parse(row.traits || '[]'),
+    commonRoom: row.common_room,
+    relic: row.relic,
+    headOfHouse: row.head_of_house,
+    prefect: row.prefect,
+    membersCount: row.members_count,
+    startingPoints: row.starting_points
+  };
+}
+
+export function dbLocationToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    nordicName: row.nordic_name,
+    floor: row.floor,
+    x: row.x,
+    y: row.y,
+    icon: row.icon,
+    house: row.house,
+    type: row.type,
+    region: row.region,
+    image: row.image,
+    shortDesc: row.short_desc,
+    fullLore: row.full_lore,
+    npcs: JSON.parse(row.npcs || '[]'),
+    actions: JSON.parse(row.actions || '[]'),
+    secretClue: row.secret_clue,
+    quests: JSON.parse(row.quests || '[]')
+  };
+}
+
+export function dbRuneCatalogToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    symbol: row.symbol,
+    name: row.name,
+    meaning: row.meaning,
+    element: row.element,
+    description: row.description,
+    count: row.default_count
+  };
+}
+
+export function dbRuneFormulaToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    runes: JSON.parse(row.runes || '[]'),
+    catalyst: row.catalyst,
+    houseBonus: row.house_bonus,
+    rewardXp: row.reward_xp,
+    rewardPoints: row.reward_points,
+    rewardCurrency: row.reward_currency,
+    loreReward: row.lore_reward,
+    description: row.description
+  };
+}
+
+export function dbCeremonyQuestionToFrontend(row, options = []) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    scenario: row.scenario,
+    options: options.map(o => ({
+      text: o.text,
+      house: o.house,
+      reason: o.reason
+    }))
+  };
+}
+
+export function dbShopToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    categorySlug: row.category_slug,
+    description: row.description
+  };
+}
+
+export function dbFutharkRuneToFrontend(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    rune: row.rune_char,
+    name: row.name,
+    meaning: row.meaning,
+    color: row.color
+  };
+}
+
 export function dbSecretToFrontend(row) {
   if (!row) return null;
   return {
@@ -3675,6 +4174,7 @@ try { db.exec("ALTER TABLE news ADD COLUMN house TEXT DEFAULT ''"); } catch (_) 
 try { db.exec("ALTER TABLE news ADD COLUMN tags TEXT DEFAULT '[]'"); } catch (_) {}
 try { db.exec("ALTER TABLE news ADD COLUMN author_signature TEXT DEFAULT ''"); } catch (_) {}
 try { db.exec("ALTER TABLE news ADD COLUMN read_time TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE news ADD COLUMN subject_id TEXT DEFAULT ''"); } catch (_) {}
 // Professor signature image
 try { db.exec("ALTER TABLE users ADD COLUMN signature_png TEXT DEFAULT ''"); } catch (_) {}
 // HTML transaction e-mail archive and link to the external delivery ledger.
@@ -3842,7 +4342,7 @@ if (gazetteSectionCount === 0) {
     ['sec-z-lekcji', 'Z Lekcji', '📚', 4],
     ['sec-wywiady', 'Wywiady', '🎤', 5],
     ['sec-kroniki', 'Kroniki', '📜', 6],
-    ['sec-mity', 'Mity i Legendy Północy', '🐉', 7],
+    ['sec-mity', 'Mity i Legendy', '🐉', 7],
     ['sec-sport', 'Sport i Pojedynki', '⚔️', 8],
     ['sec-kultura', 'Kultura', '🎭', 9],
     ['sec-tworczosc', 'Twórczość Uczniów', '✍️', 10],
@@ -3921,7 +4421,7 @@ if (false && gazetteIssueCount === 0) {
     'KRONIKI & BADANIA',
     'Przełomowe znalezisko w Dolnych Kryptach Futharku',
     'Podczas prac renowacyjnych w zachodnim skrzydle Twierdzy natrafiono na zamurowaną komnatę runiczną sprzed siedmiu stuleci. Odkryte inskrypcje rzucają nowe światło na dawne techniki kucia ochronnych glifów.',
-    `# Tajemnice Starszego Futharku\n\nProfesorowie Katedry Runologii i Magii Północy potwierdzili autentyczność odnalezionych tablic bazaltowych. Zawierają one złożone kombinacje znaków **Thurisaz**, **Algiz** oraz **Sowilo**, splecione w formuły defensywne zdolne odbijać klątwy żywiołów.\n\n## Formuła Tarczy Mroźnego Wichru\n\nWedług wstępnych analiz, pradawni mistrzowie używali kombinacji run do hartowania kling i różdżek w lodowatej wodzie fiordu. Warsztat Runiczny (Galdrastofa) wkrótce udostępni adeptom wyższych roczników możliwość odtworzenia tych potężnych matryc.\n\n> „Moc run nie leży w ich wyryciu, lecz w woli, która tchnie w nie iskrę prawdy” — podkreśla Mistrz Runiczny Cytadeli.`,
+    `# Tajemnice Starszego Futharku\n\nProfesorowie Katedry Runologii i Magii Północy potwierdzili autentyczność odnalezionych tablic bazaltowych. Zawierają one złożone kombinacje znaków **Thurisaz**, **Algiz** oraz **Sowilo**, splecione w formuły defensywne zdolne odbijać klątwy żywiołów.\n\n## Formuła Tarczy Mroźnego Wichru\n\nWedług wstępnych analiz, pradawni mistrzowie używali kombinacji run do hartowania kling i różdżek w lodowatej wodzie fiordu. Starożytne Runy wkrótce udostępni adeptom wyższych roczników możliwość odtworzenia tych potężnych matryc.\n\n> „Moc run nie leży w ich wyryciu, lecz w woli, która tchnie w nie iskrę prawdy” — podkreśla Mistrz Runiczny Cytadeli.`,
     'usr-grindel-01',
     'Gellert Grindelwald',
     'sec-kroniki',
@@ -4270,7 +4770,7 @@ if (false && sessionCount === 0) {
     ) VALUES (
       ?, ?, 'czarna-magia', 'Czarna Magia', 'Egzamin Końcowy — Czarna Magia Klasa II',
       'Oficjalny sprawdzian wiedzy teoretycznej, runicznej i taktycznej z Czarnej Magii i Obrony przed Czarną Magią.',
-      'usr-prof-01', 'Prof. Morana Vane', 'Klasa II',
+      'usr-prof-01', '', 'Klasa II',
       '2026-08-01 00:00:00', '2026-11-30 23:59:59',
       60, 'soft_limit', 1, 40.0,
       'free', 0, 0, 'after_approval',
@@ -4915,7 +5415,7 @@ Zdejmowanie łusek może odbywać się wyłącznie za pomocą narzędzi z czarne
     'les-1',
     'Stabilizacja Eliksiru Wiggenowego w warunkach północnych',
     'usr-astrid-vinter',
-    'Prof. Astrid Vinter',
+    '',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
     'Krótki protokół laboratoryjny z pierwszej lekcji eliksirów.',
     'Na podstawie dyskusji na lekcji 1 w kociołkach z białego żelaza, opisz procedurę dodawania kory jarzębiny arktycznej i śluzu żądłoskoczka tundrowego.',
@@ -5170,7 +5670,7 @@ if (false && memoryYearCount === 0) {
   insertYear.run(
     'year-xvii', 'XVII', 'XVII Rok Szkolny', 'Semestr Zimowy 2026', '01.09.2026 – 31.10.2026',
     '2026-09-01', '2026-10-31', 'ravnheim', 2458,
-    'Arcymistrz Valdemar Krag-Hansen', 'Prof. Morana Vane',
+    'Arcymistrz Valdemar Krag-Hansen', '',
     'Astrid Vinter', 'Prof. Ezra Camhi',
     'Wielki Turniej Runiczny Trzech Fiordów & Otwarcie Sali Pamięci',
     28, 7, 'published', 1,
@@ -5182,8 +5682,8 @@ if (false && memoryYearCount === 0) {
   insertYear.run(
     'year-xvi', 'XVI', 'XVI Rok Szkolny', 'Semestr Wiosenny 2026', '01.02.2026 – 31.05.2026',
     '2026-02-01', '2026-05-31', 'reinhall', 2189,
-    'Arcymistrz Thorvald Vinter', 'Prof. Sigrid Hällström',
-    'Magnus Blom', 'Prof. Gunnar Vargson',
+    'Arcymistrz Thorvald Vinter', '',
+    'Magnus Blom', '',
     'Odkrycie Zapomnianej Krypty Blóðhorn',
     22, 6, 'published', 0,
     'Wiosenny semestr niezłomnej dyscypliny i chwały Zakonu Reinhall. Rekordowe zbiory ziół arktycznych, pomyślna ekspedycja na lodowiec Jotunheim i mistrzostwo w pojedynkach obronnych.',
@@ -5194,8 +5694,8 @@ if (false && memoryYearCount === 0) {
   insertYear.run(
     'year-xv', 'XV', 'XV Rok Szkolny', 'Semestr Zimowy 2025', '01.09.2025 – 31.12.2025',
     '2025-09-01', '2025-12-31', 'bjornhall', 2340,
-    'Arcymistrz Thorvald Vinter', 'Prof. Gunnar Vargson',
-    'Einar Solberg', 'Prof. Sigrid Hällström',
+    'Arcymistrz Thorvald Vinter', '',
+    'Einar Solberg', '',
     'Wielki Turniej Żelaznego Niedźwiedzia',
     20, 5, 'published', 0,
     'Jubileuszowy rok potęgi bojowej Zakonu Björnhall. Ponad sto oficjalnych starć na Arenie Północy i ustanowienie nowego rekordu obrony Cytadeli przed szturmem trolli granitowych.',
@@ -5289,21 +5789,21 @@ if (false && memoryYearCount === 0) {
   );
 
   insertStaff.run(
-    'stf-morana-xvii', 'year-xvii', 'usr-morana-vane', 'Prof. Morana Vane',
+    'stf-morana-xvii', 'year-xvii', 'usr-morana-vane', '',
     'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
     'Profesor Wróżbiarstwa & Opiekun Ravnheim', 'house_head', 'ravnheim', 'Wróżbiarstwo z Kości i Astralne Symbole',
     'Katedra Tajemnic i Wieszczbiarstwa', '', '', 'Zastępca Dyrektora, opieka nad Zakonem Ravnheim.', 2, '2026-11-01 12:00:00'
   );
 
   insertStaff.run(
-    'stf-sigrid-xvii', 'year-xvii', 'usr-sigrid-hallstrom', 'Prof. Sigrid Hällström',
+    'stf-sigrid-xvii', 'year-xvii', 'usr-sigrid-hallstrom', '',
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
     'Profesor Eliksirów & Opiekun Reinhall', 'house_head', 'reinhall', 'Eliksiry i Destylacja Soli',
     'Katedra Alchemii i Warzenia', '', '', 'Kierowanie laboratoriami alchemicznymi, opieka nad Reinhall.', 3, '2026-11-01 12:00:00'
   );
 
   insertStaff.run(
-    'stf-gunnar-xvii', 'year-xvii', 'usr-gunnar-vargson', 'Prof. Gunnar Vargson',
+    'stf-gunnar-xvii', 'year-xvii', 'usr-gunnar-vargson', '',
     'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80',
     'Profesor Zaklęć Bojowych & Opiekun Björnhall', 'house_head', 'bjornhall', 'Zaklęcia i Uroki Obronne',
     'Katedra Magii Bojowej', '', '', 'Koordynator obrony murów, opieka nad Zakonem Björnhall.', 4, '2026-11-01 12:00:00'
@@ -5324,7 +5824,7 @@ if (false && memoryYearCount === 0) {
 
   insertTrophy.run(
     'tr-xvii-housecup', 'year-xvii', 'ravnheim', 'house_cup', 'Wielki Puchar Twierdzy Magii XVII Roku',
-    2458, 'Prof. Morana Vane',
+    2458, '',
     JSON.stringify([
       { name: 'Astrid Vinter', points: 480, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100' },
       { name: 'Valdemar Krag-Hansen', points: 390, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
@@ -5336,7 +5836,7 @@ if (false && memoryYearCount === 0) {
 
   insertTrophy.run(
     'tr-xvii-dueling', 'year-xvii', 'bjornhall', 'dueling_cup', 'Tarcza Żelaznego Mistrza Pojedynków',
-    420, 'Prof. Gunnar Vargson',
+    420, '',
     JSON.stringify([
       { name: 'Einar Solberg', points: 190, avatar: '' },
       { name: 'Torstein Ragnvald', points: 140, avatar: '' }
@@ -5347,7 +5847,7 @@ if (false && memoryYearCount === 0) {
 
   insertTrophy.run(
     'tr-xvi-housecup', 'year-xvi', 'reinhall', 'house_cup', 'Wielki Puchar Twierdzy Magii XVI Roku',
-    2189, 'Prof. Sigrid Hällström',
+    2189, '',
     JSON.stringify([
       { name: 'Magnus Blom', points: 445, avatar: '' },
       { name: 'Kari Håkonson', points: 360, avatar: '' }
@@ -5358,7 +5858,7 @@ if (false && memoryYearCount === 0) {
 
   insertTrophy.run(
     'tr-xv-housecup', 'year-xv', 'bjornhall', 'house_cup', 'Wielki Puchar Twierdzy Magii XV Roku',
-    2340, 'Prof. Gunnar Vargson',
+    2340, '',
     JSON.stringify([
       { name: 'Einar Solberg', points: 410, avatar: '' },
       { name: 'Bjorn Ironhide', points: 395, avatar: '' }
@@ -5450,7 +5950,7 @@ if (false && memoryYearCount === 0) {
     'dip-xvii-04', 'year-xvii', 'usr-sigrid', 'Sigrid Lind', 'otergard', 'olimpiada',
     'Olimpiada Toksykologii i Eliksirów Arktycznych', 'II Miejsce',
     'Za opracowanie receptury neutralizatora jadu morskich żmij głębinowych.',
-    'Prof. Sigrid Hällström', '2026-10-18', '🧪', '', 'public', '2026-11-01 12:00:00'
+    '', '2026-10-18', '🧪', '', 'public', '2026-11-01 12:00:00'
   );
 
   // Awards (Wyróżnienia)
@@ -5516,9 +6016,9 @@ if (false && memoryYearCount === 0) {
     'rnk-xvii-professors', 'year-xvii', 'professors',
     JSON.stringify([
       { rank: 1, name: 'Prof. Ezra Camhi', subject: 'Czarna Magia i Klątwy', lessonsCount: 14, pointsGiven: 720 },
-      { rank: 2, name: 'Prof. Morana Vane', subject: 'Wróżbiarstwo z Kości', lessonsCount: 12, pointsGiven: 640 },
-      { rank: 3, name: 'Prof. Sigrid Hällström', subject: 'Eliksiry', lessonsCount: 11, pointsGiven: 590 },
-      { rank: 4, name: 'Prof. Gunnar Vargson', subject: 'Zaklęcia Bojowe', lessonsCount: 10, pointsGiven: 510 }
+      { rank: 2, name: '', subject: 'Wróżbiarstwo z Kości', lessonsCount: 12, pointsGiven: 640 },
+      { rank: 3, name: '', subject: 'Eliksiry', lessonsCount: 11, pointsGiven: 590 },
+      { rank: 4, name: '', subject: 'Zaklęcia Bojowe', lessonsCount: 10, pointsGiven: 510 }
     ]),
     '2026-10-31', '2026-11-01 12:00:00'
   );
@@ -5536,7 +6036,7 @@ if (false && memoryYearCount === 0) {
       {
         categoryName: 'Najsympatyczniejszy Profesor',
         winner: 'Prof. Ezra Camhi',
-        nominees: ['Prof. Ezra Camhi', 'Prof. Morana Vane', 'Prof. Gunnar Vargson'],
+        nominees: ['Prof. Ezra Camhi', '', ''],
         icon: '❄️'
       },
       {
@@ -5548,7 +6048,7 @@ if (false && memoryYearCount === 0) {
       {
         categoryName: 'Mistrz Ciętej Riposty w Karczmie',
         winner: 'Magnus Blom',
-        nominees: ['Magnus Blom', 'Prof. Gunnar Vargson', 'Sigrid Lind'],
+        nominees: ['Magnus Blom', '', 'Sigrid Lind'],
         icon: '🍺'
       },
       {

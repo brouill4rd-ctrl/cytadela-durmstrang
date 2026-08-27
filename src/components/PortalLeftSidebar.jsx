@@ -204,7 +204,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                     {currentUser.fullName || currentUser.name}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontWeight: 600 }}>
-                    {currentUser.role === 'admin' ? 'Arcymistrzyni • admin' : currentUser.role === 'professor' ? 'Profesor Katedry' : house ? house.name : 'Adept'}
+                    {currentUser.role === 'admin' ? `${currentUser.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz'} • admin` : currentUser.role === 'professor' ? 'Profesor Katedry' : house ? house.name : 'Adept'}
                   </div>
                 </div>
               </div>

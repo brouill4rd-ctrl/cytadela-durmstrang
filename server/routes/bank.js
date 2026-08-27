@@ -6,8 +6,35 @@ import db, {
   dbUserToFrontend
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import {
+  credit as creditSkirnir,
+  debit as debitSkirnir,
+  transfer as transferSkirnir
+} from '../services/skirnirService.js';
 
 const router = Router();
+
+router.get('/salary-config', (req, res) => {
+  try {
+    const keys = [
+      'salary_lesson_base_rate',
+      'salary_bonus_high_participation',
+      'salary_monthly_allowance',
+      'salary_currency_symbol',
+      'salary_currency_rune'
+    ];
+    const rows = db.prepare(`SELECT key, value FROM school_config WHERE key IN (${keys.map(() => '?').join(',')})`).all(...keys);
+    const config = {};
+    for (const row of rows) {
+      const camel = row.key.replace('salary_', '').replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      const num = Number(row.value);
+      config[camel] = isNaN(num) ? row.value : num;
+    }
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd pobierania konfiguracji wynagrodzeń: ' + err.message });
+  }
+});
 
 // GET /api/bank/account/:userId — get or create bank vault for user (zalogowani)
 router.get('/account/:userId', requireAuth, (req, res) => {
@@ -63,101 +90,62 @@ router.post('/transfer', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Nie możesz wykonać przelewu do samego siebie.' });
   }
 
-  // Get sender user
-  const senderRow = db.prepare('SELECT * FROM users WHERE id = ?').get(senderId);
-  if (!senderRow) return res.status(404).json({ error: 'Nadawca nie istnieje w Cytadeli.' });
-  const sender = dbUserToFrontend(senderRow);
+  try {
+    const result = transferSkirnir({
+      senderId,
+      recipientId,
+      amount: numAmount,
+      title: title || 'Przelew bankowy Skirnirów',
+      note: note || '',
+      idempotencyKey: `transfer-${senderId}-${recipientId}-${Date.now()}`
+    });
 
-  if ((sender.currency || 0) < numAmount) {
-    return res.status(400).json({ error: `Niewystarczające środki w skrytce bankowej. Posiadasz: ${sender.currency} Skirnirów.` });
-  }
-
-  // Handle special targets (like house treasury or charity) vs normal users
-  let recipientName = 'Odbiorca';
-  let isSpecialTarget = false;
-
-  if (recipientId.startsWith('house-treasury-')) {
-    const houseKey = recipientId.replace('house-treasury-', '');
-    recipientName = `Skarbiec Zakonu ${houseKey.toUpperCase()}`;
-    isSpecialTarget = true;
-  } else if (recipientId === 'cytadela-treasury') {
-    recipientName = 'Skarbiec Główny Cytadeli';
-    isSpecialTarget = true;
-  } else {
-    const recipientRow = db.prepare('SELECT * FROM users WHERE id = ?').get(recipientId);
-    if (!recipientRow) return res.status(404).json({ error: 'Odbiorca przelewu nie istnieje.' });
-    recipientName = recipientRow.full_name;
-  }
-
-  const txId = `tx-skr-${Date.now()}`;
-  const refCode = `SKR-TX-${Math.floor(10000 + Math.random() * 90000)}`;
-  const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-
-  // Execute database transaction
-  const executeTransfer = db.transaction(() => {
-    // 1. Deduct from sender
-    db.prepare('UPDATE users SET currency = currency - ? WHERE id = ?').run(numAmount, senderId);
-    db.prepare('UPDATE bank_accounts SET balance = balance - ? WHERE user_id = ?').run(numAmount, senderId);
-
-    // 2. Add to recipient if regular user
+    // Send notification email to recipient if regular user
+    const isSpecialTarget = recipientId.startsWith('house-treasury-') || recipientId === 'cytadela-treasury';
     if (!isSpecialTarget) {
-      db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(numAmount, recipientId);
-      db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(numAmount, recipientId);
-    }
-
-    // 3. Create bank transaction record
-    db.prepare(`
-      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).run(
-      txId, sender.id, sender.fullName, recipientId, recipientName,
-      numAmount, 'transfer', 'przelew', title || 'Przelew bankowy Skirnirów', note || '',
-      'completed', refCode, nowStr
-    );
-
-    // 4. Send notification email to recipient if user
-    if (!isSpecialTarget) {
-      const recipientUserRow = db.prepare('SELECT username FROM users WHERE id = ?').get(recipientId);
-      const recipientUsername = recipientUserRow ? recipientUserRow.username : recipientId;
-      const emailId = `mail-bank-${Date.now()}`;
-      db.prepare(`
-        INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'bank', ?)
-      `).run(
-        emailId,
-        `${recipientUsername}@durmstrang.edu`,
-        recipientName,
-        'bank@kaupangr.durmstrang.edu',
-        'Kaupangr Skírnisbanki',
-        `[BANK] Wpływ na Twoją Skrytkę: +${numAmount} Skirnirów od ${sender.fullName}`,
-        nowStr,
-        `Szanowny Adept/Profesorze ${recipientName},
+      const recipientUserRow = db.prepare('SELECT username, full_name FROM users WHERE id = ?').get(recipientId);
+      const senderRow = db.prepare('SELECT full_name FROM users WHERE id = ?').get(senderId);
+      if (recipientUserRow && senderRow) {
+        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        const emailId = `mail-bank-${Date.now()}`;
+        db.prepare(`
+          INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'bank', ?)
+        `).run(
+          emailId,
+          `${recipientUserRow.username}@durmstrang.edu`,
+          recipientUserRow.full_name,
+          'bank@kaupangr.durmstrang.edu',
+          'Kaupangr Skírnisbanki',
+          `[BANK] Wpływ na Twoją Skrytkę: +${numAmount} Skirnirów od ${senderRow.full_name}`,
+          nowStr,
+          `Szanowny Adept/Profesorze ${recipientUserRow.full_name},
 
 Do Twojej skrytki bankowej wpłynął oficjalny przelew waluty w Skirnirach:
 - Kwota: +${numAmount} Skirnirów
-- Nadawca: ${sender.fullName}
+- Nadawca: ${senderRow.full_name}
 - Tytuł: ${title || 'Przelew bankowy'}
-${note ? `- Notatka: „${note}”\n` : ''}- Kod transakcji: ${refCode}
-
+${note ? `- Notatka: „${note}”\n` : ''}
 Twoje saldo zostało zaktualizowane w księgach Banku Skirnirów.
 
 Z pieczęcią krasnoludzkich mincerzy,
 Główny Bankier Kaupangr Skírnisbanki`
-      );
+        );
+      }
     }
-  });
 
-  executeTransfer();
+    const senderUpdated = db.prepare('SELECT currency FROM users WHERE id = ?').get(senderId);
+    const createdTx = db.prepare('SELECT * FROM bank_transactions WHERE id = ?').get(result.txId);
 
-  const senderUpdated = db.prepare('SELECT currency FROM users WHERE id = ?').get(senderId);
-  const createdTx = db.prepare('SELECT * FROM bank_transactions WHERE id = ?').get(txId);
-
-  res.json({
-    success: true,
-    newBalance: senderUpdated.currency,
-    transaction: dbBankTransactionToFrontend(createdTx),
-    message: `Pomyślnie przelano ${numAmount} Skirnirów do: ${recipientName}.`
-  });
+    res.json({
+      success: true,
+      newBalance: senderUpdated.currency,
+      transaction: dbBankTransactionToFrontend(createdTx),
+      message: `Pomyślnie przelano ${numAmount} Skirnirów.`
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // GET /api/bank/transactions — transaction history (zalogowani)
@@ -217,12 +205,21 @@ router.post('/salaries/payout-all', requireAuth, requireRole('admin'), (req, res
   const executePayroll = db.transaction(() => {
     for (const prof of professors) {
       const salId = `sal-${prof.id}-${Date.now()}`;
-      const txId = `tx-sal-${prof.id}-${Date.now()}`;
-      const refCode = `SKR-SAL-${Math.floor(10000 + Math.random() * 90000)}`;
 
-      // 1. Credit professor currency & vault
-      db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(numAmount, prof.id);
-      db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(numAmount, prof.id);
+      // 1. Credit professor via central service
+      creditSkirnir({
+        userId: prof.id,
+        userName: prof.full_name,
+        amount: numAmount,
+        category: 'pensja',
+        title: `Uposażenie Profesorskie (${period})`,
+        note: `Wypłata pensji zadekretowana przez: ${adminName}`,
+        sourceType: 'SALARY',
+        sourceId: salId,
+        actorId: req.user.id,
+        actorName: adminName,
+        idempotencyKey: `sal-${prof.id}-${period}`
+      });
 
       // 2. Insert salary record
       db.prepare(`
@@ -230,18 +227,7 @@ router.post('/salaries/payout-all', requireAuth, requireRole('admin'), (req, res
         VALUES (?, ?, ?, ?, ?, ?, 'paid', datetime('now'))
       `).run(salId, prof.id, prof.full_name, numAmount, period, 'Budżet Dyrekcji Cytadeli');
 
-      // 3. Insert bank transaction
-      db.prepare(`
-        INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-        VALUES (?, 'cytadela-treasury', 'Rada Dyrekcji Cytadeli', ?, ?, ?, 'inflow', 'pensja', ?, ?, 'completed', ?, ?, datetime('now'))
-      `).run(
-        txId, prof.id, prof.full_name, numAmount,
-        `Uposażenie Profesorskie (${period})`,
-        `Wypłata pensji zadekretowana przez: ${adminName}`,
-        refCode, nowStr
-      );
-
-      // 4. Send official notification email
+      // 3. Send official notification email
       const emailId = `mail-sal-${prof.id}-${Date.now()}`;
       db.prepare(`
         INSERT INTO emails (id, to_email, to_name, from_addr, from_name, subject, date, read, type, body)
@@ -298,23 +284,24 @@ router.post('/salaries/payout-lesson', requireAuth, requireRole('admin', 'profes
   const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
 
   const executeLessonPayout = db.transaction(() => {
-    db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(totalAmount, professorId);
-    db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(totalAmount, professorId);
+    creditSkirnir({
+      userId: professorId,
+      userName: profRow.full_name,
+      amount: totalAmount,
+      category: 'pensja',
+      title: `Honorarium za Lekcję: ${lessonTopic || 'Zajęcia Katedry'}`,
+      note: `Automatyczne rozliczenie za poprowadzenie zajęć (${participantsCount} uczestników).`,
+      sourceType: 'LESSON_SALARY',
+      sourceId: lessonId || salId,
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'System',
+      idempotencyKey: `les-sal-${professorId}-${lessonId || Date.now()}`
+    });
 
     db.prepare(`
       INSERT INTO teacher_salaries (id, professor_id, professor_name, amount, period, source, lesson_id, status, paid_at)
       VALUES (?, ?, ?, ?, 'Lekcja Bieżąca', 'Honorarium Lekcyjne', ?, 'paid', datetime('now'))
     `).run(salId, professorId, profRow.full_name, totalAmount, lessonId || '');
-
-    db.prepare(`
-      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-      VALUES (?, 'cytadela-treasury', 'Skarbiec Główny Cytadeli', ?, ?, ?, 'inflow', 'pensja', ?, ?, 'completed', ?, ?, datetime('now'))
-    `).run(
-      txId, professorId, profRow.full_name, totalAmount,
-      `Honorarium za Lekcję: ${lessonTopic || 'Zajęcia Katedry'}`,
-      `Automatyczne rozliczenie za poprowadzenie zajęć (${participantsCount} uczestników).`,
-      refCode, nowStr
-    );
   });
 
   executeLessonPayout();
@@ -347,49 +334,49 @@ router.post('/deposit', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Brak uprawnień do modyfikacji cudzej skrytki.' });
   }
 
-  const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  const userRow = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId);
   if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
 
   const isDeposit = type === 'inflow' || numAmount > 0;
   const absAmount = Math.abs(numAmount);
-  const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-  const txId = `tx-dep-${Date.now()}`;
-  const refCode = `SKR-DEP-${Math.floor(10000 + Math.random() * 90000)}`;
 
-  const execute = db.transaction(() => {
+  try {
+    let result;
     if (isDeposit) {
-      db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(absAmount, userId);
-      db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(absAmount, userId);
+      result = creditSkirnir({
+        userId,
+        userName: userRow.full_name,
+        amount: absAmount,
+        category,
+        title: title || 'Nagroda z aktywności',
+        sourceType: 'DEPOSIT',
+        actorId: req.user.id,
+        actorName: req.user.fullName || 'System'
+      });
     } else {
-      db.prepare('UPDATE users SET currency = MAX(0, currency - ?) WHERE id = ?').run(absAmount, userId);
-      db.prepare('UPDATE bank_accounts SET balance = MAX(0, balance - ?) WHERE user_id = ?').run(absAmount, userId);
+      result = debitSkirnir({
+        userId,
+        userName: userRow.full_name,
+        amount: absAmount,
+        category,
+        title: title || 'Opłata / Wydatek',
+        sourceType: 'WITHDRAWAL',
+        actorId: req.user.id,
+        actorName: req.user.fullName || 'System'
+      });
     }
 
-    db.prepare(`
-      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-      VALUES (?, 'cytadela-treasury', 'Skarbiec Cytadeli', ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, datetime('now'))
-    `).run(
-      txId,
-      userId, userRow.full_name,
-      isDeposit ? absAmount : -absAmount,
-      isDeposit ? 'inflow' : 'outflow',
-      category,
-      title || (isDeposit ? 'Nagroda z aktywności' : 'Opłata / Wydatek'),
-      '',
-      refCode, nowStr
-    );
-  });
+    const updatedUser = db.prepare('SELECT currency FROM users WHERE id = ?').get(userId);
+    const tx = db.prepare('SELECT * FROM bank_transactions WHERE id = ?').get(result.txId);
 
-  execute();
-
-  const updatedUser = db.prepare('SELECT currency FROM users WHERE id = ?').get(userId);
-  const tx = db.prepare('SELECT * FROM bank_transactions WHERE id = ?').get(txId);
-
-  res.json({
-    success: true,
-    newBalance: updatedUser.currency,
-    transaction: dbBankTransactionToFrontend(tx)
-  });
+    res.json({
+      success: true,
+      newBalance: updatedUser.currency,
+      transaction: dbBankTransactionToFrontend(tx)
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 export default router;

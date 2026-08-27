@@ -18,7 +18,7 @@ const WIZARD_STEPS = [
 ];
 
 export const ExamCreatorView = () => {
-  const { activeExamId, navigateToExams, showNotification, currentUser } = useSchool();
+  const { activeExamId, navigateToExams, showNotification, currentUser, subjects: allSubjects } = useSchool();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -250,20 +250,12 @@ export const ExamCreatorView = () => {
                 className="gothic-input"
                 value={examForm.subjectId}
                 onChange={e => {
-                  const subMap = {
-                    'czarna-magia': 'Czarna Magia',
-                    'eliksiry': 'Eliksiry',
-                    'starozytne-runy': 'Starożytne Runy',
-                    'transmutacja': 'Transmutacja',
-                    'obrona-przed-czarna-magia': 'Obrona Przed Czarną Magią'
-                  };
-                  setExamForm(p => ({ ...p, subjectId: e.target.value, subjectName: subMap[e.target.value] || e.target.value }));
+                  const subj = (allSubjects || []).find(s => s.id === e.target.value);
+                  setExamForm(p => ({ ...p, subjectId: e.target.value, subjectName: subj?.name || e.target.value }));
                 }}>
-                <option value="czarna-magia">Czarna Magia</option>
-                <option value="eliksiry">Eliksiry</option>
-                <option value="starozytne-runy">Starożytne Runy</option>
-                <option value="transmutacja">Transmutacja</option>
-                <option value="obrona-przed-czarna-magia">Obrona Przed Czarną Magią</option>
+                {(allSubjects || []).filter(s => s.isActive !== false).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
               </select>
             </div>
           </div>

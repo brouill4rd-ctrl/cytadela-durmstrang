@@ -119,7 +119,7 @@ export const CATEGORY_BANNERS = [
   },
   {
     id: 'magizoologia',
-    categoryName: 'Magizoologia Północy',
+    categoryName: 'Magizoologia',
     defaultScript: 'magizoologia',
     themeColor: '#52b788',
     description: 'Badanie smoków, wilków mroźnych, kelpie z fiordów i trolli górskich',
@@ -129,7 +129,7 @@ export const CATEGORY_BANNERS = [
   },
   {
     id: 'obrona-przed-ciemnymi-mocami',
-    categoryName: 'Obrona Przed Ciemnymi Mocami',
+    categoryName: 'Obrona przed Ciemnymi Mocami',
     defaultScript: 'obrona przed ciemnymi mocami',
     themeColor: '#f97316',
     description: 'Neutralizacja klątw, obrona przed istotami cmentarnymi i demonami mrozu',
@@ -149,7 +149,7 @@ export const CATEGORY_BANNERS = [
   },
   {
     id: 'wrozbiarstwo',
-    categoryName: 'Wróżbiarstwo z Kości i Dymu',
+    categoryName: 'Wróżbiarstwo',
     defaultScript: 'wrozbiarstwo',
     themeColor: '#a855f7',
     description: 'Rzuty kośćmi völvy, interpretacja dymu ziół arktycznych i lustra lodowe',
@@ -189,7 +189,7 @@ export const CATEGORY_BANNERS = [
   },
   {
     id: 'rytualistyka',
-    categoryName: 'Rytualistyka Północna',
+    categoryName: 'Rytualistyka',
     defaultScript: 'rytualistyka',
     themeColor: '#7c3aed',
     description: 'Wieloosobowe rytuały magiczne: blóty, seiðr i galdr w warunkach ekstremalnych',
@@ -209,7 +209,7 @@ export const CATEGORY_BANNERS = [
   },
   {
     id: 'mity-polnocy',
-    categoryName: 'Mity i Legendy Północy',
+    categoryName: 'Mity i Legendy',
     defaultScript: 'mity polnocy',
     themeColor: '#8b5cf6',
     description: 'Nordycka mitologia jako realny zapis historii magicznej — od wojen Asów po Ragnarök',

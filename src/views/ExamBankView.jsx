@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export const ExamBankView = () => {
-  const { navigateToExams, showNotification, currentUser } = useSchool();
+  const { navigateToExams, showNotification, currentUser, subjects: allSubjects } = useSchool();
 
   const [questions, setQuestions] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -149,11 +149,9 @@ export const ExamBankView = () => {
             className="gothic-input"
             value={selectedSubject}
             onChange={e => setSelectedSubject(e.target.value)}>
-            <option value="czarna-magia">Czarna Magia</option>
-            <option value="eliksiry">Eliksiry</option>
-            <option value="starozytne-runy">Starożytne Runy</option>
-            <option value="transmutacja">Transmutacja</option>
-            <option value="obrona-przed-czarna-magia">Obrona Przed Czarną Magią</option>
+            {(allSubjects || []).filter(s => s.isActive !== false).map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
           </select>
 
           <input

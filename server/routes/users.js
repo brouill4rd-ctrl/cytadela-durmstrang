@@ -150,6 +150,49 @@ router.patch('/:id/approve', requireAuth, requireRole('admin'), async (req, res)
     }
 
     db.prepare("UPDATE pending_applications SET status = 'approved' WHERE user_id = ? AND status = 'pending'").run(req.params.id);
+
+    // Professor: auto-approve pending subject applications and create assignments
+    if (user.role === 'professor') {
+      const pendingApps = db.prepare(
+        `SELECT * FROM professor_subject_applications WHERE professor_id = ? AND status = 'pending'`
+      ).all(req.params.id);
+
+      const schoolYear = db.prepare("SELECT value FROM school_config WHERE key = 'school_year'").get()?.value || 'XIX Rok Szkolny (2026/2027)';
+
+      for (const app of pendingApps) {
+        db.prepare(`
+          UPDATE professor_subject_applications
+          SET status = 'approved', reviewed_by = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
+          WHERE id = ?
+        `).run(adminName, app.id);
+
+        db.prepare(`
+          INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status, assigned_by)
+          VALUES (?, ?, ?, 'primary', ?, 'active', ?)
+        `).run(
+          `tsa-${req.params.id}-${app.subject_id}`,
+          req.params.id,
+          app.subject_id,
+          schoolYear,
+          adminName
+        );
+
+        // Set as primary professor if subject has none
+        const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(app.subject_id);
+        if (subject && !subject.professor_id) {
+          db.prepare('UPDATE subjects SET professor_id = ?, professor_name = ? WHERE id = ?')
+            .run(req.params.id, user.fullName, app.subject_id);
+        }
+      }
+
+      // Sync taught_subject_ids convenience column
+      const assignedIds = db.prepare(
+        `SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active'`
+      ).all(req.params.id).map(r => r.subject_id);
+      db.prepare('UPDATE users SET taught_subject_ids = ? WHERE id = ?')
+        .run(JSON.stringify(assignedIds), req.params.id);
+    }
+
     db.prepare(`
       INSERT INTO audit_logs (id, timestamp, admin, action, detail)
       VALUES (?, ?, ?, ?, ?)

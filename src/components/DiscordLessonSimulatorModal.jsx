@@ -32,7 +32,7 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState('setup');
   const [threadId, setThreadId] = useState(`thread-${Date.now()}`);
   const [threadName, setThreadName] = useState('lekcja-eliksiry-wiggen');
-  const [subjectId, setSubjectId] = useState('eliksiry-i-destylacja');
+  const [subjectId, setSubjectId] = useState('eliksiry');
   const [classYear, setClassYear] = useState('Klasa II');
   const [topic, setTopic] = useState('Eliksir Wiggenowy — Stabilizacja i Warzenie Północne');
   const [professorName, setProfessorName] = useState(currentUser?.fullName || 'Prof. Astrid Vinter');
@@ -59,7 +59,7 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
       threadId,
       threadName,
       subjectId,
-      subjectName: subj?.name || 'Eliksiry i Destylacja Soli',
+      subjectName: subj?.name || 'Eliksiry',
       classYear,
       topic,
       professorName

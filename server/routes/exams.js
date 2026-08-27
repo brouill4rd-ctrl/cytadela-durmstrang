@@ -7,7 +7,8 @@ import db, {
   dbQuestionForStudentFrontend,
   dbExamAttemptToFrontend,
   dbAttemptAnswerToFrontend,
-  dbExamGradingScaleToFrontend
+  dbExamGradingScaleToFrontend,
+  isProfessorOfSubject
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { discordBot } from '../discordBot.js';
@@ -304,6 +305,9 @@ router.get('/exams/:id', requireAuth, (req, res) => {
 router.post('/exams', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   const d = req.body;
   if (!d.sessionId || !d.subjectId || !d.title || !d.classYear) return res.status(400).json({ error: 'Wypełnij wymagane pola.' });
+  if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, d.subjectId)) {
+    return res.status(403).json({ error: 'Możesz tworzyć egzaminy tylko dla przedmiotów, które prowadzisz.' });
+  }
   const session = db.prepare('SELECT * FROM exam_sessions WHERE id = ?').get(d.sessionId);
   if (!session) return res.status(404).json({ error: 'Nie znaleziono sesji egzaminacyjnej.' });
   const id = genId('exam');

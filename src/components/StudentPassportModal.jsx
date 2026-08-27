@@ -62,17 +62,18 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
     : null;
 
   const studentName = currentUser
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.name || currentUser.username || 'Nowicjusz Północy'
+    ? (currentUser.fullName || `${currentUser.name || ''} ${currentUser.surname || ''}`.trim() || currentUser.username || 'Nowicjusz Północy')
     : 'Nowicjusz Północy';
 
   const roleMap = {
-    admin: 'Arcymistrz / Prefekt',
+    admin: 'Arcymistrz Cytadeli',
     professor: 'Profesor Katedry',
     teacher: 'Mistrz Wykładowca',
     student: 'Adept Północy (Uczeń)',
     headmaster: 'Dyrektor Cytadeli'
   };
   const roleName = roleMap[currentUser?.role] || currentUser?.role || 'Adept I Roku';
+  const isStaff = ['admin', 'professor', 'teacher', 'headmaster'].includes(currentUser?.role);
 
   const userAvatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80';
 
@@ -202,7 +203,11 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
       ctx.font = '15px Georgia, serif';
       ctx.fillStyle = '#d1d5db';
       ctx.fillText(`Status / Rola: ${roleName}`, textX, 205);
-      ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
+      if (isStaff) {
+        ctx.fillText(`Katedra: ${currentUser?.departmentName || (currentUser?.role === 'admin' || currentUser?.role === 'headmaster' ? 'Rada Najwyższa' : 'Katedra Magii')}`, textX, 245);
+      } else {
+        ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
+      }
       ctx.fillText(`Identyfikator: ${runicId}`, textX, 285);
       ctx.fillText(`Data Rejestracji: XIX Rok Szkolny`, textX, 325);
       ctx.fillText(`Kancelaria: Najwyższa Rada Mistrzów TMD`, textX, 365);
@@ -255,7 +260,11 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
       ctx.font = '15px Georgia, serif';
       ctx.fillStyle = '#d1d5db';
       ctx.fillText(`Status / Rola: ${roleName}`, textX, 205);
-      ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
+      if (isStaff) {
+        ctx.fillText(`Katedra: ${currentUser?.departmentName || (currentUser?.role === 'admin' || currentUser?.role === 'headmaster' ? 'Rada Najwyższa' : 'Katedra Magii')}`, textX, 245);
+      } else {
+        ctx.fillText(`Zakon: ${currentHouse ? currentHouse.name : 'Nieprzydzielony (Oczekuje na Ceremonię)'}`, textX, 245);
+      }
       ctx.fillText(`Identyfikator: ${runicId}`, textX, 285);
       ctx.fillText(`Data Rejestracji: XIX Rok Szkolny`, textX, 325);
 
@@ -457,41 +466,50 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                  <div>
-                    <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Zakon</span>
-                    {currentHouse ? (
-                      <div style={{ fontSize: '0.98rem', fontWeight: 700, color: currentHouse.colors?.secondary || 'var(--gold-ancient)', fontFamily: 'var(--font-heading)' }}>
-                        {currentHouse.name}
+                  {isStaff ? (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Katedra / Wydział</span>
+                      <div style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--gold-ancient)', fontFamily: 'var(--font-heading)' }}>
+                        {currentUser?.departmentName || (currentUser?.role === 'admin' || currentUser?.role === 'headmaster' ? 'Rada Najwyższa' : 'Katedra Magii')}
                       </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                        <span style={{ fontSize: '0.82rem', color: '#fbbf24', fontStyle: 'italic', fontWeight: 600 }}>
-                          Oczekuje na Rytuał
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onClose();
-                            if (setActiveView) setActiveView('ceremony');
-                          }}
-                          style={{
-                            background: 'rgba(197, 159, 78, 0.2)',
-                            border: '1px solid var(--gold-ancient)',
-                            borderRadius: '3px',
-                            color: 'var(--gold-ancient)',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            padding: '0.15rem 0.45rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                          title="Przejdź do Ceremonii Przydziału przed Kamień Przysięgi"
-                        >
-                          ᛞ Rytuał →
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Zakon</span>
+                      {currentHouse ? (
+                        <div style={{ fontSize: '0.98rem', fontWeight: 700, color: currentHouse.colors?.secondary || 'var(--gold-ancient)', fontFamily: 'var(--font-heading)' }}>
+                          {currentHouse.name}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          <span style={{ fontSize: '0.82rem', color: '#fbbf24', fontStyle: 'italic', fontWeight: 600 }}>
+                            Oczekuje na Rytuał
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              if (setActiveView) setActiveView('ceremony');
+                            }}
+                            style={{
+                              background: 'rgba(197, 159, 78, 0.2)',
+                              border: '1px solid var(--gold-ancient)',
+                              borderRadius: '3px',
+                              color: 'var(--gold-ancient)',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.45rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            title="Przejdź do Ceremonii Przydziału przed Kamień Przysięgi"
+                          >
+                            ᛞ Rytuał →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rola / Stopień</span>
                     <div style={{ fontSize: '0.92rem', color: '#d1d5db', fontWeight: 600 }}>

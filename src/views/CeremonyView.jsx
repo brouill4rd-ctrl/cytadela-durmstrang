@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { CEREMONY_QUESTIONS } from '../data/seedCeremonyQuestions';
 import { Sparkles, Shield, Flame, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
 
 export const CeremonyView = () => {
-  const { houses, sortIntoHouse, studentProfile, setActiveView, setActiveHouseTab } = useSchool();
+  const { houses, ceremonyQuestions, sortIntoHouse, studentProfile, setActiveView, setActiveHouseTab } = useSchool();
   const { playRuneChime, playSortingFanfare, playWandSwoosh } = useSound();
 
   const [currentStep, setCurrentStep] = useState(0); // 0 = intro, 1..N = questions, 8 = calculating/reveal, 9 = final
@@ -24,7 +23,7 @@ export const CeremonyView = () => {
     const newAnswers = [...answers, option.house];
     setAnswers(newAnswers);
 
-    if (currentStep < CEREMONY_QUESTIONS.length) {
+    if (currentStep < ceremonyQuestions.length) {
       setCurrentStep(currentStep + 1);
     } else {
       triggerCeremonyClimax(newAnswers);
@@ -78,7 +77,7 @@ export const CeremonyView = () => {
 
   const assignedHouse = houseObj || (houses && typeof houses === 'object' ? Object.values(houses)[0] : null);
 
-  const currentQ = currentStep >= 1 && currentStep <= CEREMONY_QUESTIONS.length ? CEREMONY_QUESTIONS[currentStep - 1] : null;
+  const currentQ = currentStep >= 1 && currentStep <= ceremonyQuestions.length ? ceremonyQuestions[currentStep - 1] : null;
 
   return (
     <div style={{ maxWidth: '840px', margin: '0 auto', minHeight: '70vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -144,7 +143,7 @@ export const CeremonyView = () => {
       )}
 
       {/* 2. QUESTION SCREEN */}
-      {currentStep >= 1 && currentStep <= CEREMONY_QUESTIONS.length && currentQ && (
+      {currentStep >= 1 && currentStep <= ceremonyQuestions.length && currentQ && (
         <div
           className="gothic-card runic-corners"
           style={{
@@ -157,10 +156,10 @@ export const CeremonyView = () => {
           {/* Progress Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.8rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '1rem' }}>
             <span style={{ fontFamily: 'var(--font-heading)', color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
-              {currentQ.title || `Próba ${currentStep} z ${CEREMONY_QUESTIONS.length}`}
+              {currentQ.title || `Próba ${currentStep} z ${ceremonyQuestions.length}`}
             </span>
             <div style={{ display: 'flex', gap: '0.35rem' }}>
-              {CEREMONY_QUESTIONS.map((_, i) => (
+              {ceremonyQuestions.map((_, i) => (
                 <div
                   key={i}
                   style={{

@@ -869,7 +869,7 @@ router.post('/archive-year/preview', authenticateToken, requireAdmin, (req, res)
       userId: f.id,
       name: f.full_name || `${f.name} ${f.surname}`,
       avatar: f.avatar || '',
-      title: f.title || (f.role === 'admin' ? 'Arcymistrz Dyrekcji' : 'Profesor'),
+      title: f.title || (f.role === 'admin' ? (f.gender === 'czarodziejka' ? 'Arcymistrzyni Dyrekcji' : 'Arcymistrz Dyrekcji') : 'Profesor'),
       role: f.role === 'admin' ? 'headmaster' : 'professor',
       house: f.house || '',
       subjectName: f.department_name || 'Czarna Magia',

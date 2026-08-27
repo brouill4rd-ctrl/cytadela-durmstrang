@@ -58,13 +58,14 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
 
   const renderInline = (text) => {
     const parts = [];
-    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
+    const regex = /(\{color:([^}]+)\}(.+?)\{\/color\}|\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
     let last = 0, m;
     while ((m = regex.exec(text)) !== null) {
       if (m.index > last) parts.push(text.slice(last, m.index));
-      if (m[2]) parts.push(<strong key={m.index}>{m[2]}</strong>);
-      else if (m[3]) parts.push(<em key={m.index}>{m[3]}</em>);
-      else if (m[4]) parts.push(<a key={m.index} href={m[5]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[4]}</a>);
+      if (m[2]) parts.push(<span key={m.index} style={{ color: m[2] }}>{m[3]}</span>);
+      else if (m[4]) parts.push(<strong key={m.index}>{m[4]}</strong>);
+      else if (m[5]) parts.push(<em key={m.index}>{m[5]}</em>);
+      else if (m[6]) parts.push(<a key={m.index} href={m[7]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[6]}</a>);
       last = m.index + m[0].length;
     }
     if (last < text.length) parts.push(text.slice(last));
@@ -281,7 +282,7 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
             <CategoryBanner
               category={currentArticle.categoryKey || currentArticle.category}
               customText={currentArticle.bannerCustomText}
-              height={84}
+              height={140}
             />
           </div>
 
@@ -380,35 +381,21 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
               border: '1px solid rgba(164, 200, 225, 0.15)',
               borderRadius: '4px',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
               gap: '1rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              {currentArticle.authorSignature && (
-                <img
-                  src={currentArticle.authorSignature}
-                  alt={`Podpis ${currentArticle.author}`}
-                  style={{ maxHeight: '60px', maxWidth: '180px', objectFit: 'contain', filter: 'brightness(1.1)' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              )}
-              <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Sygnatura Urzędowa:
-                </div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', color: '#ffffff', marginTop: '0.15rem' }}>
-                  {currentArticle.author}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)' }}>
-                  {currentArticle.authorRole || 'Rada Dyrekcji Cytadeli'}
-                </div>
-              </div>
-            </div>
+            {currentArticle.authorSignature && (
+              <img
+                src={currentArticle.authorSignature}
+                alt={`Podpis ${currentArticle.author}`}
+                style={{ maxHeight: '90px', maxWidth: '280px', objectFit: 'contain', filter: 'brightness(1.1)' }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', flexWrap: 'wrap', gap: '1rem' }}>
               <button
                 onClick={handleCopyLink}
                 style={{
@@ -427,6 +414,18 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
                 {copied ? <Check size={13} color="#22c55e" /> : <Share2 size={13} />}
                 <span>{copied ? 'Skopiowano' : 'Kopiuj Odnośnik'}</span>
               </button>
+
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Sygnatura Urzędowa:
+                </div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', color: '#ffffff', marginTop: '0.15rem' }}>
+                  {currentArticle.author}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)' }}>
+                  {currentArticle.authorRole || 'Rada Dyrekcji Cytadeli'}
+                </div>
+              </div>
             </div>
           </div>
 

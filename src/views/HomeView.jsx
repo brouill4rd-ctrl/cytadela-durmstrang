@@ -259,7 +259,7 @@ export const HomeView = () => {
                 <CategoryBanner
                   category={article.categoryKey || article.category}
                   customText={article.bannerCustomText}
-                  height={78}
+                  height={140}
                 />
               </div>
 
@@ -355,11 +355,19 @@ export const HomeView = () => {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', fontStyle: 'italic', color: 'var(--ice-frost)', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontStyle: 'italic', color: 'var(--ice-frost)', marginTop: '0.5rem', textAlign: 'right' }}>
                   <div>
                     Z wyrazami szacunku,<br />
                     <strong style={{ color: '#ffffff' }}>{article.author}</strong>
                   </div>
+                  {article.authorSignature && (
+                    <img
+                      src={article.authorSignature}
+                      alt={`Podpis ${article.author}`}
+                      style={{ maxHeight: '70px', maxWidth: '220px', objectFit: 'contain', filter: 'brightness(1.1)', marginTop: '0.4rem' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
                 </div>
               </div>
 

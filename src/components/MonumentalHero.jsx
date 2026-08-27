@@ -32,48 +32,48 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
       house: houses.reinhall || { startingPoints: 480 },
       name: 'Reinhall',
       runeTitle: 'ᚦ REINHALL ᚦ',
-      color: '#c59f4e', // Ancient Gold & Blood
+      color: houses.reinhall?.colors?.primary || '#c59f4e',
       colorText: '#f7e6c4',
       sandColor: '#c59f4e',
       gemColor: '#7a1818',
-      head: 'Prof. Sigrid Hällström',
-      prefect: 'Magnus Blom'
+      head: houses.reinhall?.headOfHouse || 'Prof. Sigrid Hällström',
+      prefect: houses.reinhall?.prefect || 'Magnus Blom'
     },
     {
       id: 'bjornhall',
       house: houses.bjornhall || { startingPoints: 520 },
       name: 'Björnhall',
       runeTitle: 'ᛉ BJÖRNHALL ᛉ',
-      color: '#c02b2b', // Battle Crimson & Dark Iron
+      color: houses.bjornhall?.colors?.primary || '#c02b2b',
       colorText: '#ffbaba',
       sandColor: '#c02b2b',
       gemColor: '#dc2626',
-      head: 'Prof. Gunnar Vargson',
-      prefect: 'Astrid Vargadottir'
+      head: houses.bjornhall?.headOfHouse || 'Prof. Gunnar Vargson',
+      prefect: houses.bjornhall?.prefect || 'Astrid Vargadottir'
     },
     {
       id: 'ravnheim',
       house: houses.ravnheim || { startingPoints: 510 },
       name: 'Ravnheim',
       runeTitle: 'ᚱ RAVNHEIM ᚱ',
-      color: '#a77de0', // Astral Violet & Night Obsidian
+      color: houses.ravnheim?.colors?.primary || '#a77de0',
       colorText: '#e6d8ff',
       sandColor: '#a77de0',
       gemColor: '#9333ea',
-      head: 'Prof. Morana Vane',
-      prefect: 'Valdemar Krag-Hansen'
+      head: houses.ravnheim?.headOfHouse || 'Prof. Morana Vane',
+      prefect: houses.ravnheim?.prefect || 'Valdemar Krag-Hansen'
     },
     {
       id: 'otergard',
       house: houses.otergard || { startingPoints: 495 },
       name: 'Otergard',
       runeTitle: 'ᛞ OTERGARD ᛞ',
-      color: '#2ec4b6', // Glacial Teal & Emerald Waters
+      color: houses.otergard?.colors?.primary || '#2ec4b6',
       colorText: '#b2f5ea',
       sandColor: '#2ec4b6',
       gemColor: '#0d9488',
-      head: 'Prof. Klaus Lindqvist',
-      prefect: 'Sigrun Lindqvist'
+      head: houses.otergard?.headOfHouse || 'Prof. Klaus Lindqvist',
+      prefect: houses.otergard?.prefect || 'Sigrun Lindqvist'
     }
   ];
 

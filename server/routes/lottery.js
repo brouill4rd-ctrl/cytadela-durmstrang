@@ -2,19 +2,28 @@ import { Router } from 'express';
 import db, {
   dbLotteryRoundToFrontend,
   dbLotteryTicketToFrontend,
+  dbFutharkRuneToFrontend,
   dbUserToFrontend,
   calculateHouseRankings
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
+import { credit as creditSkirnir, debit as debitSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
 
-const ALL_FUTHARK_RUNES = [
-  'fehu', 'uruz', 'thurisaz', 'ansuz', 'raidho', 'kenaz',
-  'gebo', 'wunjo', 'hagalaz', 'nauthiz', 'isa', 'jera',
-  'eihwaz', 'perthro', 'algiz', 'sowilo', 'tiwaz', 'berkano',
-  'ehwaz', 'mannaz', 'laguz', 'ingwaz', 'dagaz', 'othala'
-];
+function getAllFutharkRuneNames() {
+  return db.prepare('SELECT name FROM futhark_runes ORDER BY sort_order ASC').all().map(r => r.name);
+}
+
+router.get('/runes', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM futhark_runes ORDER BY sort_order ASC').all();
+    res.json(rows.map(dbFutharkRuneToFrontend));
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd pobierania run Futharku: ' + err.message });
+  }
+});
 
 // GET /api/lottery/current — get current active round and user's tickets
 router.get('/current', (req, res) => {
@@ -53,7 +62,7 @@ router.get('/current', (req, res) => {
   res.json({
     round,
     userTickets,
-    allRunes: ALL_FUTHARK_RUNES
+    allRunes: getAllFutharkRuneNames()
   });
 });
 
@@ -67,7 +76,8 @@ router.post('/buy-ticket', requireAuth, (req, res) => {
 
   // Validate unique runes
   const uniqueRunes = new Set(chosenRunes);
-  if (uniqueRunes.size !== 3 || chosenRunes.some(r => !ALL_FUTHARK_RUNES.includes(r))) {
+  const allRuneNames = getAllFutharkRuneNames();
+  if (uniqueRunes.size !== 3 || chosenRunes.some(r => !allRuneNames.includes(r))) {
     return res.status(400).json({ error: 'Nieprawidłowe lub powtórzone runy w losie.' });
   }
 
@@ -92,9 +102,20 @@ router.post('/buy-ticket', requireAuth, (req, res) => {
   const refCode = `SKR-LOT-${Math.floor(10000 + Math.random() * 90000)}`;
 
   const executeTicketPurchase = db.transaction(() => {
-    // 1. Deduct ticket price from user & vault
-    db.prepare('UPDATE users SET currency = currency - ? WHERE id = ?').run(ticketPrice, user.id);
-    db.prepare('UPDATE bank_accounts SET balance = balance - ? WHERE user_id = ?').run(ticketPrice, user.id);
+    // 1. Deduct ticket price via central service
+    debitSkirnir({
+      userId: user.id,
+      userName: user.fullName,
+      amount: ticketPrice,
+      category: 'loteria',
+      title: `Zakup Losu Loterii (Runda #${roundRow.round_number})`,
+      note: `Wybrane Runy: ${chosenRunes.map(r => r.toUpperCase()).join(' - ')}`,
+      recipientId: 'lottery-pool',
+      recipientName: 'Skandynawska Loteria Odyna',
+      sourceType: 'LOTTERY_PURCHASE',
+      sourceId: roundRow.id,
+      idempotencyKey: `lot-buy-${ticketId}`
+    });
 
     // 2. Add ticket to database
     db.prepare(`
@@ -105,24 +126,13 @@ router.post('/buy-ticket', requireAuth, (req, res) => {
       JSON.stringify(chosenRunes), nowStr
     );
 
-    // 3. Increase jackpot by 75% of ticket price (25% goes to Citadel treasury) and increment ticket counter
+    // 3. Increase jackpot by 75% of ticket price and increment ticket counter
     const jackpotAddition = Math.round(ticketPrice * 0.75);
     db.prepare(`
       UPDATE lottery_rounds
       SET jackpot = jackpot + ?, total_tickets_sold = total_tickets_sold + 1
       WHERE id = ?
     `).run(jackpotAddition, roundRow.id);
-
-    // 4. Record bank transaction
-    db.prepare(`
-      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-      VALUES (?, ?, ?, 'lottery-pool', 'Skandynawska Loteria Odyna', ?, 'outflow', 'loteria', ?, ?, 'completed', ?, ?, datetime('now'))
-    `).run(
-      txId, user.id, user.fullName, ticketPrice,
-      `Zakup Losu Loterii (Runda #${roundRow.round_number})`,
-      `Wybrane Runy: ${chosenRunes.map(r => r.toUpperCase()).join(' - ')}`,
-      refCode, nowStr
-    );
   });
 
   executeTicketPurchase();
@@ -154,7 +164,7 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
   // Draw 3 random unique runes if not provided
   let winningRunes = customWinningRunes;
   if (!Array.isArray(winningRunes) || winningRunes.length !== 3) {
-    const shuffled = [...ALL_FUTHARK_RUNES].sort(() => 0.5 - Math.random());
+    const shuffled = [...getAllFutharkRuneNames()].sort(() => 0.5 - Math.random());
     winningRunes = shuffled.slice(0, 3);
   }
 
@@ -197,35 +207,36 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
       `).run(matches, prizeSkirnirs, t.id);
 
       if (prizeSkirnirs > 0 || prizePoints > 0) {
-        // Credit winner
-        db.prepare('UPDATE users SET currency = currency + ?, points = points + ? WHERE id = ?').run(prizeSkirnirs, prizePoints, t.user_id);
-        db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(prizeSkirnirs, t.user_id);
-
-        // Point transaction for house
+        // Award house points via central service
         if (prizePoints > 0 && t.house) {
-          const ptId = `pt-lot-${Date.now()}-${t.id}`;
-          db.prepare(`
-            INSERT INTO point_transactions (id, student_id, student_name, house, points, source, professor_id, professor_name, date, comment, is_revoked, created_at)
-            VALUES (?, ?, ?, ?, ?, 'loteria', 'bot', 'Skandynawska Loteria Odyna', ?, ?, 0, datetime('now'))
-          `).run(
-            ptId, t.user_id, t.user_name, t.house, prizePoints, nowStr,
-            `Wygrana w Loterii Odyna: ${tierLabel}`
-          );
+          awardPoints({
+            studentId: t.user_id,
+            studentName: t.user_name,
+            house: t.house,
+            points: prizePoints,
+            source: `Wygrana w Loterii Odyna: ${tierLabel}`,
+            sourceType: 'LOTTERY_WIN',
+            sourceId: roundRow.id,
+            actorId: 'bot',
+            actorName: 'Skandynawska Loteria Odyna',
+            comment: `Wygrana w Loterii Odyna: ${tierLabel}`,
+            idempotencyKey: `lot-win-pt-${t.id}`
+          });
         }
 
-        // Bank transaction
+        // Credit Skirniry via central service
         if (prizeSkirnirs > 0) {
-          const txId = `tx-win-${Date.now()}-${t.id}`;
-          const refCode = `SKR-WIN-${Math.floor(10000 + Math.random() * 90000)}`;
-          db.prepare(`
-            INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-            VALUES (?, 'lottery-pool', 'Skandynawska Loteria Odyna', ?, ?, ?, 'inflow', 'loteria', ?, ?, 'completed', ?, ?, datetime('now'))
-          `).run(
-            txId, t.user_id, t.user_name, prizeSkirnirs,
-            `Wygrana w Loterii (${tierLabel})`,
-            `Trafione runy: ${chosen.filter(r => winningSet.has(r)).join(', ')}`,
-            refCode, nowStr
-          );
+          creditSkirnir({
+            userId: t.user_id,
+            userName: t.user_name,
+            amount: prizeSkirnirs,
+            category: 'loteria',
+            title: `Wygrana w Loterii (${tierLabel})`,
+            note: `Trafione runy: ${chosen.filter(r => winningSet.has(r)).join(', ')}`,
+            sourceType: 'LOTTERY_WIN',
+            sourceId: roundRow.id,
+            idempotencyKey: `lot-win-skr-${t.id}`
+          });
         }
 
         winnersSummary.push({

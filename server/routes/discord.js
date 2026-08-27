@@ -138,7 +138,7 @@ router.post('/start-lesson', (req, res) => {
       professorId = 'usr-astrid-vinter',
       professorAvatar = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
       subjectId = 'eliksiry',
-      subjectName = 'Eliksiry i Destylacja Soli',
+      subjectName = 'Eliksiry',
       classYear = 'Klasa II',
       topic = 'Właściwości Eliksiru Wiggenowego'
     } = req.body;
@@ -265,7 +265,7 @@ router.post('/post-message', (req, res) => {
           professorId: 'usr-astrid-vinter',
           professorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
           subjectId: 'eliksiry',
-          subjectName: 'Eliksiry i Destylacja Soli',
+          subjectName: 'Eliksiry',
           classYear: 'Klasa II',
           topic: 'Zajęcia Praktyczne',
           startedAt: new Date().toISOString(),

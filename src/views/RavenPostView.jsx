@@ -4,7 +4,7 @@ import { useSound } from '../context/SoundContext';
 import { Mail, Send, Inbox, Feather, Sparkles, User, CheckCircle } from 'lucide-react';
 
 export const RavenPostView = () => {
-  const { ravenMessages, sendRavenMessage, currentUser, students } = useSchool();
+  const { ravenMessages, sendRavenMessage, currentUser, students, subjects } = useSchool();
   const { playWandSwoosh } = useSound();
 
   const [activeTab, setActiveTab] = useState('inbox'); // 'inbox' | 'compose'
@@ -26,13 +26,21 @@ export const RavenPostView = () => {
     setActiveTab('inbox');
   };
 
+  const professorRecipients = (subjects || [])
+    .filter(s => s.professorName || (s.professors && s.professors.length > 0))
+    .reduce((acc, s) => {
+      const profs = (s.professors && s.professors.length > 0)
+        ? s.professors.map(p => `${p.fullName} (${s.name})`)
+        : [s.professorName ? `${s.professorName} (${s.name})` : null].filter(Boolean);
+      for (const p of profs) {
+        if (!acc.includes(p)) acc.push(p);
+      }
+      return acc;
+    }, []);
+
   const recipients = [
     'Arcymistrzyni Valgerda Storm',
-    'Prof. Morana Vane (Czarna Magia)',
-    'Prof. Sigrid Hällström (Starożytne Runy)',
-    'Prof. Gunnar Vargson (Klątwy i Magia Bojowa)',
-    'Prof. Klaus Lindqvist (Eliksiry)',
-    'Prof. Stellan Nyström (Astronomia)',
+    ...professorRecipients,
     ...students.map(s => `${s.name} (${s.house})`)
   ];
 

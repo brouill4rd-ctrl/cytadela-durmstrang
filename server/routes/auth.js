@@ -113,7 +113,7 @@ router.post('/register', async (req, res) => {
     companion: data.companion || (role === 'student' ? 'Puchacz Śnieżny' : null),
     appearance: data.appearance || (role === 'student' ? 'Młody adept w szacie podróżnej.' : null),
     backstory: data.backstory || (role === 'student' ? 'Przybysz z dalekich krain północy.' : role === 'professor' ? `Aplikacja na stanowisko profesora w Katedrze: ${data.departmentName}` : ''),
-    taught_subject_ids: role === 'professor' ? JSON.stringify(data.taughtSubjectIds || [data.department || 'czarna-magia']) : '[]',
+    taught_subject_ids: '[]',
     grades: '[]',
     inventory: role === 'student' ? JSON.stringify([{ id: 'item-init-1', name: 'Standardowa Opończa Nowicjusza', category: 'robes', rarity: 'common', icon: '🧥', price: 50 }]) : '[]',
     created_at: new Date().toISOString().split('T')[0]
@@ -148,6 +148,29 @@ router.post('/register', async (req, res) => {
       userFields.backstory || 'Podanie o przyjęcie.',
       userFields.created_at
     );
+
+    // Professor: create subject enrollment applications for requested subjects
+    if (role === 'professor') {
+      const requestedSubjects = data.taughtSubjectIds || [data.department].filter(Boolean);
+      for (const subjectId of requestedSubjects) {
+        const subject = db.prepare('SELECT id, name FROM subjects WHERE id = ?').get(subjectId);
+        if (subject) {
+          db.prepare(`
+            INSERT INTO professor_subject_applications
+              (id, professor_id, professor_name, professor_avatar, subject_id, subject_name, class_year, note, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'Klasa I', ?, 'pending')
+          `).run(
+            `psa-${randomUUID()}`,
+            newId,
+            fullName,
+            userFields.avatar,
+            subject.id,
+            subject.name,
+            `Automatyczne zgłoszenie z rejestracji profesora`
+          );
+        }
+      }
+    }
 
     queueTransactionalEmail(db, userFields, EMAIL_TYPES.ACCOUNT_CREATED);
 

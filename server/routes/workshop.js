@@ -1,8 +1,28 @@
 import { Router } from 'express';
-import db, { dbCraftedFormulaToFrontend, dbUserToFrontend, calculateHouseRankings } from '../db.js';
+import db, { dbCraftedFormulaToFrontend, dbRuneCatalogToFrontend, dbRuneFormulaToFrontend, dbUserToFrontend, calculateHouseRankings } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
+import { credit as creditSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
+
+router.get('/runes', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM runes_catalog ORDER BY sort_order ASC').all();
+    res.json(rows.map(dbRuneCatalogToFrontend));
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd pobierania run: ' + err.message });
+  }
+});
+
+router.get('/rune-formulas', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM rune_formulas ORDER BY sort_order ASC').all();
+    res.json(rows.map(dbRuneFormulaToFrontend));
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd pobierania formuł runicznych: ' + err.message });
+  }
+});
 
 // GET /api/workshop/formulas — List crafted formulas for user
 router.get('/formulas', (req, res) => {
@@ -59,20 +79,31 @@ router.post('/craft', requireAuth, (req, res) => {
 
       const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
       if (userRow) {
-        db.prepare('UPDATE users SET points = points + ?, currency = currency + ? WHERE id = ?').run(rewardPoints, rewardCurrency, userId);
+        const idemKey = `craft-${userId}-${formulaId || name}-${Date.now()}`;
         if (rewardPoints > 0 && userRow.house) {
-          db.prepare(`
-            INSERT INTO point_transactions (id, student_id, student_name, house, points, source, date, comment, is_revoked, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, date('now'), ?, 0, datetime('now'))
-          `).run(
-            `pt-craft-${Date.now()}`,
+          awardPoints({
+            studentId: userId,
+            studentName: userRow.full_name,
+            house: userRow.house,
+            points: rewardPoints,
+            source: `Warsztat Runiczny: ${name}`,
+            sourceType: 'WORKSHOP',
+            sourceId: formulaId || id,
+            comment: `Ukucie formuły z katalizatorem: ${catalyst}`,
+            idempotencyKey: `pt-${idemKey}`
+          });
+        }
+        if (rewardCurrency > 0) {
+          creditSkirnir({
             userId,
-            userRow.full_name,
-            userRow.house,
-            rewardPoints,
-            `Warsztat Runiczny: ${name}`,
-            `Ukucie formuły z katalizatorem: ${catalyst}`
-          );
+            userName: userRow.full_name,
+            amount: rewardCurrency,
+            category: 'warsztat',
+            title: `Nagroda za formułę: ${name}`,
+            sourceType: 'WORKSHOP',
+            sourceId: formulaId || id,
+            idempotencyKey: `skr-${idemKey}`
+          });
         }
       }
 

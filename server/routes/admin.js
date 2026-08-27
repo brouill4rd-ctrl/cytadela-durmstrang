@@ -1,7 +1,17 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import db, { dbUserToFrontend } from '../db.js';
+import db, { dbUserToFrontend, dbPointTxToFrontend, dbBankTransactionToFrontend } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import {
+  awardPoints, deductPoints, awardHousePoints, deductHousePoints,
+  reverseTransaction, getUserPointsTotal, getHousePointsTotal,
+  recalculateUserPoints, recalculateAllUserPoints, backfillSchoolYear
+} from '../services/pointsService.js';
+import {
+  credit as creditSkirnir, debit as debitSkirnir,
+  reverse as reverseSkirnir,
+  recalculateBalance, recalculateAllBalances
+} from '../services/skirnirService.js';
 
 const router = Router();
 
@@ -536,6 +546,374 @@ router.delete('/db/table/:tableName/:id', (req, res) => {
     res.json({ ok: true, message: `Pomyślnie usunięto rekord o ID "${id}" z tabeli ${tableName}.` });
   } catch (err) {
     res.status(500).json({ error: 'Błąd usuwania rekordu: ' + err.message });
+  }
+});
+
+// ==========================================
+// DYREKCJA: Zarządzanie Punktami i Skirnirami
+// ==========================================
+
+// POST /api/admin/points/award — przyznaj punkty adeptowi
+router.post('/points/award', (req, res) => {
+  const { studentId, house, points, reason, source } = req.body;
+  if (!house || !points || points <= 0) return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy przy ręcznym przyznawaniu punktów.' });
+
+  try {
+    const userRow = studentId ? db.prepare('SELECT full_name FROM users WHERE id = ?').get(studentId) : null;
+    const txId = awardPoints({
+      studentId: studentId || null,
+      studentName: userRow?.full_name || '',
+      house,
+      points: parseInt(points, 10),
+      source: source || `Dyrekcja: ${reason}`,
+      sourceType: 'ADMIN_AWARD',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      comment: reason,
+      idempotencyKey: `admin-award-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Przyznanie punktów (admin)', `${studentId || house}: +${points} pkt. Powód: ${reason}`
+    );
+
+    res.json({ success: true, txId, message: `Przyznano +${points} punktów.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/points/deduct — odejmij punkty adeptowi
+router.post('/points/deduct', (req, res) => {
+  const { studentId, house, points, reason, source } = req.body;
+  if (!house || !points || points <= 0) return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów do odjęcia.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy przy odjęciu punktów.' });
+
+  try {
+    const userRow = studentId ? db.prepare('SELECT full_name FROM users WHERE id = ?').get(studentId) : null;
+    const txId = deductPoints({
+      studentId: studentId || null,
+      studentName: userRow?.full_name || '',
+      house,
+      points: parseInt(points, 10),
+      source: source || `Dyrekcja: ${reason}`,
+      sourceType: 'ADMIN_DEDUCTION',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      comment: reason,
+      idempotencyKey: `admin-deduct-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Odjęcie punktów (admin)', `${studentId || house}: -${points} pkt. Powód: ${reason}`
+    );
+
+    res.json({ success: true, txId, message: `Odjęto -${points} punktów.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/points/award-house — przyznaj punkty zakonowi (bez adepata)
+router.post('/points/award-house', (req, res) => {
+  const { house, points, reason, source } = req.body;
+  if (!house || !points || points <= 0) return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy.' });
+
+  try {
+    const txId = awardHousePoints({
+      house,
+      points: parseInt(points, 10),
+      source: source || `Dyrekcja: ${reason}`,
+      sourceType: 'ADMIN_HOUSE_AWARD',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      comment: reason,
+      idempotencyKey: `admin-house-award-${house}-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Przyznanie punktów zakonowi (admin)', `${house}: +${points} pkt. Powód: ${reason}`
+    );
+
+    res.json({ success: true, txId, message: `Przyznano +${points} punktów dla ${house}.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/points/deduct-house — odejmij punkty zakonowi
+router.post('/points/deduct-house', (req, res) => {
+  const { house, points, reason, source } = req.body;
+  if (!house || !points || points <= 0) return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów do odjęcia.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy.' });
+
+  try {
+    const txId = deductHousePoints({
+      house,
+      points: parseInt(points, 10),
+      source: source || `Dyrekcja: ${reason}`,
+      sourceType: 'ADMIN_HOUSE_DEDUCTION',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      comment: reason,
+      idempotencyKey: `admin-house-deduct-${house}-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Odjęcie punktów zakonowi (admin)', `${house}: -${points} pkt. Powód: ${reason}`
+    );
+
+    res.json({ success: true, txId, message: `Odjęto -${points} punktów od ${house}.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/points/reverse — wycofaj transakcję punktową
+router.post('/points/reverse', (req, res) => {
+  const { transactionId, reason } = req.body;
+  if (!transactionId) return res.status(400).json({ error: 'Wymagane ID transakcji.' });
+  if (!reason) return res.status(400).json({ error: 'Powód wycofania jest obowiązkowy.' });
+
+  try {
+    reverseTransaction(transactionId, req.user.id, req.user.fullName || 'Dyrekcja', reason);
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Wycofanie transakcji punktowej', `TX: ${transactionId}. Powód: ${reason}`
+    );
+
+    res.json({ success: true, message: 'Transakcja wycofana.' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/skirniry/credit — dodaj Skirniry użytkownikowi
+router.post('/skirniry/credit', (req, res) => {
+  const { userId, amount, reason, category, title } = req.body;
+  if (!userId || !amount || amount <= 0) return res.status(400).json({ error: 'Wymagane ID użytkownika i dodatnia kwota.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy przy ręcznym dodaniu Skirnirów.' });
+
+  try {
+    const userRow = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId);
+    if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
+
+    const result = creditSkirnir({
+      userId,
+      userName: userRow.full_name,
+      amount: parseInt(amount, 10),
+      category: category || 'admin',
+      title: title || `Dyrekcja: ${reason}`,
+      note: reason,
+      sourceType: 'ADMIN_CREDIT',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      idempotencyKey: `admin-credit-${userId}-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Dodanie Skirnirów (admin)', `${userId}: +${amount} ᛋ. Powód: ${reason}`
+    );
+
+    const updated = db.prepare('SELECT currency FROM users WHERE id = ?').get(userId);
+    res.json({ success: true, txId: result.txId, newBalance: updated.currency, message: `Dodano +${amount} Skirnirów.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/skirniry/debit — odejmij Skirniry użytkownikowi
+router.post('/skirniry/debit', (req, res) => {
+  const { userId, amount, reason, category, title } = req.body;
+  if (!userId || !amount || amount <= 0) return res.status(400).json({ error: 'Wymagane ID użytkownika i dodatnia kwota.' });
+  if (!reason) return res.status(400).json({ error: 'Powód jest obowiązkowy przy odjęciu Skirnirów.' });
+
+  try {
+    const userRow = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId);
+    if (!userRow) return res.status(404).json({ error: 'Użytkownik nie istnieje.' });
+
+    const result = debitSkirnir({
+      userId,
+      userName: userRow.full_name,
+      amount: parseInt(amount, 10),
+      category: category || 'admin',
+      title: title || `Dyrekcja: ${reason}`,
+      note: reason,
+      sourceType: 'ADMIN_DEBIT',
+      actorId: req.user.id,
+      actorName: req.user.fullName || 'Dyrekcja',
+      idempotencyKey: `admin-debit-${userId}-${req.user.id}-${Date.now()}`
+    });
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Odjęcie Skirnirów (admin)', `${userId}: -${amount} ᛋ. Powód: ${reason}`
+    );
+
+    const updated = db.prepare('SELECT currency FROM users WHERE id = ?').get(userId);
+    res.json({ success: true, txId: result.txId, newBalance: updated.currency, message: `Odjęto -${amount} Skirnirów.` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/skirniry/reverse — wycofaj transakcję bankową
+router.post('/skirniry/reverse', (req, res) => {
+  const { transactionId, reason } = req.body;
+  if (!transactionId) return res.status(400).json({ error: 'Wymagane ID transakcji.' });
+  if (!reason) return res.status(400).json({ error: 'Powód wycofania jest obowiązkowy.' });
+
+  try {
+    const reverseTxId = reverseSkirnir(transactionId, req.user.id, req.user.fullName || 'Dyrekcja', reason);
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Wycofanie transakcji bankowej', `TX: ${transactionId}. Powód: ${reason}`
+    );
+
+    res.json({ success: true, reverseTxId, message: 'Transakcja bankowa wycofana.' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/transactions/points — globalna historia transakcji punktowych
+router.get('/transactions/points', (req, res) => {
+  const { house, studentId, sourceType, schoolYear, limit = 100, offset = 0 } = req.query;
+
+  let query = 'SELECT * FROM point_transactions WHERE 1=1';
+  const params = [];
+
+  if (house) { query += ' AND house = ?'; params.push(house.toLowerCase()); }
+  if (studentId) { query += ' AND student_id = ?'; params.push(studentId); }
+  if (sourceType) { query += ' AND source_type = ?'; params.push(sourceType); }
+  if (schoolYear) { query += ' AND school_year = ?'; params.push(schoolYear); }
+
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  params.push(parseInt(limit, 10), parseInt(offset, 10));
+
+  const rows = db.prepare(query).all(...params);
+  const total = db.prepare(query.replace(/SELECT \* /, 'SELECT COUNT(*) as cnt ').replace(/ ORDER BY.*$/, '')).get(...params.slice(0, -2))?.cnt || 0;
+
+  res.json({ transactions: rows.map(dbPointTxToFrontend), total });
+});
+
+// GET /api/admin/transactions/skirniry — globalna historia transakcji bankowych
+router.get('/transactions/skirniry', (req, res) => {
+  const { userId, category, sourceType, schoolYear, limit = 100, offset = 0 } = req.query;
+
+  let query = 'SELECT * FROM bank_transactions WHERE 1=1';
+  const params = [];
+
+  if (userId) { query += ' AND (sender_id = ? OR recipient_id = ?)'; params.push(userId, userId); }
+  if (category) { query += ' AND category = ?'; params.push(category); }
+  if (sourceType) { query += ' AND source_type = ?'; params.push(sourceType); }
+  if (schoolYear) { query += ' AND school_year = ?'; params.push(schoolYear); }
+
+  query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
+  params.push(parseInt(limit, 10), parseInt(offset, 10));
+
+  const rows = db.prepare(query).all(...params);
+  res.json({ transactions: rows.map(dbBankTransactionToFrontend) });
+});
+
+// POST /api/admin/recalculate/points — przelicz punkty z ledgera
+router.post('/recalculate/points', (req, res) => {
+  const { userId } = req.body;
+  try {
+    if (userId) {
+      const total = recalculateUserPoints(userId);
+      res.json({ success: true, userId, newTotal: total, message: `Przeliczono punkty: ${total}.` });
+    } else {
+      const count = recalculateAllUserPoints();
+      backfillSchoolYear();
+      res.json({ success: true, usersUpdated: count, message: `Przeliczono punkty dla ${count} użytkowników.` });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/recalculate/skirniry — przelicz salda Skirnirów z ledgera
+router.post('/recalculate/skirniry', (req, res) => {
+  const { userId } = req.body;
+  try {
+    if (userId) {
+      const balance = recalculateBalance(userId);
+      res.json({ success: true, userId, newBalance: balance, message: `Przeliczono saldo: ${balance} ᛋ.` });
+    } else {
+      const count = recalculateAllBalances();
+      res.json({ success: true, usersUpdated: count, message: `Przeliczono salda dla ${count} użytkowników.` });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/legacy-import — import sald legacy jako transakcje LEGACY_BALANCE_IMPORT
+router.post('/legacy-import', (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, full_name, house, points, currency FROM users').all();
+    let pointImports = 0;
+    let skirnirImports = 0;
+
+    db.transaction(() => {
+      for (const u of users) {
+        if (u.points > 0 && u.house) {
+          const existing = db.prepare("SELECT id FROM point_transactions WHERE idempotency_key = ?").get(`legacy-pts-${u.id}`);
+          if (!existing) {
+            awardPoints({
+              studentId: u.id,
+              studentName: u.full_name,
+              house: u.house,
+              points: u.points,
+              source: 'Import salda z poprzedniego systemu',
+              sourceType: 'LEGACY_BALANCE_IMPORT',
+              actorId: req.user.id,
+              actorName: req.user.fullName || 'Dyrekcja',
+              comment: 'Jednorazowy import z poprzedniego systemu punktowego',
+              idempotencyKey: `legacy-pts-${u.id}`
+            });
+            pointImports++;
+          }
+        }
+        if (u.currency > 0) {
+          const existing = db.prepare("SELECT id FROM bank_transactions WHERE idempotency_key = ?").get(`legacy-skr-${u.id}`);
+          if (!existing) {
+            creditSkirnir({
+              userId: u.id,
+              userName: u.full_name,
+              amount: u.currency,
+              category: 'legacy',
+              title: 'Import salda z poprzedniego systemu',
+              note: 'Jednorazowy import z poprzedniego systemu walutowego',
+              sourceType: 'LEGACY_BALANCE_IMPORT',
+              actorId: req.user.id,
+              actorName: req.user.fullName || 'Dyrekcja',
+              idempotencyKey: `legacy-skr-${u.id}`
+            });
+            skirnirImports++;
+          }
+        }
+      }
+    })();
+
+    db.prepare("INSERT INTO audit_logs (id, timestamp, admin, action, detail) VALUES (?, ?, ?, ?, ?)").run(
+      `log-${Date.now()}`, new Date().toISOString(), req.user.fullName || 'Dyrekcja',
+      'Import sald legacy', `Punkty: ${pointImports}, Skirniry: ${skirnirImports}`
+    );
+
+    res.json({ success: true, pointImports, skirnirImports, message: `Zaimportowano ${pointImports} sald punktowych i ${skirnirImports} sald Skirnirów.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

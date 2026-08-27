@@ -1194,8 +1194,8 @@ a:hover {
 }
 
 .category-banner-script-text {
-  font-family: 'Caveat', 'Sacramento', 'Allura', 'Alex Brush', cursive !important;
-  font-weight: 400;
+  font-family: 'Cinzel Decorative', 'Metamorphous', 'Germania One', serif !important;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0.05em;
   transform: rotate(-1.8deg);
@@ -5352,3 +5352,1402 @@ a:hover {
 .adept-belt{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99980;color:#d9d1c1}.belt-panel{min-width:390px;padding:7px 12px 9px;border:1px solid rgba(164,154,133,.55);border-radius:0 0 9px 9px;background:linear-gradient(180deg,rgba(35,34,34,.97),rgba(12,14,17,.98));box-shadow:0 12px 35px #000c,inset 0 1px rgba(255,255,255,.06);position:relative}.belt-panel:before{content:"";position:absolute;inset:4px;border:1px solid rgba(197,159,78,.15);border-radius:14px 14px 6px 6px;pointer-events:none}.belt-header{height:22px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2}.belt-title{font:600 .62rem Cinzel,serif;letter-spacing:.18em;text-transform:uppercase;color:#b7aa91}.belt-header button{display:flex;align-items:center;gap:4px;border:0;background:none;color:#9f9788;font:600 .56rem Cinzel,serif;text-transform:uppercase;cursor:pointer}.belt-close-mobile,.belt-mobile-toggle,.belt-collapse-tab{display:none!important}.adept-belt.is-collapsed .belt-panel{display:none}.adept-belt.is-collapsed .belt-collapse-tab{display:flex!important;border-radius:20px}.adept-belt:not(.is-collapsed) .belt-collapse-tab{display:flex!important}.belt-collapse-tab{position:relative;align-items:center;gap:7px;padding:5px 14px 5px 11px;border:1px solid rgba(164,154,133,.45);border-radius:20px 20px 0 0;background:linear-gradient(180deg,rgba(28,27,27,.96),rgba(12,14,17,.98));color:#b7aa91;font:600 .6rem Cinzel,serif;text-transform:uppercase;letter-spacing:.14em;cursor:pointer;box-shadow:0 -4px 18px #0008;transition:border-color .15s,color .15s;margin-bottom:-1px}.belt-collapse-tab:hover{border-color:rgba(197,159,78,.6);color:#e0c680}.belt-tab-rune{font-size:.95rem;color:#c59f4e}.belt-tab-label{}.belt-tab-chevron{font-size:.55rem;color:#8f8879;margin-left:2px}.belt-tab-badge{position:static;display:inline-grid;margin-left:2px}.belt-slots{display:flex;justify-content:center;gap:11px;min-height:53px;align-items:center;position:relative;z-index:2}.belt-slot-wrap{position:relative;width:53px;text-align:center}.belt-talisman,.belt-empty-slot{width:48px;height:48px;display:flex;align-items:center;justify-content:center;margin:auto;position:relative}.belt-talisman{border:0;cursor:pointer;color:#c4b897;background:transparent;filter:drop-shadow(0 5px 4px #000b);transition:transform .16s ease,filter .16s ease}.belt-talisman:focus-visible,.belt-pin-page:focus-visible,.belt-header button:focus-visible{outline:2px solid #e4c875;outline-offset:3px}.belt-talisman:hover,.belt-talisman:focus-visible{transform:translateY(-3px);filter:drop-shadow(0 7px 6px #000) drop-shadow(0 0 4px #c59f4e66)}.talisman-glyph{font:700 1.65rem Georgia,serif;text-shadow:0 1px #fff3,0 -1px #000}.talisman-rune .talisman-glyph{width:38px;height:40px;border-radius:45% 55% 48% 52%;display:grid;place-items:center;background:radial-gradient(circle at 40% 28%,#6c6a61,#282a29 70%);border:1px solid #858076}.talisman-coin .talisman-glyph,.talisman-medallion .talisman-glyph{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#817655,#302d27 72%);border:2px double #a08e61}.talisman-scroll .talisman-glyph,.talisman-map .talisman-glyph{width:36px;height:32px;display:grid;place-items:center;color:#3b3123;background:linear-gradient(100deg,#8e7851,#c3aa72 45%,#745e3d);border-radius:4px 8px 5px 7px}.talisman-feather .talisman-glyph{font-size:2rem;color:#787d83;transform:rotate(-18deg)}.talisman-key .talisman-glyph{font-size:2.05rem;color:#8d8b83;transform:rotate(-18deg)}.talisman-seal .talisman-glyph{width:35px;height:35px;display:grid;place-items:center;background:#59302c;border-radius:46% 54% 43% 57%;border:1px solid #8d5a4b}.is-dormant{opacity:.38;filter:grayscale(1)}.talisman-badge{position:absolute;right:1px;top:0;min-width:17px;height:17px;padding:0 3px;border-radius:50% 45% 55% 42%;display:grid;place-items:center;background:#75634a;border:1px solid #c4a86b;color:#fff;font:bold .56rem sans-serif}.belt-tooltip{position:absolute;left:50%;bottom:58px;transform:translateX(-50%) translateY(4px);width:190px;padding:9px;border:1px solid #756648;background:#0c1016f5;box-shadow:0 8px 25px #000;color:#ddd;opacity:0;visibility:hidden;transition:.15s;pointer-events:none;z-index:5}.belt-tooltip b,.belt-tooltip span,.belt-tooltip small{display:block}.belt-tooltip b{font:.58rem Cinzel,serif;color:#baa36e;text-transform:uppercase;letter-spacing:.1em}.belt-tooltip span{font-weight:700;margin:3px 0}.belt-tooltip small{color:#aaa;line-height:1.35}.belt-talisman:hover~.belt-tooltip,.belt-talisman:focus~.belt-tooltip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}.belt-mobile-label{display:none}.belt-empty-slot{border:1px dashed #5e5b54;border-radius:50%;color:#555;background:#121518}.belt-empty-slot span{font:1.5rem serif}.belt-empty-slot svg{position:absolute;right:-2px;bottom:0}.belt-empty-copy{font-size:.65rem;color:#8f8a80;text-align:center;margin:2px 0 0}.belt-edit-actions{display:flex;justify-content:center;margin-top:2px}.belt-edit-actions button{width:17px;height:17px;padding:0;display:grid;place-items:center;border:0;background:#202328;color:#aaa;cursor:pointer}.belt-edit-actions button:disabled{opacity:.25}.is-editing .belt-slots{align-items:flex-start}.belt-pin-page{position:fixed;right:20px;bottom:22px;z-index:99979;display:flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #655b49;border-radius:18px;background:#11151bea;color:#bdb5a5;font:600 .6rem Cinzel,serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;box-shadow:0 6px 18px #0009}.belt-pin-page:hover,.belt-pin-page.is-pinned{border-color:#a78c54;color:#e0c680}.belt-modal-backdrop{position:fixed;inset:0;z-index:100000;background:#020407c9;display:grid;place-items:center;padding:18px}.belt-modal{position:relative;width:min(430px,100%);padding:28px;border:1px solid #776848;background:linear-gradient(145deg,#1b1d20,#0b0e13);box-shadow:0 24px 70px #000;text-align:center;color:#ddd}.belt-modal-rune{font-size:2rem;color:#aa915c}.belt-modal h2{font:700 1.05rem Cinzel,serif;color:#d2bd8b}.belt-modal p{text-transform:uppercase;letter-spacing:.12em;font-size:.67rem;color:#969082}.belt-modal-close{position:absolute;right:10px;top:10px;border:0;background:none;color:#aaa;cursor:pointer}.belt-replace-list{display:grid;gap:6px;margin-top:18px}.belt-replace-list button{display:grid;grid-template-columns:35px 1fr auto;align-items:center;text-align:left;padding:9px 12px;border:1px solid #3c3b37;background:#14171b;color:#d4d0c8;cursor:pointer}.belt-replace-list button:hover{border-color:#a58d5e;background:#1d1e1e}
 @media(max-width:760px){.adept-belt{left:12px;right:12px;bottom:10px;transform:none}.belt-collapse-tab{display:none!important}.adept-belt.is-collapsed .belt-panel{display:none}.belt-mobile-toggle{display:flex!important;width:100%;height:46px;align-items:center;justify-content:center;gap:9px;border:1px solid #756648;border-radius:23px;background:#11151bf2;color:#d6c393;font:700 .72rem Cinzel,serif;text-transform:uppercase;letter-spacing:.1em;box-shadow:0 8px 25px #000}.belt-mobile-count{color:#8f8879}.belt-panel{display:none;min-width:0;width:100%;max-height:70vh;overflow:auto;border-radius:14px;padding:12px}.adept-belt.is-open .belt-panel{display:block}.adept-belt.is-open .belt-mobile-toggle{display:none!important}.belt-close-mobile{display:flex!important}.belt-header{height:30px}.belt-slots{display:grid;grid-template-columns:1fr;gap:4px;margin-top:8px}.belt-slot-wrap{width:100%;display:grid;grid-template-columns:52px 1fr;align-items:center;text-align:left;border-bottom:1px solid #292a28;padding:2px 0}.belt-talisman{margin:0}.belt-mobile-label{display:block;color:#d2cec4;font-size:.78rem}.belt-tooltip{display:none}.belt-empty-slot{width:42px;height:42px;margin:2px 0}.belt-edit-actions{grid-column:2;justify-content:flex-start}.belt-edit-actions button{width:34px;height:30px}.belt-pin-page{bottom:64px;right:12px}.belt-pin-page span{display:none}}
 @media(prefers-reduced-motion:reduce){.belt-talisman,.belt-tooltip{transition:none!important}.belt-talisman:hover,.belt-talisman:focus-visible{transform:none}}
+
+/* ==========================================================================
+   COMPREHENSIVE MOBILE RESPONSIVENESS — Durmstrang TMD
+   Breakpoints: 1024 / 768 / 480 / 375 / 320
+   ========================================================================== */
+
+/* Utility: hide on mobile */
+.hidden-mobile { display: inline !important; }
+
+/* --- Ensure no horizontal overflow globally --- */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+img, video, iframe, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Tables: horizontal scroll wrapper --- */
+table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* ======== TABLET (≤1024px) ======== */
+@media (max-width: 1024px) {
+  .hidden-mobile { display: none !important; }
+
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.65rem; }
+  h3 { font-size: 1.35rem; }
+
+  .monumental-hero-section {
+    min-height: 420px;
+    padding: 2.5rem 1.5rem 1.8rem;
+  }
+
+  .hero-main-title {
+    font-size: clamp(2.4rem, 6vw, 4.2rem) !important;
+  }
+
+  .hero-motto {
+    font-size: 1.2rem;
+  }
+
+  .contentBlock {
+    padding: 1.4rem 1.5rem;
+  }
+
+  .homework-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  .grading-workspace-grid {
+    grid-template-columns: 260px 1fr;
+  }
+
+  .inspect-body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sealed-meta-strip {
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .homework-header-card {
+    padding: 1.8rem;
+  }
+
+  .header-assignment-title {
+    font-size: 1.6rem;
+  }
+
+  .creator-step-card {
+    padding: 1.5rem;
+  }
+}
+
+/* ======== MOBILE LANDSCAPE / SMALL TABLET (≤768px) ======== */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 14px;
+  }
+
+  h1 { font-size: 1.65rem; }
+  h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.2rem; }
+  h4 { font-size: 1.1rem; }
+
+  #portal-wrapper {
+    border-left: none;
+    border-right: none;
+  }
+
+  .monumental-hero-section {
+    min-height: 360px;
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .hero-main-title {
+    font-size: clamp(2rem, 8vw, 3.2rem) !important;
+    letter-spacing: 0.06em;
+  }
+
+  .hero-motto {
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-crest-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.9rem;
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero-cta-group .btn-durmstrang,
+  .hero-cta-group .btn-durmstrang-secondary {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .portal-ticker-bar {
+    height: 34px;
+    padding: 0 0.75rem;
+  }
+
+  .ticker-label-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem 0.2rem 0;
+  }
+
+  .portal-main-grid {
+    grid-template-columns: 1fr !important;
+    padding: 0.75rem;
+    gap: 1rem;
+  }
+
+  #menuContainerRight {
+    grid-template-columns: 1fr !important;
+  }
+
+  .contentBlock {
+    padding: 1.2rem 1rem;
+  }
+
+  .contentTitle span,
+  .contentTitle h2 {
+    font-size: 1.35rem;
+  }
+
+  .contentBody {
+    text-align: left;
+    hyphens: none;
+  }
+
+  .contentBody p {
+    text-align: left;
+    hyphens: none;
+  }
+
+  /* House cards */
+  .ramesville-house-card {
+    height: auto;
+    min-height: 130px;
+  }
+
+  /* Homework system */
+  .homework-center-container,
+  .homework-detail-container,
+  .homework-creator-container,
+  .homework-grading-container {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .homework-monumental-header {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .homework-main-title {
+    font-size: 1.5rem;
+  }
+
+  .homework-view-switcher {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .switcher-btn {
+    padding: 0.45rem 1rem;
+    font-size: 0.78rem;
+  }
+
+  .homework-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controls-search-box {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .controls-dropdowns {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .controls-dropdowns .tmd-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .homework-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .homework-header-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .header-assignment-title {
+    font-size: 1.35rem;
+  }
+
+  .header-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .linked-lesson-banner {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .homework-detail-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+
+  .detail-tab-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .task-section-box {
+    padding: 1.2rem;
+  }
+
+  .task-resources-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editable-homework-form {
+    padding: 1rem;
+  }
+
+  .editor-control-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .editor-bottom-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .editor-bottom-actions .tmd-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sealed-submission-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .sealed-meta-strip {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .grade-result-hero {
+    padding: 1.5rem 1rem;
+  }
+
+  .score-big {
+    font-size: 2.2rem;
+  }
+
+  .grading-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grading-sidebar-students {
+    max-height: 300px;
+  }
+
+  .grading-main-sheet {
+    padding: 1.2rem;
+  }
+
+  .inspect-body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-inspect-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .creator-step-card {
+    padding: 1.25rem;
+  }
+
+  .form-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .submission-types-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .creator-stepper-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .creator-stepper-footer .tmd-action-btn,
+  .creator-stepper-footer .footer-right .tmd-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .crit-inputs-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .crit-pts-input {
+    width: 100%;
+  }
+
+  /* Calendar */
+  .homework-calendar-component {
+    padding: 1rem;
+  }
+
+  .calendar-nav-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .calendar-legend {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .calendar-day-cell {
+    min-height: 70px;
+    padding: 0.35rem;
+  }
+
+  /* Archive */
+  .homework-archive-component {
+    padding: 1.2rem;
+  }
+
+  .archive-intro-box {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  /* Modals */
+  .gothic-modal-overlay {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .gothic-modal-content {
+    max-height: 95vh;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+
+  .tmd-modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .tmd-modal-box {
+    padding: 1.25rem;
+    max-height: 95vh;
+  }
+
+  .tmd-modal-box.wide-modal {
+    max-width: 100%;
+  }
+
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Gazette */
+  .gazette-landing {
+    padding: 1rem 0.5rem;
+  }
+
+  .gazette-hero {
+    padding: 1.5rem 1rem;
+  }
+
+  .gazette-cover-frame {
+    width: 180px;
+    min-height: 250px;
+  }
+
+  .gazette-hero-issue {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .gazette-hero-meta {
+    text-align: center;
+  }
+
+  .gazette-recent {
+    padding: 1rem;
+  }
+
+  .gazette-recent-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+
+  /* Gazette Panel */
+  .gazette-panel {
+    padding: 0.75rem;
+  }
+
+  .gazette-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .gazette-panel-content {
+    padding: 0.8rem;
+  }
+
+  .gzp-issue-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gzp-issue-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+  }
+
+  .gzp-article-card {
+    flex-wrap: wrap;
+  }
+
+  .gzp-article-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.4rem;
+  }
+
+  /* Flipbook */
+  .gzfb-page {
+    width: 95vw !important;
+    min-height: min(80vh, 600px);
+  }
+
+  .gzfb-page-content {
+    padding: 1.2rem 1rem 2rem;
+  }
+
+  .gzfb-flip-face-content {
+    padding: 1.2rem 1rem 2rem;
+  }
+
+  .gzfb-toc-panel,
+  .gzfb-thumbnails-panel {
+    width: 240px;
+  }
+
+  .gzfb-click-zone {
+    width: 50px;
+  }
+
+  .gzfb-spine {
+    width: 8px;
+  }
+
+  /* Footer */
+  footer {
+    padding: 2rem 1rem 1.5rem 1rem !important;
+  }
+
+  /* Drop cap */
+  .drop-cap::first-letter {
+    font-size: 2.8rem;
+    margin-right: 0.4rem;
+  }
+
+  /* Gazette flipbook pages */
+  .gzp-article-title {
+    font-size: 1.2rem;
+  }
+
+  .gzp-cover-masthead {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+  }
+
+  .gzp-crossword-clues {
+    grid-template-columns: 1fr;
+  }
+
+  /* Category banners */
+  .category-banner-script-text {
+    transform: rotate(-1deg) !important;
+  }
+
+  /* Buttons — ensure minimum touch target */
+  button, a, [role="button"], [role="tab"],
+  .btn-durmstrang, .btn-durmstrang-secondary,
+  input[type="button"], input[type="submit"] {
+    min-height: 44px;
+  }
+
+  /* Small icon-only buttons exempt from min-width/height */
+  .btn-editor-tool,
+  .rune-glyph-btn,
+  .gzfb-tool-btn,
+  .gzp-btn-icon,
+  .tool-btn,
+  .belt-edit-actions button,
+  header button[title*="źwięki"],
+  header button[title*="nieg"] {
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  /* Inputs — prevent iOS zoom */
+  input, select, textarea {
+    font-size: max(16px, 1em) !important;
+  }
+
+  /* Prevent text-align justify rivers on narrow screens */
+  .gzp-article-body {
+    text-align: left;
+    hyphens: none;
+  }
+}
+
+/* ======== MOBILE PORTRAIT (≤480px) ======== */
+@media (max-width: 480px) {
+  h1 { font-size: 1.45rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
+
+  .monumental-hero-section {
+    min-height: 300px;
+    padding: 1.5rem 0.75rem 1.2rem;
+  }
+
+  .hero-main-title {
+    font-size: clamp(1.6rem, 9vw, 2.4rem) !important;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-motto {
+    font-size: 0.92rem;
+  }
+
+  .hero-crest-badge {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.7rem;
+  }
+
+  .contentBlock {
+    padding: 1rem 0.75rem;
+  }
+
+  .contentTitle span,
+  .contentTitle h2 {
+    font-size: 1.15rem;
+  }
+
+  .menuBlockContent {
+    padding: 0.75rem;
+  }
+
+  .portal-main-grid {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .portal-ticker-bar {
+    height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .ticker-label-badge {
+    font-size: 0.68rem;
+  }
+
+  /* House cards stacked */
+  .ramesville-house-card {
+    padding: 0.65rem 0.75rem 0.65rem 0.65rem;
+  }
+
+  .card-nordic-house-name {
+    font-size: 1.05rem;
+  }
+
+  /* Homework */
+  .homework-monumental-header {
+    padding: 1.5rem 0.75rem 1rem;
+  }
+
+  .homework-main-title {
+    font-size: 1.25rem;
+  }
+
+  .homework-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .homework-card {
+    padding: 1rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .student-overview-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .header-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .homework-header-card {
+    padding: 1.2rem 0.75rem;
+  }
+
+  .header-assignment-title {
+    font-size: 1.15rem;
+  }
+
+  .grade-result-hero {
+    padding: 1.2rem 0.75rem;
+  }
+
+  .score-big {
+    font-size: 1.8rem;
+  }
+
+  .score-label-badge {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.8rem;
+  }
+
+  /* Gazette */
+  .gazette-cover-frame {
+    width: 160px;
+    min-height: 220px;
+  }
+
+  .gazette-hero-number {
+    font-size: 1.1rem;
+  }
+
+  .gazette-hero-theme {
+    font-size: 0.95rem;
+  }
+
+  /* Calendar */
+  .calendar-days-grid {
+    gap: 0.25rem;
+  }
+
+  .calendar-day-cell {
+    min-height: 55px;
+    padding: 0.25rem;
+  }
+
+  .day-event-pill {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.25rem;
+  }
+
+  /* Modals — full screen on very small */
+  .gothic-modal-overlay {
+    padding: 0;
+  }
+
+  .gothic-modal-content {
+    max-height: 100vh;
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  .tmd-modal-overlay {
+    padding: 0;
+  }
+
+  .tmd-modal-box {
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 1rem;
+  }
+
+  /* Gazette Flipbook */
+  .gzfb-page-content {
+    padding: 0.8rem 0.65rem 1.5rem;
+    font-size: 0.82rem;
+  }
+
+  .gzfb-flip-face-content {
+    padding: 0.8rem 0.65rem 1.5rem;
+    font-size: 0.82rem;
+  }
+
+  .gzfb-toc-panel,
+  .gzfb-thumbnails-panel {
+    width: 100%;
+  }
+
+  .gzfb-click-zone {
+    width: 35px;
+  }
+
+  /* Reaction seals */
+  .btn-reaction-seal {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  /* Prof dashboard */
+  .professor-dashboard-summary {
+    padding: 1rem;
+  }
+
+  .prof-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .prof-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  /* Sidebar widgets */
+  .homework-student-widget,
+  .homework-professor-widget {
+    padding: 0.75rem;
+  }
+
+  /* Drop cap size */
+  .drop-cap::first-letter {
+    font-size: 2.2rem;
+  }
+
+  .gzp-text-p:first-child::first-letter {
+    font-size: 2.5em;
+  }
+}
+
+/* ======== VERY SMALL MOBILE (≤375px — iPhone SE, etc.) ======== */
+@media (max-width: 375px) {
+  html, body {
+    font-size: 13.5px;
+  }
+
+  .monumental-hero-section {
+    min-height: 260px;
+    padding: 1.2rem 0.5rem 1rem;
+  }
+
+  .hero-main-title {
+    font-size: clamp(1.4rem, 10vw, 2rem) !important;
+  }
+
+  .hero-motto {
+    font-size: 0.85rem;
+  }
+
+  .contentBlock {
+    padding: 0.85rem 0.65rem;
+  }
+
+  .portal-main-grid {
+    padding: 0.35rem;
+  }
+
+  .homework-card {
+    padding: 0.85rem;
+  }
+
+  .homework-monumental-header {
+    padding: 1.2rem 0.5rem 0.8rem;
+  }
+
+  .homework-main-title {
+    font-size: 1.1rem;
+  }
+
+  .homework-header-card {
+    padding: 1rem 0.6rem;
+  }
+
+  .grade-result-hero {
+    padding: 1rem 0.6rem;
+  }
+
+  .creator-step-card {
+    padding: 1rem;
+  }
+
+  .student-overview-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .gazette-cover-frame {
+    width: 140px;
+    min-height: 200px;
+  }
+}
+
+/* ======== ABSOLUTE MINIMUM (≤320px) ======== */
+@media (max-width: 320px) {
+  html, body {
+    font-size: 13px;
+  }
+
+  .hero-crest-badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .hero-main-title {
+    font-size: 1.3rem !important;
+  }
+
+  .btn-durmstrang,
+  .btn-durmstrang-secondary {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  .homework-main-title {
+    font-size: 1rem;
+  }
+
+  .score-big {
+    font-size: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 0.9rem;
+  }
+
+  .gazette-hero-title {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* ======== SAFE AREA INSETS (notch phones) ======== */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .adept-belt {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  footer {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ======== LANDSCAPE ORIENTATION ======== */
+@media (max-height: 500px) and (orientation: landscape) {
+  .monumental-hero-section {
+    min-height: 220px;
+    padding: 1rem 1.5rem 0.8rem;
+  }
+
+  .hero-center-content {
+    margin-bottom: 1rem;
+  }
+
+  .gothic-modal-overlay {
+    align-items: flex-start;
+    padding: 0.5rem;
+  }
+
+  .gothic-modal-content {
+    max-height: 95vh;
+  }
+
+  .tmd-modal-box {
+    max-height: 95vh;
+  }
+
+  .ramesville-hourglasses-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ======== TOUCH: prevent hover artifacts on mobile ======== */
+@media (hover: none) {
+  .gothic-card:hover,
+  .ramesville-house-card:hover,
+  .homework-card:hover,
+  .btn-durmstrang:hover,
+  .btn-durmstrang-secondary:hover {
+    transform: none;
+  }
+
+  .diegetic-wax-seal {
+    animation: none;
+  }
+}
+
+/* ======== NAVBAR MOBILE OVERRIDES ======== */
+@media (max-width: 1040px) {
+  /* Hide kbd shortcut hint on mobile */
+  header kbd {
+    display: none !important;
+  }
+
+  /* Allow the utility cluster to shrink */
+  header > div > div:last-child {
+    flex-shrink: 1 !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    overflow: hidden !important;
+  }
+
+  /* Compact the nav container padding on mobile */
+  header > div {
+    padding: 0.35rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Sound/snow pill — keep compact, not enlarged */
+  header > div > div:last-child > div {
+    flex-shrink: 1 !important;
+  }
+
+  /* Hide login text, icon-only on mobile */
+  header .btn-durmstrang {
+    font-size: 0 !important;
+    padding: 0.4rem 0.6rem !important;
+    gap: 0 !important;
+    min-width: 44px !important;
+    justify-content: center !important;
+  }
+  header .btn-durmstrang svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Search button — icon only */
+  header button[title*="Kompas"] span,
+  header button[title*="Szukaj"] span.hidden-mobile {
+    display: none !important;
+  }
+
+  /* Compact search button */
+  header button[title*="Kompas"] {
+    padding: 0.3rem 0.5rem !important;
+  }
+
+  /* Currency pill compact */
+  header div[title*="Skirniry"] {
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* Sound/snow pill buttons — small toggles, not full touch targets */
+  header > div > div:last-child button[title*="źwięki"],
+  header > div > div:last-child button[title*="nieg"] {
+    min-height: 32px !important;
+    min-width: 32px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  header > div {
+    padding: 0.3rem 0.5rem !important;
+    gap: 0.35rem !important;
+  }
+
+  /* Hide sound/snow pill on very narrow screens */
+  header > div > div:last-child > div:not([title]) {
+    display: none !important;
+  }
+
+  /* Even more compact search */
+  header button[title*="Kompas"] {
+    padding: 0.25rem !important;
+    min-width: 36px !important;
+  }
+}
+
+/* ======== VIEWS — EXAM / QUEST / PROFILE / MISC ======== */
+@media (max-width: 768px) {
+  /* Exam system */
+  .exam-center-container,
+  .exam-taking-container,
+  .exam-result-container,
+  .exam-creator-container,
+  .exam-grading-container,
+  .exam-bank-container {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .exam-monumental-header {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .exam-main-title {
+    font-size: 1.5rem;
+  }
+
+  .exam-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .exam-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-header-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .exam-detail-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .exam-question-card {
+    padding: 1.2rem;
+  }
+
+  .exam-result-hero {
+    padding: 1.5rem 1rem;
+  }
+
+  .exam-result-score-big {
+    font-size: 2.2rem;
+  }
+
+  .exam-bank-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-bank-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .bank-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bank-search-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Quest system */
+  .quest-board-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .quest-board-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .quest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quest-card {
+    padding: 1rem;
+  }
+
+  .quest-detail-card {
+    padding: 1.2rem;
+  }
+
+  .quest-objectives-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Profile */
+  .profile-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .profile-header-card {
+    padding: 1.5rem 1rem;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-avatar-frame {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .profile-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .profile-inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  /* Market */
+  .market-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .market-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-item-card {
+    padding: 1rem;
+  }
+
+  /* Bank */
+  .bank-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .bank-header-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .bank-balance-display {
+    font-size: 1.8rem;
+  }
+
+  .bank-transactions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Raven Post */
+  .raven-post-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .raven-compose-form {
+    padding: 1.2rem;
+  }
+
+  .raven-message-card {
+    padding: 1rem;
+  }
+
+  /* Map */
+  .tmd-map-container {
+    padding: 0.5rem;
+  }
+
+  /* Timetable */
+  .timetable-container {
+    padding: 1rem 0.5rem;
+    overflow-x: auto;
+  }
+
+  .timetable-grid {
+    min-width: 600px;
+  }
+
+  /* Ceremony */
+  .ceremony-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .ceremony-header {
+    padding: 1.5rem 1rem;
+  }
+
+  /* Rules */
+  .rules-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .rules-toc {
+    position: static;
+    max-height: none;
+  }
+
+  .rules-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* News */
+  .news-ticker-container {
+    overflow-x: hidden;
+  }
+
+  /* Rune workshop */
+  .rune-workshop-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .rune-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  /* Admin panel */
+  .admin-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .admin-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .admin-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .admin-data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Discord lesson simulator modal */
+  .discord-sim-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  .discord-message-area {
+    max-height: 50vh;
+  }
+
+  /* Auth modal */
+  .auth-modal-box {
+    max-width: 100% !important;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+  }
+
+  /* Enrollment */
+  .enrollment-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .enrollment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Absence chamber */
+  .absence-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .absence-form-card {
+    padding: 1.2rem;
+  }
+
+  /* Lottery */
+  .lottery-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .lottery-wheel-wrapper {
+    max-width: 300px;
+  }
+
+  /* Secret pages */
+  .secret-container {
+    padding: 1rem 0.75rem;
+  }
+
+  /* Lesson detail */
+  .lesson-detail-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .lesson-header-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .lesson-content-area {
+    padding: 1rem;
+  }
+
+  .lesson-sidebar-info {
+    position: static;
+  }
+
+  .lesson-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  /* Professor journal editor */
+  .journal-editor-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .editor-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .editor-toolbar button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .exam-monumental-header {
+    padding: 1.5rem 0.75rem 1rem;
+  }
+
+  .exam-main-title {
+    font-size: 1.25rem;
+  }
+
+  .exam-result-score-big {
+    font-size: 1.8rem;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  .bank-balance-display {
+    font-size: 1.4rem;
+  }
+}

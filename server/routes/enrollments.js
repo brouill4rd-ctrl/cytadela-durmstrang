@@ -50,19 +50,25 @@ router.get('/stats', (req, res) => {
 // ── GET /api/enrollments/professors ─────────────────────────────────────────
 router.get('/professors', requireAuth, (req, res) => {
   const profs = db.prepare(`
-    SELECT id, name, surname, full_name, avatar, specialization, department_name, taught_subject_ids
-    FROM users WHERE role IN ('professor','admin') AND status = 'active'
+    SELECT id, name, surname, full_name, avatar, specialization, department_name
+    FROM users WHERE role IN ('professor','admin') AND status IN ('approved', 'active')
     ORDER BY surname
   `).all();
 
   const result = profs.map(p => {
-    let subjectIds = [];
-    try { subjectIds = JSON.parse(p.taught_subject_ids || '[]'); } catch {}
-    const subjects = subjectIds.length
-      ? db.prepare(`SELECT id, name, icon, class_year FROM subjects WHERE id IN (${subjectIds.map(() => '?').join(',')})`)
-          .all(...subjectIds)
-      : [];
-    return { ...p, taught_subject_ids: subjectIds, subjects };
+    const assignments = db.prepare(`
+      SELECT tsa.subject_id, tsa.role, s.name, s.icon, s.class_years
+      FROM teacher_subject_assignments tsa
+      JOIN subjects s ON s.id = tsa.subject_id
+      WHERE tsa.professor_id = ? AND tsa.status = 'active'
+      ORDER BY s.sort_order
+    `).all(p.id);
+
+    return {
+      ...p,
+      taught_subject_ids: assignments.map(a => a.subject_id),
+      subjects: assignments.map(a => ({ id: a.subject_id, name: a.name, icon: a.icon, classYears: a.class_years }))
+    };
   });
 
   res.json(result);
@@ -138,8 +144,20 @@ router.post('/applications/:id/review', requireAuth, requireAdmin, (req, res) =>
     WHERE id = ?
   `).run(decision, reviewComment || '', req.user.full_name, app.id);
 
-  // If approved: add subject to professor's taught_subject_ids (avoid duplicates)
   if (decision === 'approved') {
+    const schoolYear = getConfig('school_year', 'XIX Rok Szkolny (2026/2027)');
+    db.prepare(`
+      INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status, assigned_by)
+      VALUES (?, ?, ?, 'primary', ?, 'active', ?)
+    `).run(
+      `tsa-${app.professor_id}-${app.subject_id}`,
+      app.professor_id,
+      app.subject_id,
+      schoolYear,
+      req.user.full_name
+    );
+
+    // Sync convenience columns
     const prof = db.prepare('SELECT taught_subject_ids FROM users WHERE id = ?').get(app.professor_id);
     let ids = [];
     try { ids = JSON.parse(prof?.taught_subject_ids || '[]'); } catch {}
@@ -147,6 +165,14 @@ router.post('/applications/:id/review', requireAuth, requireAdmin, (req, res) =>
       ids.push(app.subject_id);
       db.prepare('UPDATE users SET taught_subject_ids = ? WHERE id = ?')
         .run(JSON.stringify(ids), app.professor_id);
+    }
+
+    // If subject has no primary professor, set it
+    const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(app.subject_id);
+    if (subject && !subject.professor_id) {
+      const profUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(app.professor_id);
+      db.prepare('UPDATE subjects SET professor_id = ?, professor_name = ? WHERE id = ?')
+        .run(app.professor_id, profUser?.full_name || app.professor_name, app.subject_id);
     }
   }
 
@@ -172,10 +198,25 @@ router.delete('/professors/:profId/subjects/:subjectId', requireAuth, requireAdm
   const prof = db.prepare('SELECT id, taught_subject_ids FROM users WHERE id = ?').get(req.params.profId);
   if (!prof) return res.status(404).json({ error: 'Nie znaleziono profesora' });
 
+  // Deactivate assignment in join table
+  db.prepare(`
+    UPDATE teacher_subject_assignments
+    SET status = 'ended', ended_at = datetime('now')
+    WHERE professor_id = ? AND subject_id = ? AND status = 'active'
+  `).run(req.params.profId, req.params.subjectId);
+
+  // Sync convenience JSON
   let ids = [];
   try { ids = JSON.parse(prof.taught_subject_ids || '[]'); } catch {}
   ids = ids.filter(id => id !== req.params.subjectId);
   db.prepare('UPDATE users SET taught_subject_ids = ? WHERE id = ?').run(JSON.stringify(ids), prof.id);
+
+  // If this was the primary professor on the subject, clear it
+  const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(req.params.subjectId);
+  if (subject && subject.professor_id === req.params.profId) {
+    db.prepare('UPDATE subjects SET professor_id = \'\', professor_name = \'\' WHERE id = ?').run(req.params.subjectId);
+  }
+
   res.json({ ok: true });
 });
 

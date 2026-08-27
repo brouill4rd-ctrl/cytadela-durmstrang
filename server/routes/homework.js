@@ -9,9 +9,11 @@ import db, {
   dbHomeworkExceptionToFrontend,
   dbHomeworkTemplateToFrontend,
   dbHomeworkQuickCommentToFrontend,
-  calculateHouseRankings
+  calculateHouseRankings,
+  isProfessorOfSubject
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'homework');
@@ -482,6 +484,10 @@ router.post('/', requireAuth, requireRole('professor', 'admin'), (req, res) => {
       return res.status(400).json({ error: 'Tytuł, przedmiot oraz termin oddania są wymagane.' });
     }
 
+    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, subjectId)) {
+      return res.status(403).json({ error: 'Możesz tworzyć prace domowe tylko dla przedmiotów, które prowadzisz.' });
+    }
+
     const id = genId('hw');
     const professor = req.user;
 
@@ -494,7 +500,7 @@ router.post('/', requireAuth, requireRole('professor', 'admin'), (req, res) => {
         revision_allowed, revision_due_date, max_points, grading_type, grading_scale_id, rubric,
         is_optional, is_group, group_data, is_published, is_archived, is_featured,
         created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))
     `).run(
       id,
       title.trim(),
@@ -1149,27 +1155,22 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
         sub.current_version || 1
       );
 
-      // 3. Award House & Student Points via point_transactions
+      // 3. Award House & Student Points via central service
       if (housePointsAwarded > 0 && sub.house) {
-        const txId = `pt-hw-${Date.now()}`;
-        db.prepare(`
-          INSERT INTO point_transactions (
-            id, student_id, student_name, house, points, source,
-            lesson_id, professor_id, professor_name, date, comment, is_revoked, created_at
-          ) VALUES (?, ?, ?, ?, ?, 'HOMEWORK_REWARD', ?, ?, ?, date('now'), ?, 0, datetime('now'))
-        `).run(
-          txId,
-          sub.student_id,
-          sub.student_name,
-          sub.house,
-          housePointsAwarded,
-          sub.lesson_id || (hw?.lesson_id || null),
-          professor.id,
-          professor.fullName,
-          `Nagroda za pracę domową „${hw ? hw.title : sub.subject_name}” (${numericScore}/${gradeMax} pkt) od ${professor.fullName}`
-        );
-
-        db.prepare('UPDATE users SET points = points + ? WHERE id = ?').run(housePointsAwarded, sub.student_id);
+        awardPoints({
+          studentId: sub.student_id,
+          studentName: sub.student_name,
+          house: sub.house,
+          points: housePointsAwarded,
+          source: `Praca domowa: ${hw ? hw.title : sub.subject_name}`,
+          sourceType: 'HOMEWORK',
+          sourceId: sub.homework_id || subId,
+          lessonId: sub.lesson_id || (hw?.lesson_id || null),
+          actorId: professor.id,
+          actorName: professor.fullName,
+          comment: `Nagroda za pracę domową „${hw ? hw.title : sub.subject_name}” (${numericScore}/${gradeMax} pkt) od ${professor.fullName}`,
+          idempotencyKey: `homework-grade-${subId}`
+        });
       }
 
       // 4. Record to central Gradebook (grades table) if requested

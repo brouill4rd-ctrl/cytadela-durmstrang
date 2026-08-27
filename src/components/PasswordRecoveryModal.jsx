@@ -176,7 +176,7 @@ export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
                     {matchedUser.fullName}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--gold-glow)' }}>
-                    @{matchedUser.username} • {matchedUser.role === 'admin' ? 'Arcymistrz' : matchedUser.role === 'professor' ? 'Profesor' : 'Adept'}
+                    @{matchedUser.username} • {matchedUser.role === 'admin' ? (matchedUser.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz') : matchedUser.role === 'professor' ? 'Profesor' : 'Adept'}
                   </div>
                 </div>
               </div>

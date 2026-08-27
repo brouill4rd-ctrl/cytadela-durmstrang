@@ -7,7 +7,7 @@ import api from '../api';
 import {
   X, Scroll, Eye, Edit3, Pin, Calendar,
   Clock, Image as ImageIcon,
-  Type, Bold, Italic, List, Minus, Link, Quote, Hash, User
+  Type, Bold, Italic, List, Minus, Link, Quote, Hash, User, Palette
 } from 'lucide-react';
 
 const TITLE_TEMPLATES = [
@@ -77,6 +77,7 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState(['Edykt']);
 
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [showCatCreator, setShowCatCreator] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatScript, setNewCatScript] = useState('');
@@ -189,6 +190,22 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
     const newContent = content.slice(0, lineStart) + snippet + '\n' + content.slice(lineStart);
     setContent(newContent);
     setTimeout(() => { textarea.focus(); }, 0);
+  };
+
+  const COLOR_PRESETS = [
+    { label: 'Złoty', value: '#c59f4e' },
+    { label: 'Lodowy', value: '#a4c8e1' },
+    { label: 'Czerwony', value: '#ef4444' },
+    { label: 'Szmaragd', value: '#2ec4b6' },
+    { label: 'Purpurowy', value: '#b18cfe' },
+    { label: 'Biały', value: '#ffffff' },
+    { label: 'Ogień', value: '#f59e0b' },
+    { label: 'Krew', value: '#b32626' },
+  ];
+
+  const insertColor = (color) => {
+    insertAtCursor(`{color:${color}}`, '{/color}');
+    setShowColorPicker(false);
   };
 
   const TOOLBAR = [
@@ -325,13 +342,14 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
 
   const renderInline = (text) => {
     const parts = [];
-    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
+    const regex = /(\{color:([^}]+)\}(.+?)\{\/color\}|\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
     let last = 0, m;
     while ((m = regex.exec(text)) !== null) {
       if (m.index > last) parts.push(text.slice(last, m.index));
-      if (m[2]) parts.push(<strong key={m.index}>{m[2]}</strong>);
-      else if (m[3]) parts.push(<em key={m.index}>{m[3]}</em>);
-      else if (m[4]) parts.push(<a key={m.index} href={m[5]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[4]}</a>);
+      if (m[2]) parts.push(<span key={m.index} style={{ color: m[2] }}>{m[3]}</span>);
+      else if (m[4]) parts.push(<strong key={m.index}>{m[4]}</strong>);
+      else if (m[5]) parts.push(<em key={m.index}>{m[5]}</em>);
+      else if (m[6]) parts.push(<a key={m.index} href={m[7]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[6]}</a>);
       last = m.index + m[0].length;
     }
     if (last < text.length) parts.push(text.slice(last));
@@ -389,7 +407,7 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
 
                 <div>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Podgląd wybranego banera:</div>
-                  <CategoryBanner category={category} customText={bannerCustomText} height={80} />
+                  <CategoryBanner category={category} customText={bannerCustomText} height={140} />
                 </div>
 
                 <div>
@@ -574,6 +592,19 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                     </button>
                   ))}
                   <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.25rem' }} />
+                  <div style={{ position: 'relative' }}>
+                    <button type="button" onClick={() => setShowColorPicker(v => !v)} title="Kolor tekstu" className="btn-editor-tool" style={{ color: showColorPicker ? 'var(--gold-ancient)' : undefined }}>
+                      <Palette size={13} />
+                    </button>
+                    {showColorPicker && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 20, background: 'rgba(10,14,22,0.97)', border: '1px solid rgba(164,200,225,0.25)', borderRadius: '6px', padding: '0.5rem', display: 'flex', gap: '0.35rem', flexWrap: 'wrap', width: '170px', marginTop: '0.3rem', boxShadow: '0 4px 16px rgba(0,0,0,0.7)' }}>
+                        {COLOR_PRESETS.map(c => (
+                          <button key={c.value} type="button" title={c.label} onClick={() => insertColor(c.value)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '2px solid rgba(255,255,255,0.15)', background: c.value, cursor: 'pointer', transition: 'transform 0.15s' }} onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.target.style.transform = 'scale(1)'} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.25rem' }} />
                   <span style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', marginRight: '0.3rem' }}>Runy:</span>
                   {RUNE_GLYPHS.map(rune => (
                     <button key={rune} type="button" onClick={() => { playRuneChime(); insertAtCursor(rune); }} className="rune-glyph-btn" title={`Wstaw runę ${rune}`}>{rune}</button>
@@ -589,7 +620,8 @@ Obsługiwane formatowanie:
 **pogrubienie** | *kursywa* | ## Nagłówek | ### Podnagłówek
 > Cytat | * Lista | 1. Numerowanie | --- Linia
 [odnośnik](https://...) | ![obraz](https://...)
-:::warning Treść ostrzeżenia ::: | :::info Treść informacji :::`}
+:::warning Treść ostrzeżenia ::: | :::info Treść informacji :::
+{color:#c59f4e}kolorowy tekst{/color}`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="gothic-textarea"
@@ -619,7 +651,7 @@ Obsługiwane formatowanie:
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="contentBlock" style={{ background: 'rgba(15,20,30,0.95)', border: '1px solid rgba(164,200,225,0.35)', padding: '2rem' }}>
                 <div style={{ marginBottom: '1.2rem' }}>
-                  <CategoryBanner category={category} customText={bannerCustomText} height={80} />
+                  <CategoryBanner category={category} customText={bannerCustomText} height={140} />
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                   {pinned && <span style={{ fontSize: '0.74rem', background: 'rgba(197,159,78,0.2)', color: 'var(--gold-glow)', padding: '0.2rem 0.65rem', borderRadius: '4px', border: '1px solid var(--gold-ancient)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase' }}><Pin size={12} /> Edykt Główny</span>}

@@ -2,7 +2,7 @@ import React from 'react';
 import { getCategoryBanner } from '../data/categoryBanners';
 import { useSchool } from '../context/SchoolContext';
 
-export const CategoryBanner = ({ category, customText, height = 76, style = {}, className = '' }) => {
+export const CategoryBanner = ({ category, customText, height = 140, style = {}, className = '' }) => {
   const school = useSchool?.();
   const dynamicBanners = school?.categoryBanners;
 
@@ -254,9 +254,9 @@ export const CategoryBanner = ({ category, customText, height = 76, style = {}, 
         style={{
           position: 'relative',
           zIndex: 3,
-          fontFamily: "'Caveat', 'Sacramento', 'Allura', 'Alex Brush', cursive",
-          fontSize: '2.45rem',
-          fontWeight: 400,
+          fontFamily: "'Cinzel Decorative', 'Metamorphous', 'Germania One', serif",
+          fontSize: '2.6rem',
+          fontWeight: 700,
           color: '#ffffff',
           letterSpacing: '0.04em',
           textShadow: '0 0 12px rgba(255, 255, 255, 0.45), 0 2px 5px rgba(0, 0, 0, 0.95)',

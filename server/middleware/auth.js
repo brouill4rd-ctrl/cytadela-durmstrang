@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import db from '../db.js';
+import db, { isProfessorOfSubject } from '../db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294';
 
@@ -28,6 +28,10 @@ export function requireAuth(req, res, next) {
     return res.status(403).json({ error: 'Twoje konto nie zostało jeszcze zatwierdzone przez Radę Mistrzów.' });
   }
 
+  const taughtFromAssignments = db.prepare(
+    `SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active'`
+  ).all(row.id).map(r => r.subject_id);
+
   req.user = {
     id: row.id,
     username: row.username,
@@ -35,10 +39,10 @@ export function requireAuth(req, res, next) {
     status: row.status,
     house: row.house,
     fullName: row.full_name,
+    full_name: row.full_name,
+    avatar: row.avatar || '',
     department: row.department,
-    taughtSubjectIds: (() => {
-      try { return JSON.parse(row.taught_subject_ids || '[]'); } catch { return []; }
-    })()
+    taughtSubjectIds: taughtFromAssignments
   };
 
   next();
@@ -90,10 +94,8 @@ export function requireSubjectOwnerOrAdmin(req, res, next) {
   }
   if (req.user.role === 'admin') return next();
   if (req.user.role === 'professor') {
-    const subjectId = req.params.id;
-    if (req.user.taughtSubjectIds.includes(subjectId)) return next();
-    const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(subjectId);
-    if (subject && subject.professor_id === req.user.id) return next();
+    const subjectId = req.params.id || req.params.subjectId || req.body?.subjectId;
+    if (isProfessorOfSubject(req.user.id, subjectId)) return next();
     return res.status(403).json({ error: 'Możesz edytować tylko przedmioty, które prowadzisz.' });
   }
   return res.status(403).json({ error: 'Brak uprawnień. Wymagana rola: admin lub profesor.' });

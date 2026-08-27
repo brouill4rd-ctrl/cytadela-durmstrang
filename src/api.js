@@ -56,6 +56,16 @@ export const api = {
   login: (username, password) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   register: (userData) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
 
+  // Domain data
+  getHouses: () => apiFetch('/houses'),
+  getLocations: () => apiFetch('/locations'),
+  getRunesCatalog: () => apiFetch('/workshop/runes'),
+  getRuneFormulas: () => apiFetch('/workshop/rune-formulas'),
+  getCeremonyQuestions: () => apiFetch('/ceremony/questions'),
+  getShops: () => apiFetch('/market/shops'),
+  getLotteryRunes: () => apiFetch('/lottery/runes'),
+  getSalaryConfig: () => apiFetch('/bank/salary-config'),
+
   // Users
   getUsers: () => apiFetch('/users'),
   getUser: (id) => apiFetch(`/users/${id}`),

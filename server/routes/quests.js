@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import db, { dbCompletedQuestToFrontend, dbUserToFrontend, calculateHouseRankings } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
+import { credit as creditSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
 
@@ -72,7 +74,7 @@ router.post('/complete', requireAuth, (req, res) => {
         rewardItemName
       );
 
-      // 2. Update user profile (XP, level, currency, points, inventory)
+      // 2. Update user profile (XP, level, inventory — NOT points/currency, those go through services)
       const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
       if (userRow) {
         let currentInv = [];
@@ -106,51 +108,42 @@ router.post('/complete', requireAuth, (req, res) => {
 
         db.prepare(`
           UPDATE users
-          SET xp = ?, level = ?, next_level_xp = ?, points = points + ?, currency = currency + ?, inventory = ?
+          SET xp = ?, level = ?, next_level_xp = ?, inventory = ?
           WHERE id = ?
-        `).run(
-          newXp,
-          newLevel,
-          nextXp,
-          rewardPoints || 0,
-          rewardGalleons || 0,
-          JSON.stringify(currentInv),
-          userId
-        );
+        `).run(newXp, newLevel, nextXp, JSON.stringify(currentInv), userId);
       }
 
-      // 3. Add house point transaction
+      // 3. Award house points via central service
+      const idemKey = `quest-${userId}-${questId}`;
       if (rewardPoints > 0 && userRow?.house) {
-        const ptId = `pt-quest-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        db.prepare(`
-          INSERT INTO point_transactions (id, student_id, student_name, house, points, source, date, comment, is_revoked, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, date('now'), ?, 0, datetime('now'))
-        `).run(
-          ptId,
-          userId,
-          userRow.full_name,
-          userRow.house,
-          rewardPoints,
-          `Side Quest Mapy: ${questTitle || questId}`,
-          `Ukończenie misji w lokacji ${locationName || 'Twierdzy'}`
-        );
+        awardPoints({
+          studentId: userId,
+          studentName: userRow?.full_name || 'Adept',
+          house: userRow.house,
+          points: rewardPoints,
+          source: `Side Quest Mapy: ${questTitle || questId}`,
+          sourceType: 'QUEST',
+          sourceId: questId,
+          actorId: 'system',
+          actorName: 'System Cytadeli',
+          comment: `Ukończenie misji w lokacji ${locationName || 'Twierdzy'}`,
+          idempotencyKey: `pt-${idemKey}`
+        });
       }
 
-      // 4. Add bank transaction
+      // 4. Award Skirniry via central service
       if (rewardGalleons > 0) {
-        const bankTxId = `tx-quest-${Date.now()}`;
-        db.prepare(`
-          INSERT INTO bank_transactions (id, user_id, user_name, amount, type, category, title, note, status, reference_code, date)
-          VALUES (?, ?, ?, ?, 'inflow', 'quest', ?, ?, 'completed', ?, datetime('now'))
-        `).run(
-          bankTxId,
+        creditSkirnir({
           userId,
-          userRow?.full_name || 'Adept',
-          rewardGalleons,
-          `Nagroda: ${questTitle || questId}`,
-          `Lokacja: ${locationName || 'Cytadela Durmstrang'}`,
-          `SKR-QST-${Math.floor(10000 + Math.random() * 90000)}`
-        );
+          userName: userRow?.full_name || 'Adept',
+          amount: rewardGalleons,
+          category: 'quest',
+          title: `Nagroda: ${questTitle || questId}`,
+          note: `Lokacja: ${locationName || 'Cytadela Durmstrang'}`,
+          sourceType: 'QUEST',
+          sourceId: questId,
+          idempotencyKey: `skr-${idemKey}`
+        });
       }
 
       return {

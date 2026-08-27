@@ -224,7 +224,8 @@ export const ProfileView = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontFamily: 'var(--font-heading)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                  {house ? house.name : activeUser.role === 'admin' ? 'Rada Dyrekcji' : activeUser.role === 'professor' ? (activeUser.departmentName || 'Katedra Magii') : 'Adept Nowicjusz'} • {activeUser.classYear || 'Kadra Durmstrang'}
+                  {house ? house.name : ['admin', 'headmaster'].includes(activeUser.role) ? 'Rada Dyrekcji' : ['professor', 'teacher'].includes(activeUser.role) ? (activeUser.departmentName || 'Katedra Magii') : 'Adept Nowicjusz'}
+                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? ' • Kadra Durmstrang' : ` • ${activeUser.classYear || 'Klasa I'}`}
                 </span>
                 <span style={{ background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.72rem', padding: '0.15rem 0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)' }}>
                   {genderLabel}
@@ -235,7 +236,7 @@ export const ProfileView = () => {
                 {activeUser.fullName}
               </h1>
               <div style={{ fontSize: '0.9rem', color: '#a0aec0', marginTop: '0.3rem' }}>
-                {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Adept')} • {activeUser.origin || activeUser.office || 'Twierdza Magii Durmstrang (TMD)'}
+                {activeUser.title || (activeUser.role === 'admin' ? (activeUser.gender === 'czarodziejka' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Arcymistrz Twierdzy (TMD)') : 'Adept')} • {activeUser.origin || activeUser.office || 'Twierdza Magii Durmstrang (TMD)'}
               </div>
               <div style={{ fontSize: '0.78rem', color: currentAura.border, fontWeight: 700, marginTop: '0.3rem' }}>
                 ✨ {currentAura.name}
@@ -662,7 +663,7 @@ export const ProfileView = () => {
                 <div>
                   <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Godność Honorowa & Tytuł:</span>
                   <div style={{ color: 'var(--gold-glow)', fontWeight: 600, marginTop: '0.2rem' }}>
-                    {activeUser.title || (activeUser.role === 'admin' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Adept Północy')}
+                    {activeUser.title || (activeUser.role === 'admin' ? (activeUser.gender === 'czarodziejka' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Arcymistrz Twierdzy (TMD)') : 'Adept Północy')}
                   </div>
                 </div>
 
@@ -1138,22 +1139,29 @@ export const ProfileView = () => {
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Rola Zakonu</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? 'Katedra / Wydział' : 'Rola Zakonu'}
+                </div>
                 <div style={{ fontSize: '1.05rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontWeight: 700, marginTop: '0.2rem' }}>
-                  {house ? `${house.crestIcon} ${house.name}` : (activeUser.house || 'Brak')}
+                  {house ? `${house.crestIcon} ${house.name}`
+                    : ['admin', 'headmaster'].includes(activeUser.role) ? 'Rada Najwyższa'
+                    : ['professor', 'teacher'].includes(activeUser.role) ? (activeUser.departmentName || 'Katedra Magii')
+                    : (activeUser.house || 'Brak')}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '0.3rem' }}>
-                  Automatyczny przydział
+                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? 'Kadra Durmstrang' : 'Automatyczny przydział'}
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Ranga & Klasa</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? 'Ranga' : 'Ranga & Klasa'}
+                </div>
                 <div style={{ fontSize: '1.05rem', color: '#fef08a', fontWeight: 700, marginTop: '0.2rem' }}>
-                  {activeUser.role === 'admin' ? '⚡ Rada Arcymistrzów' : activeUser.role === 'professor' ? '🧙‍♂️ Profesor' : '📜 Adept'} • {activeUser.classYear || 'Kadra'}
+                  {activeUser.role === 'admin' ? 'Rada Arcymistrzów' : activeUser.role === 'headmaster' ? 'Dyrektor Cytadeli' : activeUser.role === 'professor' ? 'Profesor' : activeUser.role === 'teacher' ? 'Mistrz Wykładowca' : `Adept • ${activeUser.classYear || 'Klasa I'}`}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.3rem' }}>
-                  Synchronizowane z Dziennikiem
+                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? 'Status Kadry' : 'Synchronizowane z Dziennikiem'}
                 </div>
               </div>
             </div>

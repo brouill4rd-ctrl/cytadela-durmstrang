@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { CEREMONY_QUESTIONS } from '../data/seedCeremonyQuestions';
-import { HOUSES } from '../data/seedHouses';
 import {
   X,
   User,
@@ -28,13 +26,21 @@ import {
   Award
 } from 'lucide-react';
 
-const DEPARTMENTS_LIST = [
-  { id: 'czarna-magia', name: 'Katedra Czarnej Magii & Nekromancji', banner: 'czarna-magia' },
-  { id: 'eliksiry', name: 'Katedra Eliksirów & Toksykologii', banner: 'eliksiry' },
-  { id: 'liga-bojowa', name: 'Katedra Szermierki Runicznej & Magii Bojowej', banner: 'liga-bojowa' },
-  { id: 'starozytne-runy', name: 'Katedra Starożytnych Run & Pieczęci', banner: 'starozytne-runy' },
-  { id: 'astronomia', name: 'Katedra Astromagii & Zórz Polarnych', banner: 'astronomia' },
-  { id: 'zielarstwo', name: 'Katedra Arktycznego Zielarstwa', banner: 'zielarstwo' }
+const DEPARTMENTS_FALLBACK = [
+  { id: 'czarna-magia', name: 'Czarna Magia', banner: 'czarna-magia' },
+  { id: 'eliksiry', name: 'Eliksiry', banner: 'eliksiry' },
+  { id: 'zaklecia', name: 'Zaklęcia', banner: 'zaklecia' },
+  { id: 'transmutacja', name: 'Transmutacja', banner: 'transmutacja' },
+  { id: 'zielarstwo', name: 'Zielarstwo', banner: 'zielarstwo' },
+  { id: 'magizoologia', name: 'Magizoologia', banner: 'magizoologia' },
+  { id: 'obrona-przed-ciemnymi-mocami', name: 'Obrona przed Ciemnymi Mocami', banner: 'obrona-przed-ciemnymi-mocami' },
+  { id: 'historia-magii', name: 'Historia Magii', banner: 'historia-magii' },
+  { id: 'astronomia', name: 'Astronomia', banner: 'astronomia' },
+  { id: 'wrozbiarstwo', name: 'Wróżbiarstwo', banner: 'wrozbiarstwo' },
+  { id: 'numerologia', name: 'Numerologia', banner: 'numerologia' },
+  { id: 'starozytne-runy', name: 'Starożytne Runy', banner: 'starozytne-runy' },
+  { id: 'latanie', name: 'Latanie na Miotle', banner: 'latanie' },
+  { id: 'biala-magia', name: 'Biała Magia', banner: 'biala-magia' }
 ];
 
 const ORIGINS_LIST = [
@@ -154,8 +160,15 @@ export const AuthModal = ({ isOpen, onClose }) => {
     setAuthModalTab,
     setPasswordRecoveryModalOpen,
     studentProfile,
-    showNotification
+    showNotification,
+    subjects,
+    houses,
+    ceremonyQuestions
   } = useSchool();
+
+  const departmentsList = (subjects && subjects.length > 0)
+    ? subjects.filter(s => s.isActive !== false).map(s => ({ id: s.id, name: s.name, banner: s.id }))
+    : DEPARTMENTS_FALLBACK;
 
   const { playWandSwoosh, playRuneChime, playSortingFanfare } = useSound();
 
@@ -235,7 +248,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
     const nextAnswers = [...ceremonyAnswers, houseType];
     setCeremonyAnswers(nextAnswers);
 
-    if (ceremonyStep < CEREMONY_QUESTIONS.length) {
+    if (ceremonyStep < ceremonyQuestions.length) {
       setCeremonyStep(ceremonyStep + 1);
     } else {
       // Calculate winning house strictly from choices
@@ -286,7 +299,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
     playWandSwoosh();
 
-    const selectedDeptObj = DEPARTMENTS_LIST.find(d => d.id === regDepartment);
+    const selectedDeptObj = departmentsList.find(d => d.id === regDepartment);
     const resolvedOrigin = regOrigin.includes('Własna') && regCustomOrigin.trim() ? regCustomOrigin.trim() : regOrigin;
     const fullWand = `${regWandWood}, rdzeń: ${regWandCore}, ${regWandLength}, ${regWandFlex}`;
 
@@ -838,7 +851,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
                       className="gothic-select"
                       style={{ fontSize: '0.9rem', padding: '0.65rem 0.9rem' }}
                     >
-                      {DEPARTMENTS_LIST.map(d => (
+                      {departmentsList.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
@@ -936,8 +949,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
               {/* 6. SEKCJA DLA ADEPTA: RYTUAŁ KAMIENIA PRZYSIĘGI (JEDYNA DROGA PRZYDZIAŁU) */}
               {regRole === 'student' && (() => {
                 const currentHouseKey = regPreferredHouse || 'ravnheim';
-                const currentHouseObj = (HOUSES && HOUSES[currentHouseKey]) || Object.values(HOUSES)[0];
-                const currentQ = ceremonyStep >= 1 && ceremonyStep <= CEREMONY_QUESTIONS.length ? CEREMONY_QUESTIONS[ceremonyStep - 1] : null;
+                const currentHouseObj = (houses && houses[currentHouseKey]) || Object.values(houses || {})[0] || {};
+                const currentQ = ceremonyStep >= 1 && ceremonyStep <= ceremonyQuestions.length ? ceremonyQuestions[ceremonyStep - 1] : null;
 
                 return (
                   <div
@@ -1050,15 +1063,15 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     )}
 
                     {/* Step 1..4: Interactive Question Trial */}
-                    {ceremonyStep >= 1 && ceremonyStep <= CEREMONY_QUESTIONS.length && currentQ && (
+                    {ceremonyStep >= 1 && ceremonyStep <= ceremonyQuestions.length && currentQ && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', background: 'rgba(5, 8, 14, 0.95)', padding: '1.2rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.35)' }}>
                         {/* Progress Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
-                            {currentQ.title || `Próba ${ceremonyStep} z ${CEREMONY_QUESTIONS.length}`}
+                            {currentQ.title || `Próba ${ceremonyStep} z ${ceremonyQuestions.length}`}
                           </span>
                           <div style={{ display: 'flex', gap: '0.35rem' }}>
-                            {CEREMONY_QUESTIONS.map((_, i) => (
+                            {ceremonyQuestions.map((_, i) => (
                               <div
                                 key={i}
                                 style={{

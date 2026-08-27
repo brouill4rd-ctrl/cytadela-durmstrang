@@ -54,8 +54,8 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
 
   db.prepare(`
     INSERT INTO news (id, title, summary, content, author, author_id, author_role, author_signature,
-      category, category_key, banner_custom_text, wax_seal, house, tags, read_time, pinned, date, reactions, comments)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      category, category_key, banner_custom_text, wax_seal, house, tags, read_time, subject_id, pinned, date, reactions, comments)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     newsId,
     data.title,
@@ -72,6 +72,7 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
     data.house || '',
     JSON.stringify(data.tags || []),
     readTime,
+    data.subjectId || '',
     data.pinned ? 1 : 0,
     data.date || new Date().toISOString().split('T')[0],
     JSON.stringify(data.reactions || {}),
@@ -99,7 +100,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
       title = ?, summary = ?, content = ?,
       author = ?, author_id = ?, author_role = ?, author_signature = ?,
       category = ?, category_key = ?, banner_custom_text = ?, wax_seal = ?, house = ?,
-      tags = ?, read_time = ?, pinned = ?, reactions = ?, comments = ?
+      tags = ?, read_time = ?, subject_id = ?, pinned = ?, reactions = ?, comments = ?
     WHERE id = ?
   `).run(
     data.title ?? existing.title,
@@ -116,6 +117,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
     data.house ?? existing.house,
     data.tags ? JSON.stringify(data.tags) : existing.tags,
     readTime,
+    data.subjectId ?? existing.subject_id ?? '',
     data.pinned !== undefined ? (data.pinned ? 1 : 0) : existing.pinned,
     data.reactions ? JSON.stringify(data.reactions) : existing.reactions,
     data.comments ? JSON.stringify(data.comments) : existing.comments,

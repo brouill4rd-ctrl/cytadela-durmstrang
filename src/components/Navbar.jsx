@@ -902,7 +902,7 @@ export const Navbar = () => {
                     {currentUser?.name || currentUser?.fullName}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: userHouse ? userHouse.colors.secondary : currentUser?.role === 'admin' ? '#ff9e9e' : currentUser?.role === 'professor' ? '#d8c2ff' : 'var(--gold-ancient)', maxWidth: '105px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {currentUser?.role === 'admin' ? '🛡️ Arcymistrz' : currentUser?.role === 'professor' ? '📖 Profesor' : userHouse ? userHouse.name : '🎓 Adept'}
+                    {currentUser?.role === 'admin' ? `🛡️ ${currentUser?.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz'}` : currentUser?.role === 'professor' ? '📖 Profesor' : userHouse ? userHouse.name : '🎓 Adept'}
                   </div>
                 </div>
                 <ChevronDown size={11} color="var(--gold-ancient)" style={{ transform: openDropdown === 'user' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
@@ -936,7 +936,7 @@ export const Navbar = () => {
                     {currentUser?.fullName}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--gold-glow)' }}>
-                    {currentUser?.title || (currentUser?.role === 'admin' ? 'Arcymistrzyni Cytadeli' : 'Adept Durmstrang')}
+                    {currentUser?.title || (currentUser?.role === 'admin' ? (currentUser?.gender === 'czarodziejka' ? 'Arcymistrzyni Cytadeli' : 'Arcymistrz Cytadeli') : 'Adept Durmstrang')}
                   </div>
                 </div>
 

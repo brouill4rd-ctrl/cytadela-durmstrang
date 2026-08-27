@@ -12,19 +12,16 @@ function tryParse(key, fallback) {
 import { api } from '../api';
 import { HOUSES } from '../data/seedHouses';
 import { SUBJECTS } from '../data/seedSubjects';
-import { SHOPS, STORE_ITEMS } from '../data/seedStore';
-import { SEED_BANK_ACCOUNTS, SEED_BANK_TRANSACTIONS, TEACHER_SALARY_CONFIG } from '../data/seedBank';
+import { STORE_ITEMS } from '../data/seedStore';
+import { SEED_BANK_ACCOUNTS, SEED_BANK_TRANSACTIONS } from '../data/seedBank';
 import { SEED_SHOPPING_LISTS } from '../data/seedShoppingLists';
-import { ELDER_FUTHARK_RUNES, SEED_LOTTERY_ROUNDS, SEED_LOTTERY_USER_TICKETS } from '../data/seedLottery';
-import { LOCATIONS } from '../data/seedLocations';
+import { SEED_LOTTERY_ROUNDS, SEED_LOTTERY_USER_TICKETS } from '../data/seedLottery';
 import { LORE_ARCHIVES } from '../data/seedLore';
-import { CEREMONY_QUESTIONS } from '../data/seedCeremonyQuestions';
 import { NEWS_ITEMS } from '../data/seedNews';
 import { EVENTS } from '../data/seedEvents';
 import { DEMO_ACCOUNTS, LEADERBOARD_STUDENTS, LEADERBOARD_STAFF, PENDING_APPLICATIONS } from '../data/seedStudents';
 import { SEED_USERS } from '../data/seedUsers';
 import { SECRETS } from '../data/seedSecrets';
-import { RUNES_CATALOG, RUNE_FORMULAS } from '../data/seedRunes';
 import { SEED_LESSONS, SEED_POINT_TRANSACTIONS } from '../data/seedLessons';
 import { SEED_TIMETABLE, DAYS_OF_WEEK, TIME_SLOTS } from '../data/seedTimetable';
 import { CATEGORY_BANNERS } from '../data/categoryBanners';
@@ -1018,9 +1015,15 @@ Dyrektor Cytadeli Durmstrang`
   const [houses, setHouses] = useState(() => {
     return tryParse('durmstrang_houses', HOUSES);
   });
+  const [locations, setLocations] = useState([]);
+  const [shops, setShops] = useState([]);
+  const [elderFutharkRunes, setElderFutharkRunes] = useState([]);
+  const [runeFormulas, setRuneFormulas] = useState([]);
+  const [ceremonyQuestions, setCeremonyQuestions] = useState([]);
+  const [salaryConfig, setSalaryConfig] = useState({});
 
   // ==================== PRZEDMIOTY (KATEDRY) ====================
-  const [subjects, setSubjects] = useState(SUBJECTS); // Fallback: statyczne dane
+  const [subjects, setSubjects] = useState(SUBJECTS);
   const [activeSubjectDetail, setActiveSubjectDetail] = useState(null);
 
   // ==================== PLAN LEKCJI & HARMONOGRAM ====================
@@ -1067,7 +1070,7 @@ Dyrektor Cytadeli Durmstrang`
 
   // Runes & Workshop System
   const [userRunes, setUserRunes] = useState(() => {
-    return tryParse('durmstrang_runes', RUNES_CATALOG);
+    return tryParse('durmstrang_runes', []);
   });
 
   const [craftedFormulas, setCraftedFormulas] = useState(() => {
@@ -1196,6 +1199,14 @@ Dyrektor Cytadeli Durmstrang`
       const freshCurrentUser = loadedUsers.find(u => u.id === currentUserId) || null;
       const isAdminSession = freshCurrentUser?.role === 'admin';
 
+      // Build student ranking from loaded users
+      const studentRanking = loadedUsers
+        .filter(u => u.role === 'student' && u.status === 'approved')
+        .sort((a, b) => (b.points || 0) - (a.points || 0));
+      if (studentRanking.length > 0) {
+        setStudents(studentRanking);
+      }
+
       // Load emails
       const emailsRes = await api.getEmails();
       if (emailsRes.ok) {
@@ -1264,17 +1275,34 @@ Dyrektor Cytadeli Durmstrang`
       // Load subjects (katedry) z backendu
       const subjectsRes = await api.getSubjects();
       if (subjectsRes.ok && subjectsRes.data.length > 0) {
-        const mergedSubjects = subjectsRes.data.map(apiSubj => {
-          const staticMatch = SUBJECTS.find(s => s.id === apiSubj.id);
-          return {
-            ...staticMatch,
-            ...apiSubj,
-            lessons: (apiSubj.lessons && apiSubj.lessons.length > 0) ? apiSubj.lessons : (staticMatch?.lessons || []),
-            classYears: apiSubj.classYears || staticMatch?.classYears || ['Klasa I']
-          };
-        });
-        setSubjects(mergedSubjects);
+        setSubjects(subjectsRes.data);
       }
+
+      // Load domain data z backendu
+      const [housesRes, locationsRes, shopsRes, futharkRes, runeFormulasRes, ceremonyRes, salaryRes] = await Promise.all([
+        api.getHouses(),
+        api.getLocations(),
+        api.getShops(),
+        api.getLotteryRunes(),
+        api.getRuneFormulas(),
+        api.getCeremonyQuestions(),
+        api.getSalaryConfig()
+      ]);
+      if (housesRes.ok && housesRes.data.length > 0) {
+        const housesObj = {};
+        for (const h of housesRes.data) housesObj[h.id] = h;
+        setHouses(housesObj);
+      }
+      if (locationsRes.ok && locationsRes.data.length > 0) setLocations(locationsRes.data);
+      if (shopsRes.ok && shopsRes.data.length > 0) setShops(shopsRes.data);
+      if (futharkRes.ok && futharkRes.data.length > 0) setElderFutharkRunes(futharkRes.data);
+      if (runeFormulasRes.ok && runeFormulasRes.data.length > 0) setRuneFormulas(runeFormulasRes.data);
+      if (ceremonyRes.ok && ceremonyRes.data.length > 0) setCeremonyQuestions(ceremonyRes.data);
+      if (salaryRes.ok && salaryRes.data) setSalaryConfig(salaryRes.data);
+
+      // Load runes catalog
+      const runesCatRes = await api.getRunesCatalog();
+      if (runesCatRes.ok && runesCatRes.data.length > 0) setUserRunes(runesCatRes.data);
 
       // Load timetable (plan lekcji) z backendu
       const ttRes = await api.getTimetable();
@@ -1656,7 +1684,16 @@ Dyrektor Cytadeli Durmstrang`
       });
     }
 
-    // 5. Backend sync if available
+    // 5. Update student ranking
+    setStudents(prev => {
+      const updated = prev.map(s =>
+        s.id === targetStudentId ? { ...s, points: (s.points || 0) + points } : s
+      );
+      updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+      return updated;
+    });
+
+    // 6. Backend sync if available
     if (backendAvailable) {
       api.awardPoints({
         studentId: targetStudentId,
@@ -1899,7 +1936,7 @@ Dyrektor Cytadeli Durmstrang`
     if (!runeIds || runeIds.length < 2) return null;
     const sortedRunes = [...runeIds].sort();
 
-    const foundFormula = RUNE_FORMULAS.find(f => {
+    const foundFormula = runeFormulas.find(f => {
       const fRunes = [...f.runes].sort();
       return fRunes.length === sortedRunes.length && fRunes.every((val, idx) => val.toLowerCase() === sortedRunes[idx].toLowerCase());
     });
@@ -2704,7 +2741,7 @@ Dyrektor Cytadeli Durmstrang`
         return exists ? prev.map(u => u.id === user.id ? user : u) : [user, ...prev];
       });
       setCurrentUserId(user.id);
-      showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${user.fullName} (${user.role === 'student' ? 'Adept' : user.role === 'professor' ? 'Profesor' : 'Arcymistrz'})`, 'success');
+      showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${user.fullName} (${user.role === 'student' ? 'Adept' : user.role === 'professor' ? 'Profesor' : (user.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz')})`, 'success');
       return true;
     } else {
       if (res.data?.status === 'pending') {
@@ -2971,7 +3008,7 @@ Dyrektor Cytadeli Durmstrang`
         return res.data;
       }
     }
-    const staticSubject = SUBJECTS.find(s => s.id === subjectId);
+    const staticSubject = subjects.find(s => s.id === subjectId);
     setActiveSubjectDetail(staticSubject || null);
     return staticSubject || null;
   };
@@ -3788,7 +3825,7 @@ Dyrektor Cytadeli Durmstrang`
         restoreTimetableEntry,
         deleteTimetableEntry,
         // Rynek & Sklepy
-        shops: SHOPS,
+        shops,
         storeItems,
         setStoreItems,
         createStoreItem,
@@ -3811,7 +3848,7 @@ Dyrektor Cytadeli Durmstrang`
         payoutAllSalaries,
         payoutLessonSalary,
         teacherSalaries,
-        salaryConfig: TEACHER_SALARY_CONFIG,
+        salaryConfig,
         // Skandynawska Loteria Odyna
         currentLottery,
         userLotteryTickets,
@@ -3820,8 +3857,9 @@ Dyrektor Cytadeli Durmstrang`
         drawLottery,
         lotteryModalOpen,
         setLotteryModalOpen,
-        elderFutharkRunes: ELDER_FUTHARK_RUNES,
-        locations: LOCATIONS,
+        elderFutharkRunes,
+        locations,
+        ceremonyQuestions,
         lore: LORE_ARCHIVES,
         news,
         setNews,
@@ -3836,7 +3874,7 @@ Dyrektor Cytadeli Durmstrang`
         userRunes,
         setUserRunes,
         craftedFormulas,
-        runeFormulas: RUNE_FORMULAS,
+        runeFormulas,
         homeworkSubmissions,
         ravenMessages,
         discoveredSecrets,

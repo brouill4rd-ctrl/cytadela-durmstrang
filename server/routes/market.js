@@ -2,12 +2,24 @@ import { Router } from 'express';
 import db, {
   dbStoreItemToFrontend,
   dbShoppingListToFrontend,
+  dbShopToFrontend,
   dbUserToFrontend,
   calculateHouseRankings
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { awardPoints } from '../services/pointsService.js';
+import { credit as creditSkirnir, debit as debitSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
+
+router.get('/shops', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM shops ORDER BY sort_order ASC').all();
+    res.json(rows.map(dbShopToFrontend));
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd pobierania sklepów: ' + err.message });
+  }
+});
 
 // GET /api/market/items — list all items
 router.get('/items', (req, res) => {
@@ -71,37 +83,36 @@ function checkShoppingListCompletion(userId, userName, house) {
           nowStr, list.reward_points, list.reward_skirnirs
         );
 
-        // 2. Award house points & personal points in point_transactions & users table
-        if (house) {
-          const ptId = `pt-shop-${Date.now()}-${list.slug}`;
-          db.prepare(`
-            INSERT INTO point_transactions (id, student_id, student_name, house, points, source, professor_id, professor_name, date, comment, is_revoked, created_at)
-            VALUES (?, ?, ?, ?, ?, 'wyprawka', 'system', 'Rada Dyrekcji Durmstrang', ?, ?, 0, datetime('now'))
-          `).run(
-            ptId, userId, userName, house, list.reward_points, nowStr,
-            `Nagroda za ukończenie Wyprawki: ${list.title}`
-          );
-
-          db.prepare('UPDATE users SET points = points + ? WHERE id = ?').run(list.reward_points, userId);
+        // 2. Award house points via central service
+        if (house && list.reward_points > 0) {
+          awardPoints({
+            studentId: userId,
+            studentName: userName,
+            house,
+            points: list.reward_points,
+            source: `Wyprawka: ${list.title}`,
+            sourceType: 'SHOPPING_LIST',
+            sourceId: list.id,
+            actorId: 'system',
+            actorName: 'Rada Dyrekcji Durmstrang',
+            comment: `Nagroda za ukończenie Wyprawki: ${list.title}`,
+            idempotencyKey: `pt-shop-${userId}-${list.id}`
+          });
         }
 
-        // 3. Award bonus Skirnirs to user and vault
+        // 3. Award bonus Skirniry via central service
         if (list.reward_skirnirs > 0) {
-          db.prepare('UPDATE users SET currency = currency + ? WHERE id = ?').run(list.reward_skirnirs, userId);
-          db.prepare('UPDATE bank_accounts SET balance = balance + ? WHERE user_id = ?').run(list.reward_skirnirs, userId);
-
-          // Bank transaction
-          const txId = `tx-list-${Date.now()}`;
-          const refCode = `SKR-LST-${Math.floor(10000 + Math.random() * 90000)}`;
-          db.prepare(`
-            INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-            VALUES (?, 'cytadela-treasury', 'Rada Dyrekcji Cytadeli', ?, ?, ?, 'inflow', 'nagroda_wyprawka', ?, ?, 'completed', ?, ?, datetime('now'))
-          `).run(
-            txId, userId, userName, list.reward_skirnirs,
-            `Nagroda za skompletowanie: ${list.title}`,
-            `Gratulacje! Odznaka: ${list.badge}`,
-            refCode, nowStr
-          );
+          creditSkirnir({
+            userId,
+            userName,
+            amount: list.reward_skirnirs,
+            category: 'nagroda_wyprawka',
+            title: `Nagroda za skompletowanie: ${list.title}`,
+            note: `Gratulacje! Odznaka: ${list.badge}`,
+            sourceType: 'SHOPPING_LIST',
+            sourceId: list.id,
+            idempotencyKey: `skr-shop-${userId}-${list.id}`
+          });
         }
 
         completedLists.push({
@@ -161,26 +172,26 @@ router.post('/buy', requireAuth, (req, res) => {
   let completedLists = [];
 
   const executePurchase = db.transaction(() => {
-    // 1. Deduct currency from user and bank account
-    db.prepare('UPDATE users SET currency = currency - ? WHERE id = ?').run(item.price, userId);
-    db.prepare('UPDATE bank_accounts SET balance = balance - ? WHERE user_id = ?').run(item.price, userId);
+    // 1. Deduct currency via central service
+    debitSkirnir({
+      userId: user.id,
+      userName: user.fullName,
+      amount: item.price,
+      category: 'zakup',
+      title: `Zakup: ${item.name}`,
+      note: `Kram: ${item.shopName} (${item.rarity})`,
+      recipientId: item.shopId,
+      recipientName: item.shopName,
+      sourceType: 'PURCHASE',
+      sourceId: item.id,
+      idempotencyKey: `buy-${user.id}-${item.id}-${Date.now()}`
+    });
 
     // 2. Add item to inventory
     const updatedInventory = [...currentInventory, item];
     db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(updatedInventory), userId);
 
-    // 3. Record bank transaction
-    db.prepare(`
-      INSERT INTO bank_transactions (id, sender_id, sender_name, recipient_id, recipient_name, amount, type, category, title, note, status, reference_code, date, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'outflow', 'zakup', ?, ?, 'completed', ?, ?, datetime('now'))
-    `).run(
-      txId, user.id, user.fullName, item.shopId, item.shopName, item.price,
-      `Zakup: ${item.name}`,
-      `Kram: ${item.shopName} (${item.rarity})`,
-      refCode, nowStr
-    );
-
-    // 4. Automatically check shopping lists completion
+    // 3. Automatically check shopping lists completion
     completedLists = checkShoppingListCompletion(user.id, user.fullName, user.house);
   });
 
