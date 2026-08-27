@@ -376,41 +376,48 @@ export const normalizeHouseKey = (key) => {
   return 'reinhall';
 };
 
+export const HOUSE_CREST_IMAGES = {
+  reinhall: '/herby_zakony/reinhall-herb2.png',
+  bjornhall: '/herby_zakony/bjornhall-herb2.png',
+  ravnheim: '/herby_zakony/ravnheim-herb2.png',
+  otergard: '/herby_zakony/otergard-herb2.png'
+};
+
 export const HOUSE_RUNIC_DATA = {
   reinhall: {
     rune: 'ᚦ',
     runeName: 'Thurisaz',
     animal: 'Renifer Północy',
-    primaryColor: '#7a1818',
-    secondaryColor: '#c59f4e',
-    glowColor: 'rgba(197, 159, 78, 0.45)',
+    primaryColor: '#7a2632',
+    secondaryColor: '#a8384b',
+    glowColor: 'rgba(122, 38, 50, 0.45)',
     element: 'Krew i Wieczna Zmarzlina'
   },
   bjornhall: {
     rune: 'ᛉ',
     runeName: 'Algiz',
     animal: 'Niedźwiedź Jaskiniowy',
-    primaryColor: '#202530',
-    secondaryColor: '#c02b2b',
-    glowColor: 'rgba(192, 43, 43, 0.45)',
+    primaryColor: '#35536f',
+    secondaryColor: '#5b8aaf',
+    glowColor: 'rgba(53, 83, 111, 0.45)',
     element: 'Żelazo i Pęknięta Skala'
   },
   ravnheim: {
     rune: 'ᚱ',
     runeName: 'Raidho',
     animal: 'Kruk Mądrości',
-    primaryColor: '#1c132e',
-    secondaryColor: '#a77de0',
-    glowColor: 'rgba(167, 125, 224, 0.45)',
+    primaryColor: '#42385f',
+    secondaryColor: '#7a6ea0',
+    glowColor: 'rgba(66, 56, 95, 0.45)',
     element: 'Cień i Astralna Noc'
   },
   otergard: {
     rune: 'ᛞ',
     runeName: 'Dagaz',
     animal: 'Wydra Polarna',
-    primaryColor: '#0d2d33',
-    secondaryColor: '#2ec4b6',
-    glowColor: 'rgba(46, 196, 182, 0.45)',
+    primaryColor: '#23615b',
+    secondaryColor: '#3aaa9f',
+    glowColor: 'rgba(35, 97, 91, 0.45)',
     element: 'Lodowcowe Wody i Toksyny'
   }
 };
@@ -425,6 +432,7 @@ export const OrderCrest = ({
 }) => {
   const normKey = normalizeHouseKey(houseKey);
   const data = HOUSE_RUNIC_DATA[normKey] || HOUSE_RUNIC_DATA.reinhall;
+  const crestImage = HOUSE_CREST_IMAGES[normKey] || HOUSE_CREST_IMAGES.reinhall;
 
   let CrestSvg = ReinhallCrest;
   if (normKey === 'bjornhall') CrestSvg = BjornhallCrest;
@@ -445,7 +453,19 @@ export const OrderCrest = ({
       }}
       className={className}
     >
-      <CrestSvg size={size} />
+      <img
+        src={crestImage}
+        alt={`Herb ${data.animal}`}
+        style={{
+          width: size * 1.3,
+          height: size * 1.3,
+          objectFit: 'contain',
+          filter: `drop-shadow(0 0 8px ${data.glowColor})`,
+          pointerEvents: 'none',
+          maxWidth: 'none',
+          flexShrink: 0
+        }}
+      />
       {showRuneBadge && (
         <span
           style={{

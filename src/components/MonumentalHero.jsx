@@ -1,24 +1,31 @@
 import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
+import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES } from './HeraldicEmblems';
 import {
   Flame,
   UserPlus,
   Zap
 } from 'lucide-react';
 
+const HOUSE_ORNAMENT_CLASS = {
+  reinhall: 'order-ornament-reinhall',
+  bjornhall: 'order-ornament-bjornhall',
+  ravnheim: 'order-ornament-ravnheim',
+  otergard: 'order-ornament-otergard'
+};
+
 export const MonumentalHero = ({ onOpenCreationModal }) => {
   const {
     houses,
-    addHousePoints,
+    houseRankings,
     setActiveView,
     setActiveHouseTab,
     currentUser,
     openAuthModal
   } = useSchool();
 
-  const { playWandSwoosh, playCoinClink } = useSound();
+  const { playWandSwoosh } = useSound();
 
   const handleHouseClick = (houseId) => {
     playWandSwoosh();
@@ -26,109 +33,78 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
     setActiveView('houses');
   };
 
+  const rankingByHouse = new Map(
+    (houseRankings?.standings || []).map((standing) => [standing.houseKey, standing])
+  );
+
   const housesConfig = [
     {
       id: 'reinhall',
-      house: houses.reinhall || { startingPoints: 480 },
-      name: 'Reinhall',
-      runeTitle: 'ᚦ REINHALL ᚦ',
-      color: houses.reinhall?.colors?.primary || '#c59f4e',
-      colorText: '#f7e6c4',
-      sandColor: '#c59f4e',
-      gemColor: '#7a1818',
-      head: houses.reinhall?.headOfHouse || 'Prof. Sigrid Hällström',
-      prefect: houses.reinhall?.prefect || 'Magnus Blom'
+      name: rankingByHouse.get('reinhall')?.name || houses?.reinhall?.name || 'Reinhall',
+      subtitle: 'Zakon Renifera',
+      color: '#7A2632',
+      colorLight: '#a8384b',
+      colorText: '#e8bfc6',
+      colorGlow: 'rgba(122, 38, 50, 0.45)',
+      head: houses?.reinhall?.headOfHouse || 'Prof. Sigrid Hällström',
+      prefect: houses?.reinhall?.prefect || 'Magnus Blom',
+      points: rankingByHouse.get('reinhall')?.totalPoints ?? houses?.reinhall?.startingPoints ?? houses?.reinhall?.points ?? 0
     },
     {
       id: 'bjornhall',
-      house: houses.bjornhall || { startingPoints: 520 },
-      name: 'Björnhall',
-      runeTitle: 'ᛉ BJÖRNHALL ᛉ',
-      color: houses.bjornhall?.colors?.primary || '#c02b2b',
-      colorText: '#ffbaba',
-      sandColor: '#c02b2b',
-      gemColor: '#dc2626',
-      head: houses.bjornhall?.headOfHouse || 'Prof. Gunnar Vargson',
-      prefect: houses.bjornhall?.prefect || 'Astrid Vargadottir'
+      name: rankingByHouse.get('bjornhall')?.name || houses?.bjornhall?.name || 'Björnhall',
+      subtitle: 'Zakon Niedźwiedzia',
+      color: '#35536F',
+      colorLight: '#5b8aaf',
+      colorText: '#c4d8e8',
+      colorGlow: 'rgba(53, 83, 111, 0.45)',
+      head: houses?.bjornhall?.headOfHouse || 'Prof. Gunnar Vargson',
+      prefect: houses?.bjornhall?.prefect || 'Astrid Vargadottir',
+      points: rankingByHouse.get('bjornhall')?.totalPoints ?? houses?.bjornhall?.startingPoints ?? houses?.bjornhall?.points ?? 0
     },
     {
       id: 'ravnheim',
-      house: houses.ravnheim || { startingPoints: 510 },
-      name: 'Ravnheim',
-      runeTitle: 'ᚱ RAVNHEIM ᚱ',
-      color: houses.ravnheim?.colors?.primary || '#a77de0',
-      colorText: '#e6d8ff',
-      sandColor: '#a77de0',
-      gemColor: '#9333ea',
-      head: houses.ravnheim?.headOfHouse || 'Prof. Morana Vane',
-      prefect: houses.ravnheim?.prefect || 'Valdemar Krag-Hansen'
+      name: rankingByHouse.get('ravnheim')?.name || houses?.ravnheim?.name || 'Ravnheim',
+      subtitle: 'Zakon Kruka',
+      color: '#42385F',
+      colorLight: '#7a6ea0',
+      colorText: '#d0c8e2',
+      colorGlow: 'rgba(66, 56, 95, 0.45)',
+      head: houses?.ravnheim?.headOfHouse || 'Prof. Morana Vane',
+      prefect: houses?.ravnheim?.prefect || 'Valdemar Krag-Hansen',
+      points: rankingByHouse.get('ravnheim')?.totalPoints ?? houses?.ravnheim?.startingPoints ?? houses?.ravnheim?.points ?? 0
     },
     {
       id: 'otergard',
-      house: houses.otergard || { startingPoints: 495 },
-      name: 'Otergard',
-      runeTitle: 'ᛞ OTERGARD ᛞ',
-      color: houses.otergard?.colors?.primary || '#2ec4b6',
-      colorText: '#b2f5ea',
-      sandColor: '#2ec4b6',
-      gemColor: '#0d9488',
-      head: houses.otergard?.headOfHouse || 'Prof. Klaus Lindqvist',
-      prefect: houses.otergard?.prefect || 'Sigrun Lindqvist'
+      name: rankingByHouse.get('otergard')?.name || houses?.otergard?.name || 'Otergard',
+      subtitle: 'Zakon Wydry',
+      color: '#23615B',
+      colorLight: '#3aaa9f',
+      colorText: '#b4e0da',
+      colorGlow: 'rgba(35, 97, 91, 0.45)',
+      head: houses?.otergard?.headOfHouse || 'Prof. Klaus Lindqvist',
+      prefect: houses?.otergard?.prefect || 'Sigrun Lindqvist',
+      points: rankingByHouse.get('otergard')?.totalPoints ?? houses?.otergard?.startingPoints ?? houses?.otergard?.points ?? 0
     }
   ];
 
-  return (
-    <section className="monumental-hero-section">
-      {/* Aurora Borealis & Blizzard Backdrop */}
-      <div className="hero-aurora-glow" />
-      <div className="hero-vignette" />
+  const maxPoints = Math.max(...housesConfig.map((order) => order.points), 0);
 
-      {/* Main Monumental Title & Hero Content */}
+  return (
+    <section className="monumental-hero-section" role="banner">
+      <div className="hero-aurora-glow" aria-hidden="true" />
+      <div className="hero-vignette" aria-hidden="true" />
+
       <div className="hero-center-content">
-        {/* Official Durmstrang Crest Emblem */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            marginBottom: '0.9rem',
-            position: 'relative'
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: '105px',
-              height: '105px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {/* Pulsing Magical Aura behind the Herb */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: '-15px',
-                background: 'radial-gradient(circle, rgba(197, 159, 78, 0.4) 0%, rgba(197, 159, 78, 0) 70%)',
-                borderRadius: '50%',
-                filter: 'blur(10px)',
-                animation: 'pulse 3s infinite alternate'
-              }}
-            />
-            <img
-              src="/tmd_herb.png"
-              alt="Herb Twierdzy Magii Durmstrang"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                position: 'relative',
-                zIndex: 2,
-                filter: 'drop-shadow(0 6px 20px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 15px rgba(197, 159, 78, 0.4))'
-              }}
-            />
-          </div>
+        <div className="hero-school-emblem">
+          <div className="hero-emblem-aura" aria-hidden="true" />
+          <img
+            src="/tmd_herb.png"
+            alt="Herb Twierdzy Magii Durmstrang"
+            className="hero-emblem-img"
+            width="105"
+            height="105"
+          />
         </div>
 
         <div className="hero-crest-badge">
@@ -145,167 +121,154 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
           „Nie każda magia powinna zostać poznana.”
         </p>
 
-        {/* Quick CTA Action Buttons */}
-        <div className="hero-cta-group">
-          {currentUser && (
-            <button
-              onClick={() => { playWandSwoosh(); setActiveView('ceremony'); }}
-              className="btn-durmstrang"
-              style={{ padding: '0.65rem 1.4rem', fontSize: '0.88rem' }}
-            >
-              <Flame size={16} /> Rytuał Kamienia Przysięgi
-            </button>
-          )}
-
-          {!currentUser && (
-            <button
-              onClick={() => {
-                playWandSwoosh();
-                if (openAuthModal) openAuthModal('register');
-                else if (onOpenCreationModal) onOpenCreationModal();
-              }}
-              className="btn-durmstrang"
-              style={{ padding: '0.65rem 1.4rem', fontSize: '0.88rem' }}
-            >
-              <UserPlus size={16} /> Złóż Podanie Adepta
-            </button>
-          )}
-
-          {currentUser && (
-            <button
-              onClick={() => { playWandSwoosh(); setActiveView('rune-workshop'); }}
-              style={{
-                padding: '0.65rem 1.4rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(46, 196, 182, 0.18)',
-                border: '1px solid #2ec4b6',
-                color: '#8cefe6',
-                fontFamily: 'var(--font-heading)',
-                fontSize: '0.88rem',
-                fontWeight: 700,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                boxShadow: '0 0 15px rgba(46, 196, 182, 0.25)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Zap size={16} /> Warsztat Run (Galdr)
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* =========================================================================
-          PUCHAR PÓŁNOCY: 4 NORDYCKIE ZAKONY (REINHALL, BJÖRNHALL, RAVNHEIM, OTERGARD)
-          ========================================================================= */}
-      <div className="ramesville-hourglasses-container">
-        {housesConfig.map((item) => {
-          const pts = item.house?.startingPoints || 0;
-          const fillPercent = Math.min(85, Math.max(18, (pts / 650) * 100));
+      {/* ===== TABLICA ZAKONÓW ===== */}
+      <section className="orders-board" aria-labelledby="orders-board-title">
+        <div className="orders-board__inner-line" aria-hidden="true" />
 
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleHouseClick(item.id)}
-              className="ramesville-house-card"
-              style={{
-                '--theme-color': item.color
-              }}
-            >
-              {/* Mascot Emblem Sitting on Top of the Card */}
-              <div className="card-top-mascot-anchor">
-                <OrderCrest houseKey={item.id} size={52} showFrame={true} />
-              </div>
+        <header className="orders-board__header">
+          <div className="orders-board__title-group">
+            <span className="orders-board__eyebrow">ᛞ · Puchar Północy · ᛞ</span>
+            <h2 id="orders-board-title">Tablica Zakonów</h2>
+            <div className="orders-board__runes" aria-hidden="true">ᚦ ᛉ ᚱ ᛞ · ᛁ ᛋ ᛟ · ᚾ ᛟ ᚱ ᚦ</div>
+          </div>
 
-              {/* Glass Hourglass on Left */}
-              <div className="card-glass-hourglass">
-                {/* Metallic Top Ring */}
-                <div className="hg-metal-cap top-cap" />
-
-                {/* Glass Chamber */}
-                <div className="hg-glass-chamber">
-                  {/* Top Bulb */}
-                  <div className="hg-bulb-top">
-                    <div
-                      className="hg-liquid-top"
-                      style={{ background: item.sandColor }}
-                    />
-                  </div>
-
-                  {/* Pinched Waist Neck */}
-                  <div className="hg-waist-neck">
-                    <div
-                      className="hg-flow-stream"
-                      style={{ background: item.color }}
-                    />
-                  </div>
-
-                  {/* Bottom Bulb with Falling Gems/Sand */}
-                  <div className="hg-bulb-bottom">
-                    <div
-                      className="hg-liquid-bottom"
-                      style={{
-                        height: `${fillPercent}%`,
-                        background: `linear-gradient(180deg, ${item.color} 0%, ${item.gemColor} 100%)`
-                      }}
-                    >
-                      <div className="liquid-glow-top" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metallic Bottom Ring */}
-                <div className="hg-metal-cap bottom-cap" />
-              </div>
-
-              {/* Right Content: Nordycka Nazwa Domu, Opiekun, Prefekt, Punkty */}
-              <div className="card-house-details">
-                {/* Prominent Nordic House Header */}
-                <div
-                  className="card-nordic-house-name"
-                  style={{ color: item.color }}
+          <div className="orders-board__actions">
+            {currentUser ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { playWandSwoosh(); setActiveView('ceremony'); }}
+                  className="orders-board__action"
                 >
-                  {item.runeTitle}
+                  <Flame size={13} aria-hidden="true" />
+                  <span>Rytuał Kamienia Przysięgi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { playWandSwoosh(); setActiveView('rune-workshop'); }}
+                  className="orders-board__action orders-board__action--galdr"
+                >
+                  <Zap size={13} aria-hidden="true" />
+                  <span>Warsztat Run (Galdr)</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  playWandSwoosh();
+                  if (openAuthModal) openAuthModal('register');
+                  else if (onOpenCreationModal) onOpenCreationModal();
+                }}
+                className="orders-board__action"
+              >
+                <UserPlus size={13} aria-hidden="true" />
+                <span>Złóż Podanie Adepta</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="orders-board__grid" role="list">
+          {housesConfig.map((item, index) => {
+            const runic = HOUSE_RUNIC_DATA[item.id] || HOUSE_RUNIC_DATA.reinhall;
+            const crestSrc = HOUSE_CREST_IMAGES[item.id] || HOUSE_CREST_IMAGES.reinhall;
+            const progress = maxPoints > 0
+              ? Math.min(100, Math.max(0, (item.points / maxPoints) * 100))
+              : 0;
+            const markerPosition = Math.min(96, Math.max(4, progress));
+
+            return (
+              <article
+                key={item.id}
+                className={`order-segment ${HOUSE_ORNAMENT_CLASS[item.id] || ''}`}
+                role="listitem"
+                style={{
+                  '--order-color': item.color,
+                  '--order-light': item.colorLight,
+                  '--order-glow': item.colorGlow,
+                  '--order-text': item.colorText,
+                  '--progress': `${progress}%`,
+                  '--marker-position': `${markerPosition}%`,
+                  '--order-index': index
+                }}
+              >
+                <button
+                  type="button"
+                  className="order-segment__open"
+                  onClick={() => handleHouseClick(item.id)}
+                  aria-label={`Otwórz Zakon ${item.name}, ${item.points} punktów`}
+                />
+
+                <div className="order-segment__ornament" aria-hidden="true" />
+
+                <div className="order-segment__summary">
+                  <div className="order-segment__crest">
+                    <span className="order-segment__crest-ring" aria-hidden="true" />
+                    <img
+                      src={crestSrc}
+                      alt={`Herb Zakonu ${item.name}`}
+                      className="order-segment__crest-img"
+                      loading="lazy"
+                      width="88"
+                      height="88"
+                    />
+                  </div>
+
+                  <div className="order-segment__identity">
+                    <div className="order-segment__name-row">
+                      <span className="order-segment__rune" aria-hidden="true">{runic.rune}</span>
+                      <h3>{item.name}</h3>
+                    </div>
+                    <span className="order-segment__subtitle">{item.subtitle}</span>
+                  </div>
+
+                  <div className="order-segment__score">
+                    <strong>{item.points}</strong>
+                    <span>Punktów</span>
+                  </div>
                 </div>
 
-                <div className="detail-row">
-                  <span className="detail-label">Opiekun:</span>
-                  <span
-                    className="detail-value"
-                    style={{ color: item.colorText }}
-                  >
-                    {item.head}
+                <div className="order-segment__people">
+                  <div className="order-segment__person">
+                    <span>Opiekun</span>
+                    <strong>{item.head}</strong>
+                  </div>
+                  <div className="order-segment__person">
+                    <span>Prefekt</span>
+                    <strong>{item.prefect}</strong>
+                  </div>
+                </div>
+
+                <div className="order-meter" aria-label={`Poziom punktów: ${Math.round(progress)}% wyniku lidera`}>
+                  <span className="order-meter__cap order-meter__cap--left" aria-hidden="true" />
+                  <div className="order-meter__glass" aria-hidden="true">
+                    <div className="order-meter__fill" />
+                    <div className="order-meter__dust" />
+                    <div className="order-meter__shine" />
+                  </div>
+                  <span className="order-meter__cap order-meter__cap--right" aria-hidden="true" />
+                  <span className="order-meter__marker" aria-hidden="true">
+                    <span>{runic.rune}</span>
                   </span>
                 </div>
 
-                <div className="detail-row">
-                  <span className="detail-label">Prefekt:</span>
-                  <span
-                    className="detail-value"
-                    style={{ color: item.colorText }}
-                  >
-                    {item.prefect}
-                  </span>
-                </div>
+                {index < housesConfig.length - 1 && (
+                  <span className="order-segment__divider-rune" aria-hidden="true">ᛁ</span>
+                )}
+              </article>
+            );
+          })}
+        </div>
 
-                {/* Bottom Inset Points Pill */}
-                <div className="card-bottom-pill">
-                  <span
-                    className="points-digit"
-                    style={{ color: item.color }}
-                  >
-                    {pts}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        <footer className="orders-board__footer">
+          <span aria-hidden="true">ᚦ ᛉ ᚱ ᛞ</span>
+          <p>Cztery Zakony · Jedna Twierdza · Wiedza i Dyscyplina</p>
+          <span aria-hidden="true">ᛞ ᚱ ᛉ ᚦ</span>
+        </footer>
+      </section>
     </section>
   );
 };

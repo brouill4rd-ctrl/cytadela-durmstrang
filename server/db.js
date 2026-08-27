@@ -1966,10 +1966,10 @@ if (roleMappingsCount === 0) {
 
   const defaultRoleMappings = [
     // Houses
-    ['map-house-reinhall', 'house', 'reinhall', 'Zakon Reinhall (Jeleń)', '', '🦌 Reinhall', '#c59f4e', 1],
-    ['map-house-bjornhall', 'house', 'bjornhall', 'Zakon Björnhall (Niedźwiedź)', '', '🐻 Björnhall', '#2ec4b6', 1],
-    ['map-house-ravnheim', 'house', 'ravnheim', 'Zakon Ravnheim (Kruk)', '', '🐦 Ravnheim', '#a855f7', 1],
-    ['map-house-otergard', 'house', 'otergard', 'Zakon Otergard (Wydra)', '', '🦦 Otergard', '#e63946', 1],
+    ['map-house-reinhall', 'house', 'reinhall', 'Zakon Reinhall (Jeleń)', '', '🦌 Reinhall', '#a8384b', 1],
+    ['map-house-bjornhall', 'house', 'bjornhall', 'Zakon Björnhall (Niedźwiedź)', '', '🐻 Björnhall', '#5b8aaf', 1],
+    ['map-house-ravnheim', 'house', 'ravnheim', 'Zakon Ravnheim (Kruk)', '', '🐦 Ravnheim', '#7a6ea0', 1],
+    ['map-house-otergard', 'house', 'otergard', 'Zakon Otergard (Wydra)', '', '🦦 Otergard', '#3aaa9f', 1],
     // Ranks / Roles
     ['map-role-student', 'role', 'student', 'Adept Cytadeli (Uczeń)', '', '📜 Adept Cytadeli', '#94a3b8', 1],
     ['map-role-prefect', 'role', 'prefect', 'Prefekt Zakonu', '', '🛡️ Prefekt Zakonu', '#38bdf8', 1],
@@ -2525,10 +2525,10 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
   if (housesCount === 0) {
     console.log('[DB] Seeding houses...');
     const ins = db.prepare(`INSERT INTO houses (id, name, full_name, symbol_animal, crest_icon, crest_image, element, founder, colors, gem_name, motto, latin_motto, traits, common_room, relic, head_of_house, prefect, members_count, starting_points, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    ins.run('reinhall','Reinhall','Zakon Reinhall (Ordo Rangiferi)','Renifer Północy (Rangifer)','ᚦ','/crest_stag.jpg','Krew i Wieczna Zmarzlina','Eirik Krwawy Róg (Eiríkr Blóðhorn)',JSON.stringify({primary:'#7a1818',secondary:'#c59f4e',border:'rgba(197, 159, 78, 0.6)',glow:'rgba(197, 159, 78, 0.35)',text:'#f7e6c4',gem:'#d97706'}),'Rubiny Krwi i Złoty Pył','„Krew nie kłamie, mróz nie wybacza."','Sanguis non mentitur, gelu non parcit.',JSON.stringify(['Wytrwałość','Duma rodowa','Magia krwi','Lojalność paktu','Pradawna tradycja']),'Sala Rodowa Skandzy — wyciosana w litej granitowej skale pod zachodnim skrzydłem, z wiecznym paleniskiem z kości mamuta tundrowego i gobelinami haftowanymi złotą nicią.','Kielich Przymierza Krwi (Blóðkálkr) — naczynie ze srebra i rogu, w którym założyciele pieczętowali Pakt Czterech Koron w 1294 roku.','Prof. Sigrid Hällström','Magnus Blom',63,480,1);
-    ins.run('bjornhall','Björnhall','Zakon Björnhall (Ordo Ursi)','Niedźwiedź Jaskiniowy (Ursus Spelaeus)','ᛉ','/crest_bear.jpg','Żelazo i Pęknięta Skala','Torvald Żelaznoręki (Torvaldr Járnhönd)',JSON.stringify({primary:'#202530',secondary:'#c02b2b',border:'rgba(192, 43, 43, 0.6)',glow:'rgba(192, 43, 43, 0.35)',text:'#ffbaba',gem:'#dc2626'}),'Okruchy Czarnego Żelaza i Krwawe Granaty','„Pancerz z woli, miecz z wiedzy."','Lorica ex voluntate, gladius ex scientia.',JSON.stringify(['Siła woli','Magia bojowa','Niezłomność','Klątwy niszczące','Dyscyplina wojenna']),'Bastion Żelaza — warowna wieża z widokiem na wzburzony fiord, wyposażona w prywatną arenę pojedynkową, stojaki z runicznymi puklerzami i kowadło alchemiczne.','Puklerz Pękniętego Żelaza (Járnskjöldr) — stalowa tarcza odbijająca najczarniejsze uroki niszczące.','Prof. Gunnar Vargson','Astrid Vargadottir',68,520,2);
-    ins.run('ravnheim','Ravnheim','Zakon Ravnheim (Ordo Corvi)','Kruk Mądrości (Corvus Corax)','ᚱ','/crest_raven.jpg','Cień i Astralna Noc','Morana Cień-Krocząca (Morana Skuggaganga)',JSON.stringify({primary:'#1c132e',secondary:'#a77de0',border:'rgba(167, 125, 224, 0.6)',glow:'rgba(167, 125, 224, 0.35)',text:'#e6d8ff',gem:'#9333ea'}),'Ametysty Nocy i Odłamki Obsydianu','„W ciszy cienia kryje się potęga."','In umbrae silentio potestas latet.',JSON.stringify(['Tajemnica','Nekromancja','Wróżbiarstwo z kości','Opanowanie','Astralna intuicja']),'Wieża Nocnych Szeptów — najwyższy punkt Cytadeli, gdzie okna z ciemnego kryształu wychodzą na zorzę polarną, a pod sufitem krążą astralne kruki posłańcze.','Astrolabium Siedmiu Gwiazd (Himinúrfang) — mechanizm pozwalający przepowiadać zaćmienia i ruchy cieni.','Prof. Morana Vane','Valdemar Krag-Hansen',72,510,3);
-    ins.run('otergard','Otergard','Zakon Otergard (Ordo Lutrae)','Wydra Polarna (Lutra Borealis)','ᛞ','/crest_otter.jpg','Lodowcowe Wody i Toksyny','Astrid Złotooka (Astrid Gullauga)',JSON.stringify({primary:'#0d2d33',secondary:'#2ec4b6',border:'rgba(46, 196, 182, 0.6)',glow:'rgba(46, 196, 182, 0.35)',text:'#b2f5ea',gem:'#0d9488'}),'Szmaragdy Fiordu i Akwamaryny','„Płyń pod lodem, uderzaj bez śladu."','Sub glacie natato, sine vestigio percutito.',JSON.stringify(['Spryt alchemiczny','Warzenie toksyn','Transmutacja lodu','Elastyczność','Analityczny umysł']),'Ogrody Lodowych Cieplic — podziemne atrium zasilane podwodnymi gorącymi źródłami fiordu, wypełnione rzadkimi arktycznymi mchami i retortami alchemicznymi.','Alembik Nieskończonej Destylacji (Algildi) — naczynie ze smoczego szkła, potrafiące wyekstrahować esencję z każdego żywiołu.','Prof. Klaus Lindqvist','Sigrun Lindqvist',65,495,4);
+    ins.run('reinhall','Reinhall','Zakon Reinhall (Ordo Rangiferi)','Renifer Północy (Rangifer)','ᚦ','/crest_stag.jpg','Krew i Wieczna Zmarzlina','Eirik Krwawy Róg (Eiríkr Blóðhorn)',JSON.stringify({primary:'#7a2632',secondary:'#a8384b',border:'rgba(122, 38, 50, 0.6)',glow:'rgba(122, 38, 50, 0.35)',text:'#e8bfc6',gem:'#5a1c25'}),'Rubiny Krwi i Złoty Pył','„Krew nie kłamie, mróz nie wybacza."','Sanguis non mentitur, gelu non parcit.',JSON.stringify(['Wytrwałość','Duma rodowa','Magia krwi','Lojalność paktu','Pradawna tradycja']),'Sala Rodowa Skandzy — wyciosana w litej granitowej skale pod zachodnim skrzydłem, z wiecznym paleniskiem z kości mamuta tundrowego i gobelinami haftowanymi złotą nicią.','Kielich Przymierza Krwi (Blóðkálkr) — naczynie ze srebra i rogu, w którym założyciele pieczętowali Pakt Czterech Koron w 1294 roku.','Prof. Sigrid Hällström','Magnus Blom',63,480,1);
+    ins.run('bjornhall','Björnhall','Zakon Björnhall (Ordo Ursi)','Niedźwiedź Jaskiniowy (Ursus Spelaeus)','ᛉ','/crest_bear.jpg','Żelazo i Pęknięta Skala','Torvald Żelaznoręki (Torvaldr Járnhönd)',JSON.stringify({primary:'#35536f',secondary:'#5b8aaf',border:'rgba(53, 83, 111, 0.6)',glow:'rgba(53, 83, 111, 0.35)',text:'#c4d8e8',gem:'#263d52'}),'Okruchy Czarnego Żelaza i Krwawe Granaty','„Pancerz z woli, miecz z wiedzy."','Lorica ex voluntate, gladius ex scientia.',JSON.stringify(['Siła woli','Magia bojowa','Niezłomność','Klątwy niszczące','Dyscyplina wojenna']),'Bastion Żelaza — warowna wieża z widokiem na wzburzony fiord, wyposażona w prywatną arenę pojedynkową, stojaki z runicznymi puklerzami i kowadło alchemiczne.','Puklerz Pękniętego Żelaza (Járnskjöldr) — stalowa tarcza odbijająca najczarniejsze uroki niszczące.','Prof. Gunnar Vargson','Astrid Vargadottir',68,520,2);
+    ins.run('ravnheim','Ravnheim','Zakon Ravnheim (Ordo Corvi)','Kruk Mądrości (Corvus Corax)','ᚱ','/crest_raven.jpg','Cień i Astralna Noc','Morana Cień-Krocząca (Morana Skuggaganga)',JSON.stringify({primary:'#42385f',secondary:'#7a6ea0',border:'rgba(66, 56, 95, 0.6)',glow:'rgba(66, 56, 95, 0.35)',text:'#d0c8e2',gem:'#312a47'}),'Ametysty Nocy i Odłamki Obsydianu','„W ciszy cienia kryje się potęga."','In umbrae silentio potestas latet.',JSON.stringify(['Tajemnica','Nekromancja','Wróżbiarstwo z kości','Opanowanie','Astralna intuicja']),'Wieża Nocnych Szeptów — najwyższy punkt Cytadeli, gdzie okna z ciemnego kryształu wychodzą na zorzę polarną, a pod sufitem krążą astralne kruki posłańcze.','Astrolabium Siedmiu Gwiazd (Himinúrfang) — mechanizm pozwalający przepowiadać zaćmienia i ruchy cieni.','Prof. Morana Vane','Valdemar Krag-Hansen',72,510,3);
+    ins.run('otergard','Otergard','Zakon Otergard (Ordo Lutrae)','Wydra Polarna (Lutra Borealis)','ᛞ','/crest_otter.jpg','Lodowcowe Wody i Toksyny','Astrid Złotooka (Astrid Gullauga)',JSON.stringify({primary:'#23615b',secondary:'#3aaa9f',border:'rgba(35, 97, 91, 0.6)',glow:'rgba(35, 97, 91, 0.35)',text:'#b4e0da',gem:'#1a4a45'}),'Szmaragdy Fiordu i Akwamaryny','„Płyń pod lodem, uderzaj bez śladu."','Sub glacie natato, sine vestigio percutito.',JSON.stringify(['Spryt alchemiczny','Warzenie toksyn','Transmutacja lodu','Elastyczność','Analityczny umysł']),'Ogrody Lodowych Cieplic — podziemne atrium zasilane podwodnymi gorącymi źródłami fiordu, wypełnione rzadkimi arktycznymi mchami i retortami alchemicznymi.','Alembik Nieskończonej Destylacji (Algildi) — naczynie ze smoczego szkła, potrafiące wyekstrahować esencję z każdego żywiołu.','Prof. Klaus Lindqvist','Sigrun Lindqvist',65,495,4);
     console.log('[DB] Seeded 4 houses.');
   }
 }
@@ -3118,8 +3118,8 @@ export function calculateHouseRankings(period = 'overall') {
       houseKey: 'reinhall',
       name: 'Reinhall',
       crestIcon: 'ᚦ',
-      color: '#7a1818',
-      secondaryColor: '#c59f4e',
+      color: '#7a2632',
+      secondaryColor: '#a8384b',
       basePoints: includeBase ? baseReinhall : 0,
       lessonPoints: earnedMap.reinhall,
       totalPoints: (includeBase ? baseReinhall : 0) + earnedMap.reinhall,
@@ -3130,8 +3130,8 @@ export function calculateHouseRankings(period = 'overall') {
       houseKey: 'bjornhall',
       name: 'Björnhall',
       crestIcon: 'ᛉ',
-      color: '#202530',
-      secondaryColor: '#c02b2b',
+      color: '#35536f',
+      secondaryColor: '#5b8aaf',
       basePoints: includeBase ? baseBjornhall : 0,
       lessonPoints: earnedMap.bjornhall,
       totalPoints: (includeBase ? baseBjornhall : 0) + earnedMap.bjornhall,
@@ -3142,8 +3142,8 @@ export function calculateHouseRankings(period = 'overall') {
       houseKey: 'ravnheim',
       name: 'Ravnheim',
       crestIcon: 'ᚱ',
-      color: '#1c132e',
-      secondaryColor: '#a77de0',
+      color: '#42385f',
+      secondaryColor: '#7a6ea0',
       basePoints: includeBase ? baseRavnheim : 0,
       lessonPoints: earnedMap.ravnheim,
       totalPoints: (includeBase ? baseRavnheim : 0) + earnedMap.ravnheim,
@@ -3154,8 +3154,8 @@ export function calculateHouseRankings(period = 'overall') {
       houseKey: 'otergard',
       name: 'Otergard',
       crestIcon: 'ᛞ',
-      color: '#0d2d33',
-      secondaryColor: '#2ec4b6',
+      color: '#23615b',
+      secondaryColor: '#3aaa9f',
       basePoints: includeBase ? baseOtergard : 0,
       lessonPoints: earnedMap.otergard,
       totalPoints: (includeBase ? baseOtergard : 0) + earnedMap.otergard,

@@ -29,10 +29,10 @@ export const MemoryOverviewTab = ({
   const stats = overviewData?.stats || { totalYears: 3, totalGraduates: 8, totalCertificates: 12, totalDiplomas: 20, totalTrophies: 6 };
 
   const houseIcons = {
-    reinhall: { icon: '🦌', name: 'Reinhall', color: '#c59f4e', bg: 'rgba(122, 24, 24, 0.2)' },
-    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', bg: 'rgba(32, 37, 48, 0.3)' },
-    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', bg: 'rgba(28, 19, 46, 0.3)' },
-    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', bg: 'rgba(13, 45, 51, 0.3)' }
+    reinhall: { icon: '🦌', name: 'Reinhall', color: '#c59f4e', bg: 'rgba(122, 38, 50, 0.2)' },
+    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', bg: 'rgba(53, 83, 111, 0.3)' },
+    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', bg: 'rgba(66, 56, 95, 0.3)' },
+    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', bg: 'rgba(35, 97, 91, 0.3)' }
   };
 
   return (
@@ -88,11 +88,11 @@ export const MemoryOverviewTab = ({
           style={{
             padding: '1.2rem',
             textAlign: 'center',
-            background: 'linear-gradient(135deg, rgba(46, 196, 182, 0.08) 0%, rgba(10, 13, 18, 0.9) 100%)',
-            border: '1px solid rgba(46, 196, 182, 0.3)'
+            background: 'linear-gradient(135deg, rgba(58, 170, 159, 0.08) 0%, rgba(10, 13, 18, 0.9) 100%)',
+            border: '1px solid rgba(58, 170, 159, 0.3)'
           }}
         >
-          <FileText size={22} color="#2ec4b6" style={{ margin: '0 auto 0.4rem' }} />
+          <FileText size={22} color="#3aaa9f" style={{ margin: '0 auto 0.4rem' }} />
           <div style={{ fontSize: '1.8rem', fontFamily: 'var(--font-heading)', color: '#ffffff', fontWeight: 800 }}>
             {stats.totalCertificates}
           </div>
@@ -195,16 +195,16 @@ export const MemoryOverviewTab = ({
             style={{
               padding: '1.5rem',
               cursor: 'pointer',
-              background: 'radial-gradient(circle at top left, rgba(46, 196, 182, 0.15) 0%, rgba(15, 20, 28, 0.95) 75%)',
-              border: '1px solid rgba(46, 196, 182, 0.35)',
+              background: 'radial-gradient(circle at top left, rgba(58, 170, 159, 0.15) 0%, rgba(15, 20, 28, 0.95) 75%)',
+              border: '1px solid rgba(58, 170, 159, 0.35)',
               transition: 'all 0.25s ease'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: 'rgba(46, 196, 182, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2ec4b6' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: 'rgba(58, 170, 159, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3aaa9f' }}>
                 <FileText size={22} />
               </div>
-              <ChevronRight size={18} color="#2ec4b6" />
+              <ChevronRight size={18} color="#3aaa9f" />
             </div>
             <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-heading)', color: '#ffffff', margin: '0 0 0.3rem' }}>
               Sala Dokumentów

@@ -59,10 +59,10 @@ export const MemoryYearViewTab = ({
   } = yearData;
 
   const houseColors = {
-    reinhall: { text: '#fde047', border: '#c59f4e', bg: 'rgba(122, 24, 24, 0.25)', icon: '🦌', name: 'Reinhall' },
-    bjornhall: { text: '#f87171', border: '#c02b2b', bg: 'rgba(32, 37, 48, 0.35)', icon: '🐻', name: 'Björnhall' },
-    ravnheim: { text: '#c084fc', border: '#a77de0', bg: 'rgba(28, 19, 46, 0.35)', icon: '🐦', name: 'Ravnheim' },
-    otergard: { text: '#5eead4', border: '#2ec4b6', bg: 'rgba(13, 45, 51, 0.35)', icon: '🦦', name: 'Otergard' }
+    reinhall: { text: '#fde047', border: '#c59f4e', bg: 'rgba(122, 38, 50, 0.25)', icon: '🦌', name: 'Reinhall' },
+    bjornhall: { text: '#f87171', border: '#5b8aaf', bg: 'rgba(53, 83, 111, 0.35)', icon: '🐻', name: 'Björnhall' },
+    ravnheim: { text: '#c084fc', border: '#7a6ea0', bg: 'rgba(66, 56, 95, 0.35)', icon: '🐦', name: 'Ravnheim' },
+    otergard: { text: '#5eead4', border: '#3aaa9f', bg: 'rgba(35, 97, 91, 0.35)', icon: '🦦', name: 'Otergard' }
   };
 
   const sections = [
@@ -677,21 +677,21 @@ export const MemoryYearViewTab = ({
                   className="gothic-card"
                   style={{
                     padding: '1.5rem',
-                    border: '1px solid rgba(46, 196, 182, 0.3)',
-                    background: 'linear-gradient(145deg, rgba(13, 45, 51, 0.25) 0%, rgba(10, 13, 18, 0.95) 100%)'
+                    border: '1px solid rgba(58, 170, 159, 0.3)',
+                    background: 'linear-gradient(145deg, rgba(35, 97, 91, 0.25) 0%, rgba(10, 13, 18, 0.95) 100%)'
                   }}
                 >
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.8rem' }}>
                     <img
                       src={intern.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100'}
                       alt={intern.name}
-                      style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #2ec4b6' }}
+                      style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #3aaa9f' }}
                     />
                     <div>
                       <div style={{ fontSize: '1.1rem', fontFamily: 'var(--font-heading)', fontWeight: 800, color: '#ffffff' }}>
                         {intern.name}
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#2ec4b6', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.8rem', color: '#3aaa9f', fontWeight: 600 }}>
                         Staż: {intern.subjectName}
                       </div>
                     </div>

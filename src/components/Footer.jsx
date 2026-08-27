@@ -102,9 +102,9 @@ export const Footer = () => {
             <li>
               <button
                 onClick={() => handleHouseClick('reinhall')}
-                style={{ background: 'none', border: 'none', color: '#c59f4e', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
+                style={{ background: 'none', border: 'none', color: '#a8384b', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
               >
-                <Crown size={14} color="#c59f4e" />
+                <Crown size={14} color="#a8384b" />
                 <span>Zakon Reinhall (Krew & Tradycja)</span>
               </button>
             </li>
@@ -113,7 +113,7 @@ export const Footer = () => {
                 onClick={() => handleHouseClick('bjornhall')}
                 style={{ background: 'none', border: 'none', color: '#ff8080', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
               >
-                <Shield size={14} color="#c02b2b" />
+                <Shield size={14} color="#5b8aaf" />
                 <span>Zakon Björnhall (Siła & Magia Bojowa)</span>
               </button>
             </li>
@@ -122,7 +122,7 @@ export const Footer = () => {
                 onClick={() => handleHouseClick('ravnheim')}
                 style={{ background: 'none', border: 'none', color: '#c4a6f2', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
               >
-                <Eye size={14} color="#a77de0" />
+                <Eye size={14} color="#7a6ea0" />
                 <span>Zakon Ravnheim (Cień & Nekromancja)</span>
               </button>
             </li>
@@ -131,7 +131,7 @@ export const Footer = () => {
                 onClick={() => handleHouseClick('otergard')}
                 style={{ background: 'none', border: 'none', color: '#8cefe6', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
               >
-                <FlaskConical size={14} color="#2ec4b6" />
+                <FlaskConical size={14} color="#3aaa9f" />
                 <span>Zakon Otergard (Alchemia & Toksyny)</span>
               </button>
             </li>

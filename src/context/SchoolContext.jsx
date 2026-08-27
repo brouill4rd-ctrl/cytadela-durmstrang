@@ -1003,10 +1003,10 @@ Dyrektor Cytadeli Durmstrang`
       schoolYear: 'XIX Rok Szkolny (2026/2027)',
       term: 'Semestr Zimowy',
       standings: [
-        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: 'ᚦ', color: '#7a1818', secondaryColor: '#c59f4e', basePoints: 480, lessonPoints: 30, totalPoints: 510, txCount: 2, momentum: 30, rank: 3 },
-        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: 'ᛉ', color: '#202530', secondaryColor: '#c02b2b', basePoints: 520, lessonPoints: 10, totalPoints: 530, txCount: 1, momentum: 10, rank: 2 },
-        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: 'ᚱ', color: '#1c132e', secondaryColor: '#a77de0', basePoints: 510, lessonPoints: 30, totalPoints: 540, txCount: 2, momentum: 30, rank: 1 },
-        { houseKey: 'otergard', name: 'Otergard', crestIcon: 'ᛞ', color: '#0d2d33', secondaryColor: '#2ec4b6', basePoints: 495, lessonPoints: 10, totalPoints: 505, txCount: 1, momentum: 10, rank: 4 }
+        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: 'ᚦ', color: '#7a2632', secondaryColor: '#a8384b', basePoints: 480, lessonPoints: 30, totalPoints: 510, txCount: 2, momentum: 30, rank: 3 },
+        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: 'ᛉ', color: '#35536f', secondaryColor: '#5b8aaf', basePoints: 520, lessonPoints: 10, totalPoints: 530, txCount: 1, momentum: 10, rank: 2 },
+        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: 'ᚱ', color: '#42385f', secondaryColor: '#7a6ea0', basePoints: 510, lessonPoints: 30, totalPoints: 540, txCount: 2, momentum: 30, rank: 1 },
+        { houseKey: 'otergard', name: 'Otergard', crestIcon: 'ᛞ', color: '#23615b', secondaryColor: '#3aaa9f', basePoints: 495, lessonPoints: 10, totalPoints: 505, txCount: 1, momentum: 10, rank: 4 }
       ]
     };
   });

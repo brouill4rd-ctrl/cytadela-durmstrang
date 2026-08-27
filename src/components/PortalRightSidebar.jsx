@@ -398,9 +398,9 @@ export const PortalRightSidebar = ({
             <li>
               <button onClick={() => handleNav('map')}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Flame size={13} color="#a77de0" /> Krypta Siedmiu Kręgów
+                  <Flame size={13} color="#7a6ea0" /> Krypta Siedmiu Kręgów
                 </span>
-                <span style={{ fontSize: '0.7rem', color: '#a77de0' }}>Rytuał</span>
+                <span style={{ fontSize: '0.7rem', color: '#7a6ea0' }}>Rytuał</span>
               </button>
             </li>
           </ul>

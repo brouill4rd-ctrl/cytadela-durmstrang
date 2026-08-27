@@ -41,7 +41,7 @@ export const MemoryOrderShowcaseTab = ({ houseKey, onSelectHouse, onSelectPerson
       fullName: 'Zakon Björnhall (Ordo Ursi)',
       icon: '🐻',
       color: '#f87171',
-      border: '#c02b2b',
+      border: '#5b8aaf',
       bg: 'rgba(32, 37, 48, 0.35)',
       motto: '„Pancerz z woli, miecz z wiedzy.”',
       element: 'Żelazo i Pęknięta Skala'
@@ -51,7 +51,7 @@ export const MemoryOrderShowcaseTab = ({ houseKey, onSelectHouse, onSelectPerson
       fullName: 'Zakon Ravnheim (Ordo Corvi)',
       icon: '🐦',
       color: '#c084fc',
-      border: '#a77de0',
+      border: '#7a6ea0',
       bg: 'rgba(28, 19, 19, 0.35)',
       motto: '„W ciszy cienia kryje się potęga.”',
       element: 'Cień i Astralna Noc'
@@ -61,7 +61,7 @@ export const MemoryOrderShowcaseTab = ({ houseKey, onSelectHouse, onSelectPerson
       fullName: 'Zakon Otergard (Ordo Lutrae)',
       icon: '🦦',
       color: '#5eead4',
-      border: '#2ec4b6',
+      border: '#3aaa9f',
       bg: 'rgba(13, 45, 51, 0.35)',
       motto: '„Przenikamy każdą szczelinę.”',
       element: 'Lodowcowe Wody i Toksyny'

@@ -25,6 +25,13 @@ import {
   Trophy
 } from 'lucide-react';
 
+const HOUSE_BANNER_IMAGES = {
+  reinhall: '/banery_zakony/reinhall-baner.png',
+  bjornhall: '/banery_zakony/bjornhall-baner.png',
+  ravnheim: '/banery_zakony/baner-ravnheim.png',
+  otergard: '/banery_zakony/otergard-baner.png'
+};
+
 export const HousesView = () => {
   const {
     houses,
@@ -58,6 +65,8 @@ export const HousesView = () => {
 
   const normSelectedKey = normalizeHouseKey(selectedHouseKey);
   const house = houses[selectedHouseKey] || houses[normSelectedKey] || houses.reinhall || Object.values(houses)[0];
+  const houseTheme = HOUSE_RUNIC_DATA[normSelectedKey] || HOUSE_RUNIC_DATA.reinhall;
+  const houseBannerImage = HOUSE_BANNER_IMAGES[normSelectedKey] || HOUSE_BANNER_IMAGES.reinhall;
   const houseMembers = (students || []).filter(s => normalizeHouseKey(s.house) === normSelectedKey);
 
   // Student Dormitory Access Check
@@ -233,7 +242,7 @@ export const HousesView = () => {
                   background: isFirst
                     ? 'linear-gradient(135deg, rgba(40, 32, 15, 0.95) 0%, rgba(15, 20, 30, 0.95) 100%)'
                     : 'rgba(12, 16, 24, 0.85)',
-                  border: isFirst ? '1.5px solid var(--gold-glow)' : `1px solid ${h.colors?.border || 'rgba(255,255,255,0.1)'}`,
+                  border: isFirst ? '1.5px solid var(--gold-glow)' : `1px solid ${runicData.secondaryColor}`,
                   borderRadius: '8px',
                   padding: '1.1rem',
                   cursor: 'pointer',
@@ -263,7 +272,7 @@ export const HousesView = () => {
                       >
                         #{st.rank}
                       </span>
-                      <span style={{ fontFamily: 'serif', fontSize: '1rem', color: h.colors?.secondary || 'var(--gold-ancient)' }}>
+                      <span style={{ fontFamily: 'serif', fontSize: '1rem', color: runicData.secondaryColor }}>
                         {runicData.rune}
                       </span>
                     </div>
@@ -293,7 +302,7 @@ export const HousesView = () => {
                       <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {st.name}
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: h.colors?.secondary || 'var(--gold-ancient)', fontFamily: 'var(--font-heading)', marginTop: '0.05rem' }}>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: runicData.secondaryColor, fontFamily: 'var(--font-heading)', marginTop: '0.05rem' }}>
                         {st.totalPoints} <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>pkt</span>
                       </div>
                     </div>
@@ -566,16 +575,16 @@ export const HousesView = () => {
               style={{
                 padding: '1rem',
                 background: isSelected
-                  ? `linear-gradient(135deg, ${h.colors?.primary || '#131822'} 0%, rgba(25, 32, 45, 0.95) 100%)`
+                  ? `linear-gradient(135deg, ${runicData.primaryColor} 0%, rgba(25, 32, 45, 0.95) 100%)`
                   : 'rgba(12, 15, 22, 0.7)',
-                border: isSelected ? `2px solid ${h.colors?.secondary || 'var(--gold-ancient)'}` : '1px solid rgba(255, 255, 255, 0.1)',
+                border: isSelected ? `2px solid ${runicData.secondaryColor}` : '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 textAlign: 'left',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                boxShadow: isSelected ? `0 0 25px ${h.colors?.glow || 'none'}` : 'none',
+                boxShadow: isSelected ? `0 0 25px ${runicData.glowColor}` : 'none',
                 transition: 'all 0.3s ease'
               }}
             >
@@ -585,12 +594,12 @@ export const HousesView = () => {
                   <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.02rem', fontWeight: 800, color: isSelected ? '#ffffff' : '#b0b7c3', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {h.name}
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: h.colors?.secondary || 'var(--gold-ancient)', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.74rem', color: runicData.secondaryColor, fontWeight: 600 }}>
                     {h.startingPoints || h.points || 0} pkt Północy
                   </div>
                 </div>
               </div>
-              <span style={{ fontFamily: 'serif', fontSize: '1.4rem', color: h.colors?.secondary || 'var(--gold-ancient)', marginLeft: '0.3rem', flexShrink: 0 }}>
+              <span style={{ fontFamily: 'serif', fontSize: '1.4rem', color: runicData.secondaryColor, marginLeft: '0.3rem', flexShrink: 0 }}>
                 {runicData.rune}
               </span>
             </button>
@@ -683,20 +692,24 @@ export const HousesView = () => {
           className="gothic-card runic-corners"
           style={{
             padding: '2.5rem',
-            border: `1px solid ${house.colors?.border || 'rgba(197,159,78,0.3)'}`,
-            background: `radial-gradient(circle at 80% 20%, ${house.colors?.primary || '#10141d'} 0%, rgba(10, 13, 18, 0.98) 80%)`,
-            boxShadow: `0 20px 50px rgba(0,0,0,0.9), 0 0 35px ${house.colors?.glow || 'none'}`
+            border: `1px solid ${houseTheme.secondaryColor}`,
+            backgroundColor: houseTheme.primaryColor,
+            backgroundImage: `linear-gradient(180deg, rgba(7, 10, 15, 0.16) 0%, rgba(7, 10, 15, 0.42) 48%, rgba(7, 10, 15, 0.72) 100%), url("${houseBannerImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 22%',
+            backgroundRepeat: 'no-repeat',
+            boxShadow: `0 20px 50px rgba(0,0,0,0.9), 0 0 35px ${houseTheme.glowColor}`
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
               <OrderCrest houseKey={selectedHouseKey} size={78} />
               <div>
-                <span style={{ color: house.colors?.secondary || 'var(--gold-ancient)', fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                <span style={{ color: houseTheme.secondaryColor, fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
                   {house.fullName}
                 </span>
                 <h2 style={{ fontSize: '2.3rem', color: '#ffffff', marginTop: '0.1rem', marginBottom: '0.2rem' }}>
-                  Zakon {house.name} <span style={{ fontFamily: 'serif', color: house.colors?.secondary || 'var(--gold-ancient)', fontSize: '1.8rem', marginLeft: '0.3rem' }}>{HOUSE_RUNIC_DATA[normSelectedKey]?.rune || 'ᛞ'}</span>
+                  Zakon {house.name} <span style={{ fontFamily: 'serif', color: houseTheme.secondaryColor, fontSize: '1.8rem', marginLeft: '0.3rem' }}>{houseTheme.rune}</span>
                 </h2>
                 <div style={{ fontStyle: 'italic', color: '#e5e7eb', fontSize: '1.15rem', fontFamily: 'var(--font-lore)', marginTop: '0.2rem' }}>
                   {house.motto}
@@ -748,7 +761,7 @@ export const HousesView = () => {
               <div
                 style={{
                   background: 'rgba(0, 0, 0, 0.6)',
-                  border: `1px solid ${house.colors?.secondary || 'var(--gold-ancient)'}`,
+                  border: `1px solid ${houseTheme.secondaryColor}`,
                   borderRadius: '8px',
                   padding: '0.8rem 1.4rem',
                   textAlign: 'center'
@@ -757,7 +770,7 @@ export const HousesView = () => {
                 <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   Puchar Północy
                 </div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 800, color: house.colors?.secondary || 'var(--gold-ancient)', lineHeight: 1.1 }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 800, color: houseTheme.secondaryColor, lineHeight: 1.1 }}>
                   {house.startingPoints || house.points || 0}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#d1d5db' }}>
@@ -777,7 +790,7 @@ export const HousesView = () => {
             }}
           >
             <div style={{ background: 'rgba(10, 13, 18, 0.7)', padding: '1.2rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: house.colors?.secondary || 'var(--gold-ancient)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: houseTheme.secondaryColor, fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                 <Crown size={16} /> Założyciel & Żywioł
               </div>
               <div style={{ color: '#ffffff', fontWeight: 600 }}>{house.founder}</div>
@@ -785,14 +798,14 @@ export const HousesView = () => {
             </div>
 
             <div style={{ background: 'rgba(10, 13, 18, 0.7)', padding: '1.2rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: house.colors?.secondary || 'var(--gold-ancient)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: houseTheme.secondaryColor, fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                 <Shield size={16} /> Relikwia Paktu 1294
               </div>
               <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.92rem' }}>{house.relic}</div>
             </div>
 
             <div style={{ background: 'rgba(10, 13, 18, 0.7)', padding: '1.2rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: house.colors?.secondary || 'var(--gold-ancient)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: houseTheme.secondaryColor, fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                 <User size={16} /> Opiekun & Prefekt
               </div>
               <div style={{ color: '#ffffff', fontWeight: 600 }}>{house.headOfHouse}</div>
@@ -806,7 +819,7 @@ export const HousesView = () => {
           <div
             style={{
               background: 'rgba(8, 11, 16, 0.85)',
-              border: `1px solid ${house.colors?.border || 'rgba(255,255,255,0.1)'}`,
+              border: `1px solid ${houseTheme.secondaryColor}`,
               borderRadius: '8px',
               padding: '1.5rem',
               marginTop: '2rem'
@@ -814,12 +827,12 @@ export const HousesView = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.6rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Award size={18} color={house.colors?.secondary || 'var(--gold-ancient)'} />
+                <Award size={18} color={houseTheme.secondaryColor} />
                 <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem', fontFamily: 'var(--font-heading)' }}>
                   PUNKTY Z LEKCJI — REJESTR ZASILENIA ({houseLessonPoints.length})
                 </h3>
               </div>
-              <span style={{ fontSize: '0.78rem', color: house.colors?.secondary || 'var(--gold-ancient)', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.78rem', color: houseTheme.secondaryColor, fontWeight: 700 }}>
                 Łącznie z zajęć: +{houseLessonPoints.reduce((s, tx) => s + tx.points, 0)} pkt
               </span>
             </div>
@@ -846,7 +859,7 @@ export const HousesView = () => {
                       cursor: tx.lessonId ? 'pointer' : 'default',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseEnter={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = house.colors?.secondary || 'var(--gold-ancient)'; }}
+                    onMouseEnter={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = houseTheme.secondaryColor; }}
                     onMouseLeave={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'; }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
@@ -874,7 +887,7 @@ export const HousesView = () => {
                     </div>
 
                     {tx.lessonId && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: house.colors?.secondary || 'var(--gold-ancient)', fontSize: '0.78rem', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: houseTheme.secondaryColor, fontSize: '0.78rem', fontWeight: 600 }}>
                         <span>Zobacz Dziennik</span>
                         <ChevronRight size={14} />
                       </div>

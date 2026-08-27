@@ -7,10 +7,10 @@ export const MemoryTrophiesTab = ({ trophies, onSelectYear }) => {
   const [selectedTrophyModal, setSelectedTrophyModal] = useState(null);
 
   const houseIcons = {
-    reinhall: { icon: '🦌', name: 'Reinhall', color: '#fde047', border: '#c59f4e', bg: 'rgba(122, 24, 24, 0.25)' },
-    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', border: '#c02b2b', bg: 'rgba(32, 37, 48, 0.35)' },
-    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', border: '#a77de0', bg: 'rgba(28, 19, 46, 0.35)' },
-    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', border: '#2ec4b6', bg: 'rgba(13, 45, 51, 0.35)' }
+    reinhall: { icon: '🦌', name: 'Reinhall', color: '#fde047', border: '#c59f4e', bg: 'rgba(122, 38, 50, 0.25)' },
+    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', border: '#5b8aaf', bg: 'rgba(53, 83, 111, 0.35)' },
+    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', border: '#7a6ea0', bg: 'rgba(66, 56, 95, 0.35)' },
+    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', border: '#3aaa9f', bg: 'rgba(35, 97, 91, 0.35)' }
   };
 
   const filteredTrophies = (trophies || []).filter(t => {

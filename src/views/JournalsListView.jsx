@@ -208,7 +208,7 @@ export const JournalsListView = () => {
 
           <div style={{ background: 'rgba(10, 14, 22, 0.7)', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Punkty Zasiliły Zakony</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2ec4b6', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3aaa9f', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>
               +{totalPointsDistributed} pkt
             </div>
           </div>

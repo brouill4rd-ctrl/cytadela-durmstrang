@@ -10,9 +10,9 @@ export const CertificateModal = ({ certificate, onClose }) => {
 
   const houseSealColors = {
     reinhall: { border: '#c59f4e', bg: 'rgba(122, 24, 24, 0.25)', seal: '#991b1b', text: '#fde047', rune: 'ᚦ', label: 'Pieczęć Jelenia Północy (Blóðhorn)' },
-    bjornhall: { border: '#c02b2b', bg: 'rgba(32, 37, 48, 0.35)', seal: '#1e293b', text: '#f87171', rune: 'ᛉ', label: 'Pieczęć Czarnego Żelaza (Járnskjöldr)' },
-    ravnheim: { border: '#a77de0', bg: 'rgba(28, 19, 46, 0.35)', seal: '#581c87', text: '#c084fc', rune: 'ᚱ', label: 'Pieczęć Kruka Nocy (Himinúrfang)' },
-    otergard: { border: '#2ec4b6', bg: 'rgba(13, 45, 51, 0.35)', seal: '#0f766e', text: '#5eead4', rune: 'ᛞ', label: 'Pieczęć Lodowcowej Wydry (Gullauga)' }
+    bjornhall: { border: '#5b8aaf', bg: 'rgba(32, 37, 48, 0.35)', seal: '#1e293b', text: '#f87171', rune: 'ᛉ', label: 'Pieczęć Czarnego Żelaza (Járnskjöldr)' },
+    ravnheim: { border: '#7a6ea0', bg: 'rgba(28, 19, 46, 0.35)', seal: '#581c87', text: '#c084fc', rune: 'ᚱ', label: 'Pieczęć Kruka Nocy (Himinúrfang)' },
+    otergard: { border: '#3aaa9f', bg: 'rgba(13, 45, 51, 0.35)', seal: '#0f766e', text: '#5eead4', rune: 'ᛞ', label: 'Pieczęć Lodowcowej Wydry (Gullauga)' }
   };
 
   const houseStyle = houseSealColors[certificate.house?.toLowerCase()] || houseSealColors.ravnheim;

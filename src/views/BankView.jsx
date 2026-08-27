@@ -50,8 +50,8 @@ const TREASURIES = [
     role: 'treasury',
     icon: '🐂',
     rune: 'ᚦ',
-    color: '#c59f4e',
-    bgColor: 'rgba(122, 24, 24, 0.35)',
+    color: '#a8384b',
+    bgColor: 'rgba(122, 38, 50, 0.35)',
     description: 'Skarbiec rodowy Zakonu Krwi i Wiecznej Zmarzliny. Fundusze na uzbrojenie i badania runiczne.'
   },
   {
@@ -62,8 +62,8 @@ const TREASURIES = [
     role: 'treasury',
     icon: '🐻',
     rune: 'ᛉ',
-    color: '#c02b2b',
-    bgColor: 'rgba(32, 37, 48, 0.6)',
+    color: '#5b8aaf',
+    bgColor: 'rgba(53, 83, 111, 0.6)',
     description: 'Skarbiec w Bastionie Żelaza. Wspiera Ligę Bojową, turnieje Hólmganga i alchemię kuźniczą.'
   },
   {
@@ -74,8 +74,8 @@ const TREASURIES = [
     role: 'treasury',
     icon: '🦅',
     rune: 'ᚱ',
-    color: '#a77de0',
-    bgColor: 'rgba(28, 19, 46, 0.6)',
+    color: '#7a6ea0',
+    bgColor: 'rgba(66, 56, 95, 0.6)',
     description: 'Skarbiec Wieży Nocnych Szeptów. Finansuje badania nad astralnymi runami, grimuarami i nekromancją.'
   },
   {
@@ -86,8 +86,8 @@ const TREASURIES = [
     role: 'treasury',
     icon: '🦇',
     rune: 'ᛞ',
-    color: '#2ec4b6',
-    bgColor: 'rgba(13, 45, 51, 0.6)',
+    color: '#3aaa9f',
+    bgColor: 'rgba(35, 97, 91, 0.6)',
     description: 'Skarbiec Ogrodów Lodowych Cieplic. Zapewnia rzadkie odczynniki alchemiczne i destylaty.'
   }
 ];

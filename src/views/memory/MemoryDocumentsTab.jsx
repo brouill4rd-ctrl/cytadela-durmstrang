@@ -27,10 +27,10 @@ export const MemoryDocumentsTab = ({ onInspectCertificate, onInspectDiploma }) =
   }, [docType, selectedHouse, searchQuery]);
 
   const houseIcons = {
-    reinhall: { icon: '🦌', name: 'Reinhall', color: '#fde047', border: '#c59f4e', bg: 'rgba(122, 24, 24, 0.25)' },
-    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', border: '#c02b2b', bg: 'rgba(32, 37, 48, 0.35)' },
-    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', border: '#a77de0', bg: 'rgba(28, 19, 46, 0.35)' },
-    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', border: '#2ec4b6', bg: 'rgba(13, 45, 51, 0.35)' }
+    reinhall: { icon: '🦌', name: 'Reinhall', color: '#fde047', border: '#c59f4e', bg: 'rgba(122, 38, 50, 0.25)' },
+    bjornhall: { icon: '🐻', name: 'Björnhall', color: '#f87171', border: '#5b8aaf', bg: 'rgba(53, 83, 111, 0.35)' },
+    ravnheim: { icon: '🐦', name: 'Ravnheim', color: '#c084fc', border: '#7a6ea0', bg: 'rgba(66, 56, 95, 0.35)' },
+    otergard: { icon: '🦦', name: 'Otergard', color: '#5eead4', border: '#3aaa9f', bg: 'rgba(35, 97, 91, 0.35)' }
   };
 
   const certificates = documentsData.certificates || [];
@@ -44,11 +44,11 @@ export const MemoryDocumentsTab = ({ onInspectCertificate, onInspectDiploma }) =
         style={{
           padding: '2.5rem',
           textAlign: 'center',
-          background: 'radial-gradient(circle at center, rgba(46, 196, 182, 0.12) 0%, rgba(10, 13, 18, 0.98) 75%)',
-          border: '2px solid rgba(46, 196, 182, 0.35)'
+          background: 'radial-gradient(circle at center, rgba(58, 170, 159, 0.12) 0%, rgba(10, 13, 18, 0.98) 75%)',
+          border: '2px solid rgba(58, 170, 159, 0.35)'
         }}
       >
-        <div style={{ fontSize: '0.8rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#2ec4b6', fontFamily: 'var(--font-heading)' }}>
+        <div style={{ fontSize: '0.8rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: '#3aaa9f', fontFamily: 'var(--font-heading)' }}>
           OFICJALNE ARCHIWUM DOKUMENTÓW & PIECZĘCI
         </div>
         <h1 style={{ fontSize: '2.6rem', fontFamily: 'var(--font-heading)', color: '#ffffff', margin: '0.4rem 0 0.5rem' }}>
@@ -96,7 +96,7 @@ export const MemoryDocumentsTab = ({ onInspectCertificate, onInspectDiploma }) =
             style={{
               padding: '0.45rem 0.9rem',
               borderRadius: '4px',
-              background: docType === 'certificates' ? '#2ec4b6' : 'rgba(255,255,255,0.05)',
+              background: docType === 'certificates' ? '#3aaa9f' : 'rgba(255,255,255,0.05)',
               color: docType === 'certificates' ? '#090d14' : '#cbd5e1',
               fontWeight: 700,
               fontSize: '0.8rem',
@@ -159,7 +159,7 @@ export const MemoryDocumentsTab = ({ onInspectCertificate, onInspectDiploma }) =
           {(docType === 'all' || docType === 'certificates') && (
             <div>
               <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontFamily: 'var(--font-heading)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={20} color="#2ec4b6" /> Świadectwa Szkolne ({certificates.length})
+                <FileText size={20} color="#3aaa9f" /> Świadectwa Szkolne ({certificates.length})
               </h3>
               {certificates.length === 0 ? (
                 <div className="gothic-card" style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>

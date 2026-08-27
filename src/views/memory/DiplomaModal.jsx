@@ -10,9 +10,9 @@ export const DiplomaModal = ({ diploma, onClose }) => {
 
   const houseSealColors = {
     reinhall: { border: '#c59f4e', bg: 'rgba(122, 24, 24, 0.25)', text: '#fde047', rune: 'ᚦ', label: 'Zakon Reinhall' },
-    bjornhall: { border: '#c02b2b', bg: 'rgba(32, 37, 48, 0.35)', text: '#f87171', rune: 'ᛉ', label: 'Zakon Björnhall' },
-    ravnheim: { border: '#a77de0', bg: 'rgba(28, 19, 46, 0.35)', text: '#c084fc', rune: 'ᚱ', label: 'Zakon Ravnheim' },
-    otergard: { border: '#2ec4b6', bg: 'rgba(13, 45, 51, 0.35)', text: '#5eead4', rune: 'ᛞ', label: 'Zakon Otergard' }
+    bjornhall: { border: '#5b8aaf', bg: 'rgba(32, 37, 48, 0.35)', text: '#f87171', rune: 'ᛉ', label: 'Zakon Björnhall' },
+    ravnheim: { border: '#7a6ea0', bg: 'rgba(28, 19, 46, 0.35)', text: '#c084fc', rune: 'ᚱ', label: 'Zakon Ravnheim' },
+    otergard: { border: '#3aaa9f', bg: 'rgba(13, 45, 51, 0.35)', text: '#5eead4', rune: 'ᛞ', label: 'Zakon Otergard' }
   };
 
   const houseStyle = houseSealColors[diploma.house?.toLowerCase()] || houseSealColors.ravnheim;

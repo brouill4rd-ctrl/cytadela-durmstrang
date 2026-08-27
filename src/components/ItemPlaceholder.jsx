@@ -35,8 +35,8 @@ export const ItemPlaceholder = ({ item, size = 'normal', showDetails = false }) 
         };
       case 'Rzadki':
         return {
-          glow: 'rgba(46, 196, 182, 0.45)',
-          border: 'rgba(46, 196, 182, 0.75)',
+          glow: 'rgba(58, 170, 159, 0.45)',
+          border: 'rgba(58, 170, 159, 0.75)',
           bg: 'radial-gradient(circle at center, rgba(15, 55, 60, 0.75) 0%, rgba(15, 20, 30, 0.95) 100%)',
           accent: '#8cefe6'
         };
