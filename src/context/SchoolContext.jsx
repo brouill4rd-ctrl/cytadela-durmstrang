@@ -502,16 +502,16 @@ Dyrektor Cytadeli Durmstrang`
 
   // Current active user profiles for backward compatibility
   const [studentProfile, setStudentProfile] = useState(() => {
-    const profile = tryParse('durmstrang_student', DEMO_ACCOUNTS.student);
-    return { ...profile, points: normalizePointValue(profile.points) };
+    const profile = tryParse('durmstrang_student', DEMO_ACCOUNTS.student || {});
+    return { ...profile, points: normalizePointValue(profile?.points) };
   });
 
   const [professorProfile, setProfessorProfile] = useState(() => {
-    return tryParse('durmstrang_prof', DEMO_ACCOUNTS.professor);
+    return tryParse('durmstrang_prof', DEMO_ACCOUNTS.professor || {});
   });
 
   const [adminProfile, setAdminProfile] = useState(() => {
-    return tryParse('durmstrang_admin', DEMO_ACCOUNTS.admin);
+    return tryParse('durmstrang_admin', DEMO_ACCOUNTS.admin || {});
   });
 
   // Category Banners & Block Graphics CMS
