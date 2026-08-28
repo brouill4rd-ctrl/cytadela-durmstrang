@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { SubjectIcon } from '../components/SubjectIcon';
 import { getSubjectBannerImage } from '../data/subjectBanners';
@@ -85,6 +85,221 @@ function renderMarkdownLite(text) {
 }
 
 // ===================================================================
+// Bezpieczny opis HTML katedry
+// ===================================================================
+const SUBJECT_DESCRIPTION_TAGS = new Set([
+  'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'MARK',
+  'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H2', 'H3', 'H4', 'HR',
+  'CODE', 'PRE', 'SMALL'
+]);
+
+const SUBJECT_THEMES = [
+  { match: /alchemia|warzenie/i, accent: '#2ec4b6', rgb: '46, 196, 182' },
+  { match: /historia|kroniki/i, accent: '#d4a574', rgb: '212, 165, 116' },
+  { match: /języki|inskrypcje|runy/i, accent: '#a78bfa', rgb: '167, 139, 250' },
+  { match: /kosmologia|astronomia/i, accent: '#38bdf8', rgb: '56, 189, 248' },
+  { match: /pierwotna/i, accent: '#fb923c', rgb: '251, 146, 60' },
+  { match: /praktyczna/i, accent: '#60a5fa', rgb: '96, 165, 250' },
+  { match: /modyfikacja/i, accent: '#c084fc', rgb: '192, 132, 252' },
+  { match: /ścisłe|numerologia/i, accent: '#22d3ee', rgb: '34, 211, 238' },
+  { match: /obrona|przetrwanie/i, accent: '#f87171', rgb: '248, 113, 113' },
+  { match: /przyroda|zielar|flora|stworzenia|smok/i, accent: '#56d590', rgb: '86, 213, 144' },
+  { match: /bojowa|latanie/i, accent: '#f59e0b', rgb: '245, 158, 11' },
+  { match: /tajemne|wróżbiar/i, accent: '#818cf8', rgb: '129, 140, 248' },
+  { match: /zakazane|czarna magia|klątw|truciz/i, accent: '#e879f9', rgb: '232, 121, 249' }
+];
+
+function getSubjectTheme(subject) {
+  const signature = `${subject?.category || ''} ${subject?.id || ''} ${subject?.name || ''}`;
+  return SUBJECT_THEMES.find(theme => theme.match.test(signature)) || { accent: '#c59f4e', rgb: '197, 159, 78' };
+}
+
+function escapeSubjectHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+const SAFE_STYLE_PROPS = new Set(['text-align', 'font-style', 'font-weight']);
+const STYLE_BEARING_TAGS = new Set(['P', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'LI', 'DIV']);
+
+function sanitizeInlineStyle(styleStr) {
+  if (!styleStr) return '';
+  return styleStr.split(';')
+    .map(d => d.trim()).filter(Boolean)
+    .filter(d => {
+      const prop = d.split(':')[0]?.trim().toLowerCase();
+      return prop && SAFE_STYLE_PROPS.has(prop);
+    })
+    .join('; ');
+}
+
+function splitDescriptionIntoParagraphs(text) {
+  const explicitParagraphs = text.split(/\n\s*\n/).map(part => part.trim()).filter(Boolean);
+  if (explicitParagraphs.length > 1 || text.length < 430) return explicitParagraphs;
+
+  const sentences = text.match(/[^.!?]+[.!?]+(?:[”"»])?|[^.!?]+$/g)?.map(sentence => sentence.trim()).filter(Boolean) || [text];
+  const paragraphs = [];
+  let current = '';
+  sentences.forEach(sentence => {
+    if (current && current.length + sentence.length > 390) {
+      paragraphs.push(current);
+      current = sentence;
+    } else {
+      current = `${current} ${sentence}`.trim();
+    }
+  });
+  if (current) paragraphs.push(current);
+  return paragraphs;
+}
+
+function formatSubjectDescriptionHtml(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+
+  const containsHtml = /<\/?[a-z][\s\S]*?>/i.test(text);
+  if (!containsHtml) {
+    return splitDescriptionIntoParagraphs(text)
+      .map(paragraph => `<p>${escapeSubjectHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  }
+
+  if (typeof DOMParser === 'undefined') return escapeSubjectHtml(text);
+  const documentFragment = new DOMParser().parseFromString(text, 'text/html');
+  const forbiddenTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON']);
+
+  Array.from(documentFragment.body.querySelectorAll('*')).forEach(node => {
+    if (forbiddenTags.has(node.tagName)) {
+      node.remove();
+      return;
+    }
+    if (!SUBJECT_DESCRIPTION_TAGS.has(node.tagName)) {
+      node.replaceWith(...Array.from(node.childNodes));
+      return;
+    }
+    Array.from(node.attributes).forEach(attribute => {
+      if (attribute.name === 'style' && STYLE_BEARING_TAGS.has(node.tagName)) {
+        const safe = sanitizeInlineStyle(attribute.value);
+        if (safe) node.setAttribute('style', safe);
+        else node.removeAttribute('style');
+      } else {
+        node.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return documentFragment.body.innerHTML;
+}
+
+function containsSubjectHtml(value) {
+  return /<\/?[a-z][\s\S]*?>/i.test(String(value || ''));
+}
+
+const SubjectRichContent = ({ content }) => {
+  if (!content) return null;
+  if (!containsSubjectHtml(content)) return <div className="subject-rich-content">{renderMarkdownLite(content)}</div>;
+  return (
+    <div
+      className="subject-rich-content subject-description-card__body"
+      dangerouslySetInnerHTML={{ __html: formatSubjectDescriptionHtml(content) }}
+    />
+  );
+};
+
+const SubjectHtmlToolbar = ({ onInsert }) => (
+  <div className="subject-html-toolbar" role="toolbar" aria-label="Formatowanie HTML">
+    <button type="button" onClick={() => onInsert('<p>', '</p>', 'Nowy akapit')}>¶ <span>Akapit</span></button>
+    <button type="button" title="Wyrównaj do obu stron" onClick={() => onInsert('<p style="text-align:justify">', '</p>', 'Wyjustowany akapit')}>⬛ <span>Justify</span></button>
+    <button type="button" title="Wyśrodkuj" onClick={() => onInsert('<p style="text-align:center">', '</p>', 'Wyśrodkowany akapit')}>≡ <span>Środek</span></button>
+    <button type="button" onClick={() => onInsert('<h4>', '</h4>', 'Śródtytuł')}>H <span>Nagłówek</span></button>
+    <button type="button" onClick={() => onInsert('<strong>', '</strong>', 'ważna treść')}><b>B</b> <span>Pogrubienie</span></button>
+    <button type="button" onClick={() => onInsert('<em>', '</em>', 'wyróżniona treść')}><em>I</em> <span>Kursywa</span></button>
+    <button type="button" onClick={() => onInsert('<mark>', '</mark>', 'magiczny termin')}>✦ <span>Wyróżnienie</span></button>
+    <button type="button" onClick={() => onInsert('<blockquote>', '</blockquote>', 'Motto katedry')}>❝ <span>Cytat</span></button>
+    <button type="button" onClick={() => onInsert('<ul>\n  <li>', '</li>\n</ul>', 'element listy')}>☷ <span>Lista</span></button>
+    <button type="button" onClick={() => onInsert('<ol>\n  <li>', '</li>\n</ol>', 'element listy')}>① <span>Numerowana</span></button>
+    <button type="button" title="Pozioma linia" onClick={() => onInsert('<hr>', '', '')}>― <span>Linia</span></button>
+    <button type="button" onClick={() => onInsert('<small>', '</small>', 'drobna adnotacja')}>ₐ <span>Małe</span></button>
+  </div>
+);
+
+const SubjectDescriptionCard = ({ description, subject, compact = false, theme }) => {
+  if (!description) return null;
+  const formattedDescription = formatSubjectDescriptionHtml(description);
+  const botanical = /zielar|roślin|flora|herb/i.test(`${subject?.id || ''} ${subject?.name || ''} ${subject?.category || ''}`);
+  const activeTheme = theme || getSubjectTheme(subject);
+
+  return (
+    <section
+      className={`subject-description-card${botanical ? ' subject-description-card--botanical' : ''}${compact ? ' subject-description-card--compact' : ''}`}
+      style={{ '--description-accent': activeTheme.accent, '--description-accent-rgb': activeTheme.rgb }}
+    >
+      <div className="subject-description-card__aura" aria-hidden="true" />
+      <div className="subject-description-card__particles" aria-hidden="true">
+        {Array.from({ length: compact ? 3 : 7 }, (_, index) => (
+          <span key={index} style={{ '--particle-index': index }} />
+        ))}
+      </div>
+      <header className="subject-description-card__header">
+        <div className="subject-description-card__sigil" aria-hidden="true">
+          <span>{subject?.icon || '✦'}</span>
+        </div>
+        <div className="subject-description-card__heading">
+          <span className="subject-description-card__eyebrow">Kronika Katedry</span>
+          <h3>Opis Katedry</h3>
+        </div>
+        <div className="subject-description-card__rune" aria-hidden="true">ᛉ</div>
+      </header>
+      <div
+        className="subject-description-card__body"
+        dangerouslySetInnerHTML={{ __html: formattedDescription }}
+      />
+      {!compact && (
+        <footer className="subject-description-card__footer" aria-hidden="true">
+          <span>ᚱ</span><i />
+          <small>Wiedza • Dyscyplina • Północ</small>
+          <i /><span>ᛉ</span>
+        </footer>
+      )}
+    </section>
+  );
+};
+
+// ===================================================================
+// SubjectDocumentView — piękny widok dokumentu (syllabus / regulamin)
+// ===================================================================
+const SubjectDocumentView = ({ content, label, subject, theme }) => {
+  if (!content) return null;
+  return (
+    <div
+      className="subject-doc-view"
+      style={{ '--doc-accent': theme?.accent || '#c59f4e', '--doc-accent-rgb': theme?.rgb || '197, 159, 78' }}
+    >
+      <div className="subject-doc-view__aura" aria-hidden="true" />
+      <header className="subject-doc-view__header">
+        <div className="subject-doc-view__sigil" aria-hidden="true">
+          <span>{subject?.icon || '📜'}</span>
+        </div>
+        <div>
+          <span className="subject-doc-view__eyebrow">{label}</span>
+          <div className="subject-doc-view__title">{subject?.name}</div>
+        </div>
+        <div className="subject-doc-view__runes" aria-hidden="true">ᛗ ᚱ ᛉ</div>
+      </header>
+      <div className="subject-doc-view__body">
+        <SubjectRichContent content={content} />
+      </div>
+      <footer className="subject-doc-view__footer" aria-hidden="true">
+        <span>ᚠ</span><i /><small>In Sapientia Fortitudo</small><i /><span>ᛞ</span>
+      </footer>
+    </div>
+  );
+};
+
+// ===================================================================
 // SubjectDetailView — główny komponent
 // ===================================================================
 export const SubjectDetailView = () => {
@@ -129,6 +344,9 @@ export const SubjectDetailView = () => {
   const [editingInfo, setEditingInfo] = useState(false);
   const [infoForm, setInfoForm] = useState({});
   const [savingInfo, setSavingInfo] = useState(false);
+  const descriptionEditorRef = useRef(null);
+  const syllabusEditorRef = useRef(null);
+  const regulationsEditorRef = useRef(null);
 
   useEffect(() => {
     const load = async () => {
@@ -176,13 +394,14 @@ export const SubjectDetailView = () => {
   // Profesor może edytować tylko przedmiot, do którego jest przypisany
   const isAssignedProfessor = isProfessor && (
     currentUser?.id === subject.professorId ||
+    subject.professors?.some(professor => professor.id === currentUser?.id) ||
     currentUser?.departmentName?.toLowerCase().includes(subject.id) ||
     (currentUser?.taughtSubjectIds && Array.isArray(currentUser.taughtSubjectIds) && currentUser.taughtSubjectIds.includes(subject.id)) ||
     (currentUser?.department && (currentUser.department === subject.id || currentUser.department.includes(subject.id)))
   );
   const canEditSyllabus = isAdmin || isAssignedProfessor;
   const canGrade = isAdmin || isAssignedProfessor;
-  const canEditInfo = isAdmin;
+  const canEditInfo = isAdmin || isAssignedProfessor;
 
   const grades = subject.grades || [];
   const categories = subject.categories || [];
@@ -234,11 +453,46 @@ export const SubjectDetailView = () => {
 
   const handleSaveInfo = async () => {
     setSavingInfo(true);
-    const updated = await updateSubject(subject.id, infoForm);
-    if (updated) setSubject(updated);
-    setEditingInfo(false);
+    const { professorId, professorName, ...professorEditableInfo } = infoForm;
+    const updated = await updateSubject(subject.id, isAdmin ? infoForm : professorEditableInfo);
+    if (updated) {
+      setSubject(prev => ({
+        ...prev,
+        ...updated,
+        grades: prev.grades || [],
+        recentLessons: prev.recentLessons || [],
+        stats: prev.stats || {}
+      }));
+      setEditingInfo(false);
+    }
     setSavingInfo(false);
   };
+
+  const insertHtmlAtSelection = (editorRef, value, setValue, openingTag, closingTag = '', placeholder = 'treść') => {
+    const editor = editorRef.current;
+    const selectionStart = editor?.selectionStart ?? value.length;
+    const selectionEnd = editor?.selectionEnd ?? value.length;
+    const selection = value.slice(selectionStart, selectionEnd) || placeholder;
+    const inserted = `${openingTag}${selection}${closingTag}`;
+    const nextValue = `${value.slice(0, selectionStart)}${inserted}${value.slice(selectionEnd)}`;
+    setValue(nextValue);
+
+    requestAnimationFrame(() => {
+      if (!editorRef.current) return;
+      const nextSelectionStart = selectionStart + openingTag.length;
+      editorRef.current.focus();
+      editorRef.current.setSelectionRange(nextSelectionStart, nextSelectionStart + selection.length);
+    });
+  };
+
+  const insertDescriptionHtml = (openingTag, closingTag = '', placeholder = 'treść') => insertHtmlAtSelection(
+    descriptionEditorRef,
+    infoForm.description || '',
+    nextValue => setInfoForm(prev => ({ ...prev, description: nextValue })),
+    openingTag,
+    closingTag,
+    placeholder
+  );
 
   const handleAddGrade = async (e) => {
     e.preventDefault();
@@ -273,6 +527,7 @@ export const SubjectDetailView = () => {
 
   const houseArr = Object.values(houses || {});
   const subjectBannerImage = getSubjectBannerImage(subject);
+  const subjectTheme = getSubjectTheme(subject);
 
   const TABS = [
     { id: 'overview', icon: <BookOpen size={15} />, label: 'Przegląd' },
@@ -283,7 +538,10 @@ export const SubjectDetailView = () => {
   ];
 
   return (
-    <div className="view-container animate-fade-in" style={{ paddingBottom: '5rem' }}>
+    <div
+      className="view-container animate-fade-in subject-detail-theme"
+      style={{ paddingBottom: '5rem', '--subject-accent': subjectTheme.accent, '--subject-accent-rgb': subjectTheme.rgb }}
+    >
       {/* ============================================================
           BANER + HEADER KATEDRY
       ============================================================ */}
@@ -431,30 +689,18 @@ export const SubjectDetailView = () => {
       {/* ============================================================
           ZAKŁADKI NAWIGACJI
       ============================================================ */}
-      <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.3rem', borderBottom: '1px solid rgba(197,159,78,0.2)', flexWrap: 'nowrap' }}>
+      <div className="subject-detail-tabs" style={{ display: 'flex', overflowX: 'auto', flexWrap: 'nowrap', marginBottom: '1.5rem' }}>
         {TABS.map(t => (
           <button
             key={t.id}
+            className={`subject-detail-tab${tab === t.id ? ' is-active' : ''}`}
             onClick={() => setTab(t.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.5rem 1rem', border: 'none', borderRadius: '8px 8px 0 0',
-              background: tab === t.id ? 'rgba(197,159,78,0.18)' : 'transparent',
-              color: tab === t.id ? 'var(--gold-ancient)' : '#94a3b8',
-              fontWeight: tab === t.id ? 800 : 500,
-              fontSize: '0.83rem',
-              fontFamily: 'var(--font-heading)',
-              cursor: 'pointer',
-              borderBottom: tab === t.id ? '2px solid var(--gold-ancient)' : '2px solid transparent',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s'
-            }}
           >
             {t.icon} {t.label}
           </button>
         ))}
 
-        {/* Admin - Edycja info */}
+        {/* Dyrekcja lub przypisany profesor - edycja strony katedry */}
         {canEditInfo && (
           <button
             onClick={() => setEditingInfo(!editingInfo)}
@@ -466,19 +712,21 @@ export const SubjectDetailView = () => {
       </div>
 
       {/* ============================================================
-          PANEL EDYCJI INFO (Admin)
+          PANEL EDYCJI INFO
       ============================================================ */}
       {editingInfo && (
         <div style={{ background: 'rgba(197,159,78,0.07)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '10px', padding: '1.5rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid rgba(197,159,78,0.2)', paddingBottom: '0.7rem' }}>
             <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: 0, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>✏️</span> Zarządzanie & Przypisanie Katedry (Admin)
+              <span>✏️</span> {isAdmin ? 'Zarządzanie & Przypisanie Katedry' : 'Edycja Strony Katedry'}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Wybierz konto z listy, aby powiązać profesora i automatycznie uzupełnić dane</span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              {isAdmin ? 'Wybierz konto z listy, aby powiązać profesora i automatycznie uzupełnić dane' : 'Możesz edytować dane prowadzonego przez siebie przedmiotu'}
+            </span>
           </div>
 
           {/* Szybki Selektor Konta Nauczyciela / Dyrekcji */}
-          <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1.2rem' }}>
+          {isAdmin && <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1.2rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--gold-glow)', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               <User size={15} /> 🧙‍♂️ Połączone Konto Nauczyciela / Dyrekcji
             </label>
@@ -543,7 +791,7 @@ export const SubjectDetailView = () => {
                 );
               })()}
             </div>
-          </div>
+          </div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             <div>
@@ -578,23 +826,32 @@ export const SubjectDetailView = () => {
                 style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
               />
             </div>
-            <div>
+            {isAdmin && <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wyświetlana Nazwa Prowadzącego</label>
               <input
                 value={infoForm.professorName || ''}
                 onChange={e => setInfoForm(prev => ({ ...prev, professorName: e.target.value }))}
                 style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
               />
-            </div>
+            </div>}
 
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Opis Katedry</label>
+              <SubjectHtmlToolbar onInsert={insertDescriptionHtml} />
               <textarea
+                ref={descriptionEditorRef}
                 value={infoForm.description || ''}
                 onChange={e => setInfoForm(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', resize: 'vertical', boxSizing: 'border-box' }}
+                rows={8}
+                placeholder="Wpisz zwykły tekst albo użyj bezpiecznych znaczników HTML…"
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '0 0 6px 6px', padding: '0.75rem', color: '#fff', fontSize: '0.86rem', lineHeight: 1.55, fontFamily: 'Consolas, monospace', resize: 'vertical', boxSizing: 'border-box' }}
               />
+              {infoForm.description && (
+                <div className="subject-description-preview">
+                  <span className="subject-description-preview__label">Podgląd na żywo</span>
+                  <SubjectDescriptionCard description={infoForm.description} subject={{ ...subject, ...infoForm }} compact theme={subjectTheme} />
+                </div>
+              )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gradient Banera (CSS)</label>
@@ -618,19 +875,16 @@ export const SubjectDetailView = () => {
           ZAKŁADKA: PRZEGLĄD
       ============================================================ */}
       {tab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="subject-tab-content subject-tab-content--overview" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Opis */}
           {subject.description && (
-            <div style={{ background: 'rgba(8,11,16,0.6)', borderLeft: '3px solid var(--gold-ancient)', padding: '1.2rem 1.5rem', borderRadius: '0 8px 8px 0' }}>
-              <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>Opis Katedry</h3>
-              <p style={{ color: '#e2e8f0', fontSize: '0.96rem', lineHeight: 1.7, margin: 0, fontStyle: 'italic' }}>„{subject.description}"</p>
-            </div>
+            <SubjectDescriptionCard description={subject.description} subject={subject} theme={subjectTheme} />
           )}
 
           {/* Rozkład ocen */}
           {totalGrades > 0 && (
-            <div style={{ background: 'rgba(10,14,22,0.7)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '10px', padding: '1.4rem' }}>
-              <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
+            <div className="subject-arcane-panel" style={{ background: 'rgba(10,14,22,0.7)', borderRadius: '10px', padding: '1.4rem' }}>
+              <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
                 <BarChart2 size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
                 Rozkład Ocen HP
               </h3>
@@ -656,8 +910,8 @@ export const SubjectDetailView = () => {
 
           {/* Tablica Honorowa */}
           {topStudents.length > 0 && (
-            <div style={{ background: 'rgba(10,14,22,0.7)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '10px', padding: '1.4rem' }}>
-              <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
+            <div className="subject-arcane-panel" style={{ background: 'rgba(10,14,22,0.7)', borderRadius: '10px', padding: '1.4rem' }}>
+              <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
                 <Trophy size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
                 Tablica Honorowa Katedry
               </h3>
@@ -687,8 +941,8 @@ export const SubjectDetailView = () => {
 
           {/* Osiągnięcia */}
           {achievements.length > 0 && (
-            <div style={{ background: 'rgba(10,14,22,0.7)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '10px', padding: '1.4rem' }}>
-              <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
+            <div className="subject-arcane-panel" style={{ background: 'rgba(10,14,22,0.7)', borderRadius: '10px', padding: '1.4rem' }}>
+              <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
                 <Award size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
                 Osiągnięcia Katedry
               </h3>
@@ -713,9 +967,9 @@ export const SubjectDetailView = () => {
           ZAKŁADKA: PLAN NAUCZANIA (SYLLABUS)
       ============================================================ */}
       {tab === 'syllabus' && (
-        <div style={{ background: 'rgba(10,14,22,0.7)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '10px', padding: '1.8rem', position: 'relative' }}>
+        <div className="subject-tab-content subject-arcane-panel subject-document-panel" style={{ borderRadius: '10px', padding: '1.8rem', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
-            <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               <ScrollText size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
               Plan Nauczania — {subject.name}
             </h3>
@@ -728,13 +982,28 @@ export const SubjectDetailView = () => {
 
           {editingSyllabus ? (
             <div>
+              <SubjectHtmlToolbar onInsert={(openingTag, closingTag, placeholder) => insertHtmlAtSelection(
+                syllabusEditorRef,
+                syllabusText,
+                setSyllabusText,
+                openingTag,
+                closingTag,
+                placeholder
+              )} />
               <textarea
+                ref={syllabusEditorRef}
                 value={syllabusText}
                 onChange={e => setSyllabusText(e.target.value)}
                 rows={20}
-                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder="Wpisz plan nauczania w składni Markdown..."
+                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '0 0 8px 8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
+                placeholder="Wpisz plan nauczania w HTML lub składni Markdown..."
               />
+              {syllabusText && (
+                <div className="subject-description-preview">
+                  <span className="subject-description-preview__label">Podgląd planu na żywo</span>
+                  <div className="subject-live-document-preview"><SubjectRichContent content={syllabusText} /></div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.85rem', justifyContent: 'flex-end' }}>
                 <button onClick={() => { setEditingSyllabus(false); setSyllabusText(subject.syllabus || ''); }} style={{ padding: '0.45rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}>Anuluj</button>
                 <button onClick={handleSaveSyllabus} disabled={savingText} className="btn-durmstrang" style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', gap: '0.35rem' }}>
@@ -744,8 +1013,13 @@ export const SubjectDetailView = () => {
             </div>
           ) : (
             <div style={{ minHeight: '200px' }}>
-              {subject.syllabus ? renderMarkdownLite(subject.syllabus) : (
-                <p style={{ color: '#6b7280', fontStyle: 'italic', fontSize: '0.9rem' }}>Plan nauczania nie został jeszcze opublikowany przez prowadzącego profesora.</p>
+              {subject.syllabus ? (
+                <SubjectDocumentView content={subject.syllabus} label="Plan Nauczania" subject={subject} theme={subjectTheme} />
+              ) : (
+                <div className="subject-arcane-panel subject-empty-state" style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', borderRadius: '10px' }}>
+                  <ScrollText size={28} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
+                  <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.9rem' }}>Plan nauczania nie został jeszcze opublikowany przez prowadzącego profesora.</p>
+                </div>
               )}
             </div>
           )}
@@ -756,9 +1030,9 @@ export const SubjectDetailView = () => {
           ZAKŁADKA: REGULAMIN
       ============================================================ */}
       {tab === 'regulations' && (
-        <div style={{ background: 'rgba(10,14,22,0.7)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '10px', padding: '1.8rem' }}>
+        <div className="subject-tab-content subject-arcane-panel subject-document-panel" style={{ borderRadius: '10px', padding: '1.8rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
-            <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               <FileText size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
               Regulamin Zajęć — {subject.name}
             </h3>
@@ -771,12 +1045,28 @@ export const SubjectDetailView = () => {
 
           {editingRegulations ? (
             <div>
+              <SubjectHtmlToolbar onInsert={(openingTag, closingTag, placeholder) => insertHtmlAtSelection(
+                regulationsEditorRef,
+                regulationsText,
+                setRegulationsText,
+                openingTag,
+                closingTag,
+                placeholder
+              )} />
               <textarea
+                ref={regulationsEditorRef}
                 value={regulationsText}
                 onChange={e => setRegulationsText(e.target.value)}
                 rows={16}
-                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
+                placeholder="Wpisz regulamin w HTML lub składni Markdown..."
+                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '0 0 8px 8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
               />
+              {regulationsText && (
+                <div className="subject-description-preview">
+                  <span className="subject-description-preview__label">Podgląd regulaminu na żywo</span>
+                  <div className="subject-live-document-preview"><SubjectRichContent content={regulationsText} /></div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.85rem', justifyContent: 'flex-end' }}>
                 <button onClick={() => { setEditingRegulations(false); setRegulationsText(subject.regulations || ''); }} style={{ padding: '0.45rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}>Anuluj</button>
                 <button onClick={handleSaveRegulations} disabled={savingText} className="btn-durmstrang" style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', gap: '0.35rem' }}>
@@ -786,8 +1076,13 @@ export const SubjectDetailView = () => {
             </div>
           ) : (
             <div style={{ minHeight: '150px' }}>
-              {subject.regulations ? renderMarkdownLite(subject.regulations) : (
-                <p style={{ color: '#6b7280', fontStyle: 'italic', fontSize: '0.9rem' }}>Regulamin zajęć nie został jeszcze opublikowany.</p>
+              {subject.regulations ? (
+                <SubjectDocumentView content={subject.regulations} label="Regulamin Katedry" subject={subject} theme={subjectTheme} />
+              ) : (
+                <div className="subject-arcane-panel subject-empty-state" style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', borderRadius: '10px' }}>
+                  <FileText size={28} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
+                  <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.9rem' }}>Regulamin zajęć nie został jeszcze opublikowany.</p>
+                </div>
               )}
             </div>
           )}
@@ -798,11 +1093,11 @@ export const SubjectDetailView = () => {
           ZAKŁADKA: OCENY HP
       ============================================================ */}
       {tab === 'grades' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+        <div className="subject-tab-content subject-grades-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           {/* Header + Dodaj ocenę */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+              <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
                 <Star size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
                 Księga Ocen HP — {subject.name}
               </h3>
@@ -817,7 +1112,7 @@ export const SubjectDetailView = () => {
 
           {/* Formularz oceny */}
           {showGradeForm && canGrade && (
-            <form onSubmit={handleAddGrade} style={{ background: 'rgba(197,159,78,0.07)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '10px', padding: '1.4rem' }}>
+            <form className="subject-arcane-panel subject-grade-form" onSubmit={handleAddGrade} style={{ borderRadius: '10px', padding: '1.4rem' }}>
               <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📋 Nowa Ocena HP</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '0.85rem' }}>
                 {/* Adept */}
@@ -895,12 +1190,12 @@ export const SubjectDetailView = () => {
 
           {/* Tabela ocen */}
           {filteredGrades.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+            <div className="subject-arcane-panel subject-empty-state" style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
               <Star size={32} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
               <p style={{ fontFamily: 'var(--font-heading)', fontSize: '0.9rem' }}>Brak ocen w księdze katedry.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="subject-arcane-panel subject-grades-table" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', background: 'rgba(8,11,16,0.7)', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(197,159,78,0.2)' }}>
                 <thead>
                   <tr style={{ background: 'rgba(197,159,78,0.1)', borderBottom: '1px solid rgba(197,159,78,0.25)' }}>
@@ -952,9 +1247,9 @@ export const SubjectDetailView = () => {
           ZAKŁADKA: DZIENNIKI LEKCYJNE Z DISCORDA
       ============================================================ */}
       {tab === 'lessons' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="subject-tab-content subject-lessons-panel" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <h3 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               <MessageSquare size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
               Dzienniki Lekcyjne z Discorda
             </h3>
@@ -964,7 +1259,7 @@ export const SubjectDetailView = () => {
           </div>
 
           {recentLessons.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+            <div className="subject-arcane-panel subject-empty-state" style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
               <MessageSquare size={32} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
               <p style={{ fontFamily: 'var(--font-ui)', fontSize: '0.9rem' }}>Brak dzienników lekcyjnych dla tej katedry.</p>
             </div>
@@ -980,6 +1275,7 @@ export const SubjectDetailView = () => {
               return (
                 <div
                   key={lesson.id}
+                  className="subject-lesson-card"
                   style={{ background: 'rgba(10,14,22,0.7)', border: `1px solid ${isPublished ? 'rgba(197,159,78,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', padding: '1.2rem 1.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
                   onClick={() => {
                     setActiveLessonId(lesson.id);

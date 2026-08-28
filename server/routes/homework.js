@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +13,9 @@ import db, {
   isProfessorOfSubject
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { awardPoints } from '../services/pointsService.js';
+import { awardPoints, correctTransaction } from '../services/pointsService.js';
+import { credit as creditSkirniry } from '../services/skirnirService.js';
+import { discordBot } from '../discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'homework');
@@ -22,6 +24,14 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 const router = Router();
+
+// Runtime migration: add skirnir_awarded column if missing
+try {
+  const cols = db.pragma('table_info(homework_submissions)');
+  if (!cols.find(c => c.name === 'skirnir_awarded')) {
+    db.exec("ALTER TABLE homework_submissions ADD COLUMN skirnir_awarded INTEGER DEFAULT 0");
+  }
+} catch (_) {}
 
 function genId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -120,12 +130,24 @@ router.get('/', requireAuth, (req, res) => {
       const gradedCount = subs.filter(s => s.status === 'graded').length;
       const returnedCount = subs.filter(s => s.status === 'returned_for_revision').length;
       
+      // Count actual students in assigned class
+      let assignedCount = 30;
+      try {
+        const classFilter = hw.class_year && hw.class_year !== 'Wszystkie' ? hw.class_year : null;
+        const countQuery = classFilter
+          ? "SELECT COUNT(*) as c FROM users WHERE role='student' AND class_year=?"
+          : "SELECT COUNT(*) as c FROM users WHERE role='student'";
+        assignedCount = classFilter
+          ? db.prepare(countQuery).get(classFilter)?.c || 0
+          : db.prepare(countQuery).get()?.c || 30;
+      } catch (_) {}
+
       const stats = {
         totalSubmissions: totalSubs,
         inReviewCount,
         gradedCount,
         returnedCount,
-        assignedCount: 30 // typical class size estimate or active student count
+        assignedCount
       };
 
       const mapped = dbHomeworkAssignmentToFrontend(hw, stats);
@@ -541,25 +563,36 @@ router.post('/', requireAuth, requireRole('professor', 'admin'), (req, res) => {
 
     auditLog(professor.id, professor.fullName, professor.role, 'create_homework', id, '', `Utworzono zadanie: ${title}`);
 
-    // Notify students of the class
+    // Notify only students in the target class
     try {
-      const students = db.prepare("SELECT id, full_name FROM users WHERE role = 'student'").all();
-      students.forEach(st => {
+      const isAllClasses = !classYear || classYear === 'Wszystkie' || classYear === '';
+      const targetStudents = isAllClasses
+        ? db.prepare("SELECT id, full_name FROM users WHERE role = 'student'").all()
+        : db.prepare("SELECT id, full_name FROM users WHERE role = 'student' AND class_year = ?").all(classYear);
+
+      targetStudents.forEach(st => {
         createNotification(
           st.id,
           st.full_name,
           `Nowa praca domowa: ${title} (${subjectName || subjectId})`,
-          `Profesor ${professor.fullName} zadał nową pracę domową z przedmiotu ${subjectName || subjectId}: „${title}”. Termin oddania: ${dueDate}.`,
+          `Profesor ${professor.fullName} zadał nową pracę domową z przedmiotu ${subjectName || subjectId}: „${title}". Termin oddania: ${dueDate}.`,
           'homework'
         );
       });
     } catch (_) {}
 
     const created = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
+    const createdFrontend = dbHomeworkAssignmentToFrontend(created);
+
+    // Asynchroniczne ogłoszenie na Discordzie
+    discordBot.announceHomeworkCreated(createdFrontend).catch(e =>
+      console.warn('[Discord] Błąd ogłoszenia pracy domowej:', e.message)
+    );
+
     res.status(201).json({
       ok: true,
       message: 'Praca domowa została pomyślnie utworzona i opublikowana.',
-      homework: dbHomeworkAssignmentToFrontend(created)
+      homework: createdFrontend
     });
   } catch (err) {
     res.status(500).json({ error: 'Błąd tworzenia zadania domowego: ' + err.message });
@@ -663,13 +696,40 @@ router.put('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) =>
   }
 });
 
-// DELETE /api/homework/:id — Delete assignment (Professor/Admin)
+// DELETE /api/homework/:id — Delete or archive assignment (Professor/Admin)
 router.delete('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) => {
   try {
     const { id } = req.params;
+    const { force } = req.query;
+
+    const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
+    if (!hw) return res.status(404).json({ error: 'Nie odnaleziono zadania.' });
+
+    // Check ownership for professors
+    if (req.user.role === 'professor' && hw.professor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Możesz usuwać tylko własne prace domowe.' });
+    }
+
+    const nonDraftSubs = db.prepare("SELECT COUNT(*) as count FROM homework_submissions WHERE homework_id = ? AND status != 'draft'").get(id).count;
+
+    if (nonDraftSubs > 0 && force !== 'true') {
+      // Archive instead of delete — preserve historical data
+      db.prepare("UPDATE homework_assignments SET is_archived = 1, updated_at = datetime('now') WHERE id = ?").run(id);
+      auditLog(req.user.id, req.user.fullName, req.user.role, 'archive_homework', id, '', `Zarchiwizowano zadanie (${nonDraftSubs} oddanych prac)`);
+      return res.json({
+        ok: true,
+        archived: true,
+        message: `Zadanie zostało zarchiwizowane (istnieje ${nonDraftSubs} oddanych prac). Dane historyczne zostały zachowane.`
+      });
+    }
+
+    // Safe to delete — no real submissions
+    db.prepare('DELETE FROM homework_submissions WHERE homework_id = ?').run(id);
+    db.prepare('DELETE FROM homework_submission_versions WHERE homework_id = ?').run(id);
+    db.prepare('DELETE FROM homework_exceptions WHERE homework_id = ?').run(id);
     db.prepare('DELETE FROM homework_assignments WHERE id = ?').run(id);
-    auditLog(req.user.id, req.user.fullName, req.user.role, 'delete_homework', id, '', 'Usunięto zadanie domowe');
-    res.json({ ok: true, message: 'Praca domowa została usunięta.' });
+    auditLog(req.user.id, req.user.fullName, req.user.role, 'delete_homework', id, '', 'Usunięto zadanie domowe (brak oddanych prac)');
+    res.json({ ok: true, archived: false, message: 'Praca domowa została trwale usunięta.' });
   } catch (err) {
     res.status(500).json({ error: 'Błąd usuwania zadania: ' + err.message });
   }
@@ -757,8 +817,25 @@ router.get('/:id/submissions', requireAuth, requireRole('professor', 'admin'), (
     const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
     if (!hw) return res.status(404).json({ error: 'Nie odnaleziono zadania.' });
 
-    // Fetch all students of the class to show who hasn't submitted
-    const students = db.prepare("SELECT id, full_name, house, class_year FROM users WHERE role = 'student' ORDER BY house ASC, full_name ASC").all();
+    // Fetch only students in the assigned class (or all if 'Wszystkie')
+    const isAllClasses = !hw.class_year || hw.class_year === 'Wszystkie' || hw.class_year === '';
+    const students = isAllClasses
+      ? db.prepare("SELECT id, full_name, house, class_year FROM users WHERE role = 'student' ORDER BY house ASC, full_name ASC").all()
+      : db.prepare("SELECT id, full_name, house, class_year FROM users WHERE role = 'student' AND class_year = ? ORDER BY house ASC, full_name ASC").all(hw.class_year);
+
+    // Fetch active absences for cross-referencing
+    let absenceMap = new Map();
+    try {
+      const now = new Date().toISOString().slice(0, 10);
+      const activeAbsences = db.prepare(`
+        SELECT user_id, date_from, date_to, status FROM absences
+        WHERE status = 'approved' AND date_to >= ?
+      `).all(now);
+      for (const ab of activeAbsences) {
+        if (!absenceMap.has(ab.user_id)) absenceMap.set(ab.user_id, []);
+        absenceMap.get(ab.user_id).push(ab);
+      }
+    } catch (_) {}
 
     const submissions = db.prepare('SELECT * FROM homework_submissions WHERE homework_id = ?').all(id);
     const exceptions = db.prepare('SELECT * FROM homework_exceptions WHERE homework_id = ?').all(id);
@@ -785,13 +862,27 @@ router.get('/:id/submissions', requireAuth, requireRole('professor', 'admin'), (
 
       const versions = sub ? db.prepare('SELECT * FROM homework_submission_versions WHERE submission_id = ? ORDER BY version_number DESC').all(sub.id) : [];
 
+      // Check active absences covering the due date
+      const hwDueDate = (exc?.custom_due_date || hw.due_date || '').slice(0, 10);
+      const studentAbsences = absenceMap.get(st.id) || [];
+      const coveringAbsence = studentAbsences.find(ab => {
+        if (!hwDueDate) return false;
+        return ab.date_from <= hwDueDate && ab.date_to >= hwDueDate;
+      });
+
       return {
         studentId: st.id,
         studentName: st.full_name,
         house: st.house || 'ravnheim',
+        classYear: st.class_year,
         status: computedStatus,
         submission: sub ? dbHomeworkSubmissionToFrontend(sub, versions, exc) : null,
-        exception: exc ? dbHomeworkExceptionToFrontend(exc) : null
+        exception: exc ? dbHomeworkExceptionToFrontend(exc) : null,
+        activeAbsence: coveringAbsence ? {
+          dateFrom: coveringAbsence.date_from,
+          dateTo: coveringAbsence.date_to,
+          status: coveringAbsence.status
+        } : null
       };
     });
 
@@ -1053,7 +1144,7 @@ router.post('/:id/submit', requireAuth, (req, res) => {
         hw.professor_id,
         hw.professor_name,
         `Adept ${student.fullName} oddał pracę: ${hw.title}`,
-        `Adept ${student.fullName} (${student.house?.toUpperCase() || 'BRAK'}) złożył pracę domową z przedmiotu ${hw.subject_name}: „${hw.title}” (Wersja ${newVersionNumber}).`,
+        `Adept ${student.fullName} (${student.house?.toUpperCase() || 'BRAK'}) złożył pracę domową z przedmiotu ${hw.subject_name}: „${hw.title}" (Wersja ${newVersionNumber}).`,
         'homework'
       );
     }
@@ -1082,6 +1173,7 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
       feedback = '',
       inlineAnnotations = [],
       housePointsAwarded = 0,
+      skirnirAwarded = 0,
       isFeatured = false,
       featuredBadge = '',
       achievementAwarded = '',
@@ -1103,6 +1195,10 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
     const professor = req.user;
 
     const tx = db.transaction(() => {
+      // Check if this is a re-grade (previous points existed)
+      const prevPointsAwarded = sub.house_points_awarded || 0;
+      const prevSkirnirAwarded = sub.skirnir_awarded || 0;
+
       // 1. Update submission record
       db.prepare(`
         UPDATE homework_submissions SET
@@ -1115,6 +1211,7 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
           feedback = ?,
           inline_annotations = ?,
           house_points_awarded = ?,
+          skirnir_awarded = ?,
           is_featured = ?,
           featured_badge = ?,
           achievement_awarded = ?,
@@ -1132,6 +1229,7 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
         feedback.trim(),
         JSON.stringify(inlineAnnotations),
         housePointsAwarded,
+        skirnirAwarded,
         isFeatured ? 1 : 0,
         featuredBadge,
         achievementAwarded,
@@ -1155,22 +1253,54 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
         sub.current_version || 1
       );
 
-      // 3. Award House & Student Points via central service
+      // 3. Award House & Student Points via central service (idempotent, handles re-grade)
       if (housePointsAwarded > 0 && sub.house) {
-        awardPoints({
-          studentId: sub.student_id,
-          studentName: sub.student_name,
-          house: sub.house,
-          points: housePointsAwarded,
-          source: `Praca domowa: ${hw ? hw.title : sub.subject_name}`,
-          sourceType: 'HOMEWORK',
-          sourceId: sub.homework_id || subId,
-          lessonId: sub.lesson_id || (hw?.lesson_id || null),
-          actorId: professor.id,
-          actorName: professor.fullName,
-          comment: `Nagroda za pracę domową „${hw ? hw.title : sub.subject_name}” (${numericScore}/${gradeMax} pkt) od ${professor.fullName}`,
-          idempotencyKey: `homework-grade-${subId}`
-        });
+        const idempKey = `homework-grade-pts-${subId}`;
+        const existingPtTx = db.prepare("SELECT id, points FROM point_transactions WHERE idempotency_key = ?").get(idempKey);
+
+        if (existingPtTx && existingPtTx.points !== housePointsAwarded) {
+          // Re-grade with different points: correct the existing transaction
+          try {
+            correctTransaction(existingPtTx.id, housePointsAwarded, professor.id, professor.fullName,
+              `Korekta oceny pracy domowej „${hw ? hw.title : sub.subject_name}"`);
+          } catch (_) {}
+        } else if (!existingPtTx) {
+          awardPoints({
+            studentId: sub.student_id,
+            studentName: sub.student_name,
+            house: sub.house,
+            points: housePointsAwarded,
+            source: `Praca domowa: ${hw ? hw.title : sub.subject_name}`,
+            sourceType: 'HOMEWORK',
+            sourceId: sub.homework_id || subId,
+            lessonId: sub.lesson_id || (hw?.lesson_id || null),
+            actorId: professor.id,
+            actorName: professor.fullName,
+            comment: `Nagroda za pracę domową „${hw ? hw.title : sub.subject_name}" (${numericScore}/${gradeMax} pkt) od ${professor.fullName}`,
+            idempotencyKey: idempKey
+          });
+        }
+      }
+
+      // 3b. Award Skirniry via central Skirnir service (idempotent)
+      if (skirnirAwarded > 0 && sub.student_id) {
+        try {
+          creditSkirniry({
+            userId: sub.student_id,
+            userName: sub.student_name,
+            amount: skirnirAwarded,
+            category: 'nagroda-akademicka',
+            title: `Nagroda za pracę domową: ${hw ? hw.title : sub.subject_name}`,
+            note: `Przyznano przez ${professor.fullName} za ocenę ${numericScore}/${gradeMax} pkt`,
+            sourceType: 'HOMEWORK',
+            sourceId: sub.homework_id || subId,
+            actorId: professor.id,
+            actorName: professor.fullName,
+            idempotencyKey: `homework-grade-skr-${subId}`
+          });
+        } catch (skirnirErr) {
+          console.warn('[Homework Grade] Błąd przyznawania Skirnirów:', skirnirErr.message);
+        }
       }
 
       // 4. Record to central Gradebook (grades table) if requested
@@ -1238,21 +1368,31 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
     const updatedSub = tx();
     const rankings = calculateHouseRankings('overall');
 
-    // Notify student
+    // Notify student (build comprehensive message)
+    const bonusParts = [];
+    if (housePointsAwarded > 0) bonusParts.push(`+${housePointsAwarded} pkt dla Zakonu ${sub.house?.toUpperCase()}`);
+    if (skirnirAwarded > 0) bonusParts.push(`+${skirnirAwarded} Skirnirów`);
+    const bonusStr = bonusParts.length > 0 ? ` Bonus: ${bonusParts.join(', ')}!` : '';
+
     createNotification(
       sub.student_id,
       sub.student_name,
       `Twoja praca domowa została oceniona: ${hw?.title || sub.subject_name}`,
-      `Profesor ${professor.fullName} ocenił Twoją pracę domową z przedmiotu ${sub.subject_name}: „${hw?.title || ''}”. Wynik: ${numericScore}/${gradeMax} pkt (${percentage}%, ${gradeLabel}).${housePointsAwarded > 0 ? ` Przyznano +${housePointsAwarded} punktów dla Zakonu ${sub.house?.toUpperCase()}!` : ''}`,
+      `Profesor ${professor.fullName} ocenił Twoją pracę domową z przedmiotu ${sub.subject_name}: „${hw?.title || ''}". Wynik: ${numericScore}/${gradeMax} pkt (${percentage}%, ${gradeLabel}).${bonusStr}`,
       'homework'
     );
 
     const versions = db.prepare('SELECT * FROM homework_submission_versions WHERE submission_id = ? ORDER BY version_number DESC').all(subId);
     const exc = db.prepare('SELECT * FROM homework_exceptions WHERE homework_id = ? AND student_id = ?').get(sub.homework_id, sub.student_id);
 
+    const awardedParts = [];
+    if (housePointsAwarded > 0) awardedParts.push(`+${housePointsAwarded} pkt dla Zakonu`);
+    if (skirnirAwarded > 0) awardedParts.push(`+${skirnirAwarded} Skirnirów`);
+    const awardedStr = awardedParts.length > 0 ? ` Przyznano: ${awardedParts.join(', ')}.` : '';
+
     res.json({
       ok: true,
-      message: `Praca została pomyślnie oceniona (${numericScore}/${gradeMax} pkt • ${gradeLabel}).${housePointsAwarded > 0 ? ` Przyznano +${housePointsAwarded} pkt dla Zakonu.` : ''}`,
+      message: `Praca została pomyślnie oceniona (${numericScore}/${gradeMax} pkt • ${gradeLabel}).${awardedStr}`,
       submission: dbHomeworkSubmissionToFrontend(updatedSub, versions, exc),
       rankings
     });
@@ -1301,7 +1441,7 @@ router.post('/submissions/:subId/return', requireAuth, requireRole('professor', 
       sub.student_id,
       sub.student_name,
       `Praca zwrócona do poprawy: ${hw?.title || sub.subject_name}`,
-      `Profesor ${professor.fullName} zwrócił Twoją pracę domową do poprawy. Powód: „${reason}”.${revisionDueDate ? ` Nowy termin poprawy: ${revisionDueDate}.` : ''}`,
+      `Profesor ${professor.fullName} zwrócił Twoją pracę domową do poprawy. Powód: „${reason}".${revisionDueDate ? ` Nowy termin poprawy: ${revisionDueDate}.` : ''}`,
       'homework'
     );
 

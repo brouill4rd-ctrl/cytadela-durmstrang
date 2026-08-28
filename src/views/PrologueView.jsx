@@ -320,7 +320,7 @@ export const PrologueView = ({ onComplete }) => {
             {/* Body */}
             <p className="pl-parchment-body">
               Rada Arcymistrzów Twierdzy Magii Durmstrang ma zaszczyt poinformować, że po wnikliwym
-              rozpatrzeniu dokumentów rekrutacyjnych, zostałaś/eś oficjalnie przyjęta/y w poczet adeptów
+              rozpatrzeniu dokumentów rekrutacyjnych, {letter.acceptanceClause} w poczet adeptów
               na&nbsp;<strong>{letter.schoolYear}</strong>.
             </p>
             <p className="pl-parchment-body">

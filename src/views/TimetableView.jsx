@@ -549,8 +549,7 @@ export const TimetableView = () => {
               <option value="all">Wszystkie Klasy</option>
               <option value="Klasa I">Klasa I • Fundamenty</option>
               <option value="Klasa II">Klasa II • Zaawansowana</option>
-              <option value="Klasa III">Klasa III • Specjalizacje</option>
-              <option value="Klasa IV">Klasa IV • Krąg Mistrzowski</option>
+              <option value="Staż nauczycielski">Staż nauczycielski</option>
               <option value="Wszyscy">Dla Wszystkich Adeptów</option>
             </select>
           </div>
@@ -1861,8 +1860,7 @@ const AddEditLessonModal = ({
               >
                 <option value="Klasa I">Klasa I • Fundamenty</option>
                 <option value="Klasa II">Klasa II • Zaawansowana</option>
-                <option value="Klasa III">Klasa III • Specjalizacje</option>
-                <option value="Klasa IV">Klasa IV • Mistrzowska</option>
+                <option value="Staż nauczycielski">Staż nauczycielski</option>
                 <option value="Wszyscy">Dla Wszystkich Adeptów</option>
               </select>
             </div>

@@ -17,6 +17,8 @@ import {
   Calendar,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   DoorOpen,
   Lock,
   AlertTriangle
@@ -69,6 +71,7 @@ export const HousesView = () => {
   const [individualRankingTab, setIndividualRankingTab] = useState('students'); // 'students' | 'staff'
   const [commonRoomOpen, setCommonRoomOpen] = useState(false);
   const [wardAlert, setWardAlert] = useState(null);
+  const [showAllPointTransactions, setShowAllPointTransactions] = useState(false);
 
   useEffect(() => {
     if (activeHouseTab) {
@@ -95,12 +98,17 @@ export const HousesView = () => {
     return txH === normSelectedKey && !tx.isRevoked;
   });
   const housePointBalance = housePointTransactions.reduce((sum, tx) => sum + (Number(tx.points) || 0), 0);
+  const visiblePointTransactions = showAllPointTransactions
+    ? housePointTransactions
+    : housePointTransactions.slice(0, 10);
+  const hiddenPointTransactionsCount = Math.max(housePointTransactions.length - 10, 0);
 
   const handleTabChange = (key) => {
     playWandSwoosh();
     setSelectedHouseKey(key);
     setActiveHouseTab(key);
     setWardAlert(null);
+    setShowAllPointTransactions(false);
   };
 
   const handleOpenLesson = (lessonId) => {
@@ -682,7 +690,7 @@ export const HousesView = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {housePointTransactions.map((tx) => {
+                {visiblePointTransactions.map((tx) => {
                   const points = Number(tx.points) || 0;
                   const isPositive = points >= 0;
                   const sourceLabel = POINT_SOURCE_LABELS[tx.sourceType] || (tx.lessonId ? 'Lekcja' : 'Inne źródło');
@@ -740,6 +748,43 @@ export const HousesView = () => {
                     </div>
                   );
                 })}
+
+                {hiddenPointTransactionsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPointTransactions(current => !current)}
+                    aria-expanded={showAllPointTransactions}
+                    style={{
+                      alignSelf: 'center',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.45rem',
+                      marginTop: '0.35rem',
+                      padding: '0.65rem 1.1rem',
+                      border: `1px solid ${houseTheme.secondaryColor}`,
+                      borderRadius: '6px',
+                      background: 'rgba(15, 20, 30, 0.85)',
+                      color: houseTheme.secondaryColor,
+                      fontFamily: 'inherit',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showAllPointTransactions ? (
+                      <>
+                        Pokaż tylko 10 najnowszych
+                        <ChevronUp size={16} />
+                      </>
+                    ) : (
+                      <>
+                        Pokaż starsze wpisy ({hiddenPointTransactionsCount})
+                        <ChevronDown size={16} />
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>

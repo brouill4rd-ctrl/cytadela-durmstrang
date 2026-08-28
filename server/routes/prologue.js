@@ -3,6 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getWorldState } from '../worldState.js';
 import { credit as creditSkirnir } from '../services/skirnirService.js';
+import { getAcceptanceClause, getLetterSalutation } from '../utils/polishGender.js';
 
 const router = Router();
 const stages = ['LETTER_PENDING', 'LETTER_OPENED', 'PREPARATION', 'PORT', 'SHIP', 'FJORD', 'BORDER_CONTROL', 'GREAT_HALL', 'ARRIVED', 'COMPLETED'];
@@ -66,7 +67,8 @@ function publicState(user, row) {
     kitStatus,
     character: { firstName: user.name, lastName: user.surname, fullName: user.full_name, className: user.class_year, origin: user.origin, companion: user.companion },
     letter: {
-      salutation: user.gender?.toLowerCase().includes('kob') ? `Szanowna Panno ${user.surname}` : `Szanowny Panie ${user.surname}`,
+      salutation: getLetterSalutation(user.gender, user.surname),
+      acceptanceClause: getAcceptanceClause(user.gender),
       schoolYear: 'XIX Rok Szkolny',
       signatoryName,
       signatoryTitle,

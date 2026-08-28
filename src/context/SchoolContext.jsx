@@ -3051,7 +3051,15 @@ Dyrektor Cytadeli Durmstrang`
       const res = await api.updateSubject(subjectId, fields);
       if (res.ok) {
         setSubjects(prev => prev.map(s => s.id === subjectId ? res.data : s));
-        if (activeSubjectDetail?.id === subjectId) setActiveSubjectDetail(res.data);
+        if (activeSubjectDetail?.id === subjectId) {
+          setActiveSubjectDetail(prev => prev ? {
+            ...prev,
+            ...res.data,
+            grades: prev.grades || [],
+            recentLessons: prev.recentLessons || [],
+            stats: prev.stats || {}
+          } : prev);
+        }
         showNotification('Katedra Zaktualizowana', 'Dane przedmiotu zostały zapisane.', 'success');
         return res.data;
       }

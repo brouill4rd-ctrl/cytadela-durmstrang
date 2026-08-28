@@ -202,6 +202,7 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
 // PUT /api/subjects/:id - Aktualizacja danych przedmiotu (Admin / Przypisany Profesor)
 router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
   try {
+    const canManageSubjectAssignment = req.user.role === 'admin';
     const {
       name,
       code,
@@ -247,13 +248,13 @@ router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
       category !== undefined ? category.trim() : null,
       description !== undefined ? description.trim() : null,
       classroom !== undefined ? classroom.trim() : null,
-      professorId !== undefined ? professorId.trim() : null,
-      professorName !== undefined ? professorName.trim() : null,
+      canManageSubjectAssignment && professorId !== undefined ? professorId.trim() : null,
+      canManageSubjectAssignment && professorName !== undefined ? professorName.trim() : null,
       bannerUrl !== undefined ? bannerUrl.trim() : null,
       bannerGradient !== undefined ? bannerGradient.trim() : null,
-      classYears !== undefined ? JSON.stringify(classYears) : null,
-      isActive !== undefined ? (isActive ? 1 : 0) : null,
-      sortOrder !== undefined ? parseInt(sortOrder, 10) : null,
+      canManageSubjectAssignment && classYears !== undefined ? JSON.stringify(classYears) : null,
+      canManageSubjectAssignment && isActive !== undefined ? (isActive ? 1 : 0) : null,
+      canManageSubjectAssignment && sortOrder !== undefined ? parseInt(sortOrder, 10) : null,
       req.params.id
     );
 

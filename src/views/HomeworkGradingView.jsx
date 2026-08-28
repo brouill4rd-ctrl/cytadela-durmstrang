@@ -64,6 +64,7 @@ export const HomeworkGradingView = () => {
   const [rubricScores, setRubricScores] = useState({});
   const [feedback, setFeedback] = useState('');
   const [housePointsAwarded, setHousePointsAwarded] = useState(0);
+  const [skirnirAwarded, setSkirnirAwarded] = useState(0);
   const [isFeatured, setIsFeatured] = useState(false);
   const [featuredBadge, setFeaturedBadge] = useState('★ Wybitna Praca Badawcza');
   const [recordToGradebook, setRecordToGradebook] = useState(true);
@@ -131,6 +132,7 @@ export const HomeworkGradingView = () => {
       const sub = st.submission;
       setFeedback(sub.feedback || '');
       setHousePointsAwarded(sub.housePointsAwarded || 0);
+      setSkirnirAwarded(sub.skirnirAwarded || 0);
       setIsFeatured(!!sub.isFeatured);
       setFeaturedBadge(sub.featuredBadge || '★ Wybitna Praca Badawcza');
       setInlineAnnotations(sub.inlineAnnotations || []);
@@ -151,6 +153,7 @@ export const HomeworkGradingView = () => {
     } else {
       setFeedback('');
       setHousePointsAwarded(0);
+      setSkirnirAwarded(0);
       setIsFeatured(false);
       setInlineAnnotations([]);
       setGradeScore(hwObj?.maxPoints || 20);
@@ -218,6 +221,7 @@ export const HomeworkGradingView = () => {
         feedback,
         inlineAnnotations,
         housePointsAwarded,
+        skirnirAwarded,
         isFeatured,
         featuredBadge,
         recordToGradebook
@@ -386,6 +390,11 @@ export const HomeworkGradingView = () => {
                     ) : (
                       <span className="badge-missing">NIE ODDANO</span>
                     )}
+                    {st.activeAbsence && (
+                      <span className="badge-absence" title={`Usprawiedliwienie: ${st.activeAbsence.dateFrom} – ${st.activeAbsence.dateTo}`}>
+                        USP.
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -410,6 +419,16 @@ export const HomeworkGradingView = () => {
                       )}
                       {sub?.isLate && (
                         <span className="late-pill">SPÓŹNIONA</span>
+                      )}
+                      {selectedStudent.activeAbsence && (
+                        <span className="absence-info-pill" title="Zatwierdzone usprawiedliwienie obejmuje termin tej pracy">
+                          ✓ USPRAWIEDLIWIENIE (do {selectedStudent.activeAbsence.dateTo})
+                        </span>
+                      )}
+                      {selectedStudent.exception?.customDueDate && (
+                        <span className="custom-deadline-pill">
+                          Ind. termin: {new Date(selectedStudent.exception.customDueDate).toLocaleDateString('pl-PL')}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -636,6 +655,21 @@ export const HomeworkGradingView = () => {
                           <option value="10">+10 pkt dla Zakonu (Wyróżnienie)</option>
                           <option value="15">+15 pkt dla Zakonu (Wybitny esej)</option>
                           <option value="20">+20 pkt dla Zakonu (Arcydzieło)</option>
+                        </select>
+                      </div>
+
+                      <div className="bonus-row mt-2">
+                        <span>Skirniry dla adepta:</span>
+                        <select
+                          value={skirnirAwarded}
+                          onChange={(e) => setSkirnirAwarded(parseInt(e.target.value) || 0)}
+                          className="tmd-select small-select"
+                        >
+                          <option value="0">0 Skirnirów (brak)</option>
+                          <option value="5">+5 Skirnirów</option>
+                          <option value="10">+10 Skirnirów (Solidna praca)</option>
+                          <option value="20">+20 Skirnirów (Wyróżnienie)</option>
+                          <option value="30">+30 Skirnirów (Arcydzieło)</option>
                         </select>
                       </div>
 

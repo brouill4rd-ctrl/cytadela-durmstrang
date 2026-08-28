@@ -1270,6 +1270,62 @@ export class DurmstrangDiscordBot {
     });
   }
 
+  // ==================== MODUŁ PRAC DOMOWYCH — POWIADOMIENIA ====================
+
+  async announceHomeworkCreated(homework) {
+    if (!this.client?.isReady()) return;
+    try {
+      const channel = this.client.channels.cache.find(c =>
+        c.isTextBased?.() && (
+          c.name.includes('prace-domowe') || c.name.includes('prace_domowe') ||
+          c.name.includes('zadania') || c.name.includes('ogłoszenia') ||
+          c.name.includes('ogloszenia') || c.name.includes('katedry')
+        )
+      );
+      if (!channel) return;
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const typeLabels = {
+        homework: 'Praca domowa', essay: 'Esej', practical: 'Zadanie praktyczne',
+        report: 'Raport', analysis: 'Analiza', project: 'Projekt', extra: 'Praca dodatkowa'
+      };
+      const typeLabel = typeLabels[homework.type] || 'Praca domowa';
+
+      const dueDate = homework.dueDate
+        ? new Date(homework.dueDate).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) +
+          ' o ' + new Date(homework.dueDate).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+        : '—';
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📜 NOWA PRACA DOMOWA • ${(homework.subjectName || homework.subjectId || '').toUpperCase()}`)
+        .setDescription(
+          `Profesor **${homework.professorName}** wystawił nową pracę z Katedry **${homework.subjectName || homework.subjectId}**.\n\n` +
+          `**„${homework.title}"**\n\n` +
+          (homework.description ? `*${homework.description.slice(0, 200)}${homework.description.length > 200 ? '...' : ''}*\n\n` : '') +
+          `**Klasa:** ${homework.classYear || 'Wszystkie klasy'}\n` +
+          `**Typ:** ${typeLabel}\n` +
+          `**Termin oddania:** ${dueDate}\n` +
+          `**Maks. punktów:** ${homework.maxPoints || 20} pkt`
+        )
+        .setColor(0x8B6A38)
+        .setFooter({ text: 'Twierdza Magii Durmstrang • Katedry Akademickie' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Otwórz Centrum Prac Domowych')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${frontendUrl}/#/homework`)
+          .setEmoji('📚')
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      console.log(`📜 [Discord Bot] Wysłano ogłoszenie nowej pracy domowej: ${homework.title}`);
+    } catch (err) {
+      console.warn('[Discord Bot] Błąd ogłoszenia pracy domowej:', err.message);
+    }
+  }
+
   // ==================== MODUŁ EGZAMINACYJNY — POWIADOMIENIA ====================
 
   async announceExamOpened(exam) {

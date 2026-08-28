@@ -38,6 +38,11 @@ export const HomeworkCreatorView = () => {
     showNotification
   } = useSchool();
 
+  // For professors: only show subjects they actually teach
+  const availableSubjects = currentUser?.role === 'professor' && currentUser?.taughtSubjects?.length > 0
+    ? subjects.filter(s => currentUser.taughtSubjects.includes(s.id))
+    : subjects;
+
   const { playRuneChime, playWandSwoosh } = useSound();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -333,10 +338,13 @@ export const HomeworkCreatorView = () => {
                   onChange={(e) => handleSubjectChange(e.target.value)}
                   className="tmd-select"
                 >
-                  {subjects.map(s => (
+                  {availableSubjects.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
+                {currentUser?.role === 'professor' && availableSubjects.length === 0 && (
+                  <span className="field-hint-warn">Brak przypisanych przedmiotów. Skontaktuj się z Dyrekcją.</span>
+                )}
               </div>
 
               <div className="form-field">

@@ -267,7 +267,16 @@ export const App = () => {
       <SnowCanvas />
 
       {/* Dynamic Aurora Borealis Canvas */}
-      <AuroraCanvas enabled={auroraEnabled && effectiveMode !== 'QUIET'} intensity={worldState.skyState === 'AURORA' ? (effectiveMode === 'FULL' ? 1 : 0.55) : 0.2} />
+      <AuroraCanvas
+        enabled={auroraEnabled && effectiveMode !== 'QUIET' && worldState.weather !== 'STORM' && worldState.weather !== 'BLIZZARD'}
+        intensity={(() => {
+          if (worldState.weather === 'HEAVY_SNOW') return 0.12;
+          if (worldState.weather === 'FOG') return 0.08;
+          const base = worldState.skyState === 'AURORA' ? (effectiveMode === 'FULL' ? 1 : 0.55) : 0.18;
+          const moonBonus = worldState.moonPhase === 'FULL_MOON' ? 1.35 : worldState.moonPhase === 'WAXING_GIBBOUS' || worldState.moonPhase === 'WANING_GIBBOUS' ? 1.1 : 1;
+          return Math.min(1, base * moonBonus);
+        })()}
+      />
       <CitadelAstrolabe />
 
       {/* Global Notification Toast — kept above the Magiczna Północ indicator */}
