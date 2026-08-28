@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export const Footer = () => {
-  const { setActiveView, setActiveHouseTab } = useSchool();
+  const { setActiveView, setActiveHouseTab, currentUser } = useSchool();
 
   const handleHouseClick = (houseId) => {
     if (setActiveHouseTab) setActiveHouseTab(houseId);
@@ -144,15 +144,17 @@ export const Footer = () => {
             <Compass size={15} color="var(--gold-ancient)" /> Wrota Twierdzy
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.86rem' }}>
-            <li>
-              <button
-                onClick={() => setActiveView('ceremony')}
-                style={{ background: 'none', border: 'none', color: '#b0b7c3', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
-              >
-                <Sparkles size={14} color="var(--gold-ancient)" />
-                <span>Rytuał Kamienia Przysięgi</span>
-              </button>
-            </li>
+            {(!currentUser || currentUser.role === 'student') && (
+              <li>
+                <button
+                  onClick={() => setActiveView('ceremony')}
+                  style={{ background: 'none', border: 'none', color: '#b0b7c3', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: 0 }}
+                >
+                  <Sparkles size={14} color="var(--gold-ancient)" />
+                  <span>Rytuał Kamienia Przysięgi</span>
+                </button>
+              </li>
+            )}
             <li>
               <button
                 onClick={() => setActiveView('academic')}

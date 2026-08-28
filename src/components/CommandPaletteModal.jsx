@@ -184,6 +184,7 @@ export const CommandPaletteModal = ({ isOpen, onClose }) => {
 
   // Filter items based on query
   const filteredItems = ALL_ITEMS.filter(item => {
+    if (item.view === 'ceremony' && currentUser?.role !== 'student') return false;
     if (!query.trim()) return true;
     const q = query.toLowerCase().trim();
     return (
@@ -198,6 +199,10 @@ export const CommandPaletteModal = ({ isOpen, onClose }) => {
     onClose();
 
     if (item.type === 'view') {
+      if (item.view === 'ceremony' && currentUser?.role !== 'student') {
+        showNotification('Rytuał Niedostępny', 'Ceremonia Przydziału jest przeznaczona wyłącznie dla adeptów.', 'warning');
+        return;
+      }
       setActiveView(item.view);
     } else if (item.type === 'house') {
       setActiveHouseTab(item.houseId);

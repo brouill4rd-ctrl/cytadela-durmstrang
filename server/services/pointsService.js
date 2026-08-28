@@ -62,7 +62,8 @@ export function awardPoints({
   comment = '',
   idempotencyKey = ''
 }) {
-  if (!house || !points || points <= 0) {
+  const numericPoints = Number(points);
+  if (!house || !Number.isFinite(numericPoints) || numericPoints <= 0) {
     throw new Error('Wymagany Zakon i dodatnia liczba punktów.');
   }
 
@@ -87,7 +88,7 @@ export function awardPoints({
       studentId || null,
       studentName || 'Adept',
       house.toLowerCase(),
-      points,
+      numericPoints,
       source || 'Ręczne przyznanie',
       sourceType,
       sourceId,
@@ -103,7 +104,7 @@ export function awardPoints({
 
     // Update cached points on user (cache, not source of truth)
     if (studentId) {
-      _db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(points, points * 10, studentId);
+      _db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(numericPoints, numericPoints * 10, studentId);
     }
 
     return txId;

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { LivingHourglasses } from '../components/LivingHourglasses';
 import { CommonRoomModal } from '../components/CommonRoomModal';
 import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from '../components/HeraldicEmblems';
 import {
@@ -14,15 +13,13 @@ import {
   Compass,
   BookOpen,
   Crown,
-  TrendingUp,
   Clock,
   Calendar,
   ExternalLink,
   ChevronRight,
   DoorOpen,
   Lock,
-  AlertTriangle,
-  Trophy
+  AlertTriangle
 } from 'lucide-react';
 
 const HOUSE_BANNER_IMAGES = {
@@ -30,6 +27,26 @@ const HOUSE_BANNER_IMAGES = {
   bjornhall: '/banery_zakony/bjornhall-baner.png',
   ravnheim: '/banery_zakony/baner-ravnheim.png',
   otergard: '/banery_zakony/otergard-baner.png'
+};
+
+const POINT_SOURCE_LABELS = {
+  LESSON: 'Lekcja',
+  HOMEWORK: 'Praca domowa',
+  ACTIVITY: 'Aktywność',
+  QUEST: 'Zadanie',
+  SECRET: 'Odkrycie tajemnicy',
+  WORKSHOP: 'Warsztat',
+  SHOPPING_LIST: 'Lista zakupów',
+  LOTTERY_WIN: 'Loteria',
+  EVENT: 'Wydarzenie',
+  ADMIN_AWARD: 'Nagroda administracyjna',
+  ADMIN_DEDUCTION: 'Kara administracyjna',
+  ADMIN_HOUSE_AWARD: 'Nagroda dla Zakonu',
+  ADMIN_HOUSE_DEDUCTION: 'Kara dla Zakonu',
+  ADMIN_CORRECTION: 'Korekta',
+  LEGACY_BALANCE_IMPORT: 'Bilans początkowy',
+  MANUAL: 'Przyznanie ręczne',
+  LEGACY: 'Wpis archiwalny'
 };
 
 export const HousesView = () => {
@@ -41,9 +58,6 @@ export const HousesView = () => {
     staffRanking,
     setActiveView,
     setActiveLessonId,
-    houseRankings,
-    rankingPeriod,
-    fetchRankings,
     pointLedger,
     currentUser,
     setAuthModalOpen
@@ -52,7 +66,6 @@ export const HousesView = () => {
   const { playWandSwoosh, playGateThud } = useSound();
 
   const [selectedHouseKey, setSelectedHouseKey] = useState(activeHouseTab || 'reinhall');
-  const [activePeriod, setActivePeriod] = useState(rankingPeriod || 'overall');
   const [individualRankingTab, setIndividualRankingTab] = useState('students'); // 'students' | 'staff'
   const [commonRoomOpen, setCommonRoomOpen] = useState(false);
   const [wardAlert, setWardAlert] = useState(null);
@@ -76,25 +89,18 @@ export const HousesView = () => {
   const hasDormAccess = Boolean(currentUser && (isStaff || (userHouseKey && userHouseKey === normSelectedKey)));
   const userAssignedHouse = userHouseKey ? (houses[userHouseKey] || { name: HOUSE_RUNIC_DATA[userHouseKey]?.animal || userHouseKey }) : null;
 
-  // Filter house point transactions from ledger (Single Source of Truth)
-  const houseLessonPoints = (pointLedger || []).filter(tx => {
+  // All active house transactions, regardless of how the points were earned.
+  const housePointTransactions = (pointLedger || []).filter(tx => {
     const txH = normalizeHouseKey(tx.house);
     return txH === normSelectedKey && !tx.isRevoked;
   });
+  const housePointBalance = housePointTransactions.reduce((sum, tx) => sum + (Number(tx.points) || 0), 0);
 
   const handleTabChange = (key) => {
     playWandSwoosh();
     setSelectedHouseKey(key);
     setActiveHouseTab(key);
     setWardAlert(null);
-  };
-
-  const handlePeriodChange = async (period) => {
-    playWandSwoosh();
-    setActivePeriod(period);
-    if (fetchRankings) {
-      await fetchRankings(period);
-    }
   };
 
   const handleOpenLesson = (lessonId) => {
@@ -142,14 +148,7 @@ export const HousesView = () => {
         </p>
       </div>
 
-      {/* =========================================================================
-          1. 3D LIVING HOURGLASSES (KRYSZTAŁY PUNKTÓW PUCHARU PÓŁNOCY)
-          ========================================================================= */}
-      <LivingHourglasses />
-
-      {/* =========================================================================
-          2. DYNAMIC PUCHAR CYTADELI LEADERBOARD (SINGLE SOURCE OF TRUTH)
-          ========================================================================= */}
+      {/* Individual leaderboard: adepts and staff */}
       <div
         style={{
           background: 'linear-gradient(180deg, rgba(20, 26, 38, 0.95) 0%, rgba(10, 14, 22, 0.98) 100%)',
@@ -159,169 +158,11 @@ export const HousesView = () => {
           boxShadow: '0 15px 40px rgba(0,0,0,0.85)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Trophy size={24} color="var(--gold-glow)" />
-              <h2 style={{ margin: 0, color: '#ffffff', fontSize: '1.35rem', fontFamily: 'var(--font-heading)', letterSpacing: '0.04em' }}>
-                PUCHAR TWIERDZY MAGII (TMD) — RANKING ZAKONÓW
-              </h2>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              {houseRankings?.schoolYear || 'XIX Rok Szkolny'} • {houseRankings?.term || 'Semestr Zimowy'} • Wyliczany w czasie rzeczywistym z zatwierdzonych dzienników
-            </div>
-          </div>
-
-          {/* Temporal Ranking Selector Tabs */}
-          <div
-            style={{
-              display: 'flex',
-              background: 'rgba(8, 11, 16, 0.9)',
-              border: '1px solid rgba(197, 159, 78, 0.3)',
-              borderRadius: '20px',
-              padding: '0.2rem',
-              gap: '0.2rem'
-            }}
-          >
-            {[
-              { id: 'overall', label: 'Ogólny' },
-              { id: 'school_year', label: 'Rok Szkolny' },
-              { id: 'monthly', label: 'Miesięczny' },
-              { id: 'weekly', label: 'Tygodniowy' }
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handlePeriodChange(p.id)}
-                style={{
-                  background: activePeriod === p.id ? 'linear-gradient(135deg, #c59f4e 0%, #9a7629 100%)' : 'transparent',
-                  color: activePeriod === p.id ? '#090d14' : '#cbd5e1',
-                  border: 'none',
-                  borderRadius: '16px',
-                  padding: '0.35rem 0.85rem',
-                  fontSize: '0.75rem',
-                  fontWeight: activePeriod === p.id ? 800 : 500,
-                  fontFamily: 'var(--font-heading)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Standings Grid — W JEDNEJ LINII (4 KOLUMNY W 1 RZĘDZIE) */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-            gap: '1rem'
-          }}
-        >
-          {(houseRankings?.standings || []).map((st) => {
-            const normKey = normalizeHouseKey(st.houseKey);
-            const h = houses[st.houseKey] || houses[normKey] || { name: st.name, colors: { primary: '#151b26', secondary: '#c59f4e', border: 'rgba(197,159,78,0.4)', glow: 'none' } };
-            const isFirst = st.rank === 1;
-            const runicData = HOUSE_RUNIC_DATA[normKey] || HOUSE_RUNIC_DATA.reinhall;
-
-            const rankBadgeColor =
-              st.rank === 1
-                ? { text: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.5)' }
-                : st.rank === 2
-                ? { text: '#cbd5e1', bg: 'rgba(203, 213, 225, 0.12)', border: 'rgba(203, 213, 225, 0.35)' }
-                : st.rank === 3
-                ? { text: '#d97706', bg: 'rgba(217, 119, 6, 0.12)', border: 'rgba(217, 119, 6, 0.35)' }
-                : { text: '#94a3b8', bg: 'rgba(148, 163, 184, 0.08)', border: 'rgba(148, 163, 184, 0.2)' };
-
-            return (
-              <div
-                key={st.houseKey}
-                onClick={() => handleTabChange(st.houseKey)}
-                style={{
-                  background: isFirst
-                    ? 'linear-gradient(135deg, rgba(40, 32, 15, 0.95) 0%, rgba(15, 20, 30, 0.95) 100%)'
-                    : 'rgba(12, 16, 24, 0.85)',
-                  border: isFirst ? '1.5px solid var(--gold-glow)' : `1px solid ${runicData.secondaryColor}`,
-                  borderRadius: '8px',
-                  padding: '1.1rem',
-                  cursor: 'pointer',
-                  boxShadow: isFirst ? '0 0 25px rgba(197, 159, 78, 0.3)' : 'none',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.85rem',
-                          fontWeight: 800,
-                          color: rankBadgeColor.text,
-                          background: rankBadgeColor.bg,
-                          border: `1px solid ${rankBadgeColor.border}`,
-                          borderRadius: '4px',
-                          padding: '0.15rem 0.5rem',
-                          fontFamily: 'var(--font-heading)',
-                          letterSpacing: '0.05em'
-                        }}
-                      >
-                        #{st.rank}
-                      </span>
-                      <span style={{ fontFamily: 'serif', fontSize: '1rem', color: runicData.secondaryColor }}>
-                        {runicData.rune}
-                      </span>
-                    </div>
-
-                    {st.momentum > 0 && (
-                      <span
-                        style={{
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10b981',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.2rem'
-                        }}
-                      >
-                        <TrendingUp size={12} /> +{st.momentum}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <OrderCrest houseKey={st.houseKey} size={54} />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {st.name}
-                      </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: runicData.secondaryColor, fontFamily: 'var(--font-heading)', marginTop: '0.05rem' }}>
-                        {st.totalPoints} <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>pkt</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.8rem', paddingTop: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Z lekcji: +{st.lessonPoints}</span>
-                  <span>{st.txCount} wpisów</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
         {/* =========================================================================
             INDIVIDUAL LEADERBOARD: ADEPTOWIE ORAZ KADRA & DYREKCJA
             ========================================================================= */}
-        <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(197, 159, 78, 0.2)', paddingTop: '1.5rem' }}>
+        <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -594,9 +435,6 @@ export const HousesView = () => {
                   <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.02rem', fontWeight: 800, color: isSelected ? '#ffffff' : '#b0b7c3', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {h.name}
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: runicData.secondaryColor, fontWeight: 600 }}>
-                    {h.startingPoints || h.points || 0} pkt Północy
-                  </div>
                 </div>
               </div>
               <span style={{ fontFamily: 'serif', fontSize: '1.4rem', color: runicData.secondaryColor, marginLeft: '0.3rem', flexShrink: 0 }}>
@@ -771,7 +609,7 @@ export const HousesView = () => {
                   Puchar Północy
                 </div>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 800, color: houseTheme.secondaryColor, lineHeight: 1.1 }}>
-                  {house.startingPoints || house.points || 0}
+                  {housePointBalance}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#d1d5db' }}>
                   Punktów Zakonu
@@ -814,7 +652,7 @@ export const HousesView = () => {
           </div>
 
           {/* =========================================================================
-              SECTION: PUNKTY Z LEKCJI (HISTORIA ZASILENIA ZAKONU)
+              SECTION: WSZYSTKIE PUNKTY (HISTORIA ZASILENIA ZAKONU)
               ========================================================================= */}
           <div
             style={{
@@ -829,71 +667,79 @@ export const HousesView = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Award size={18} color={houseTheme.secondaryColor} />
                 <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem', fontFamily: 'var(--font-heading)' }}>
-                  PUNKTY Z LEKCJI — REJESTR ZASILENIA ({houseLessonPoints.length})
+                  WSZYSTKIE PUNKTY — REJESTR ZAKONU ({housePointTransactions.length})
                 </h3>
               </div>
               <span style={{ fontSize: '0.78rem', color: houseTheme.secondaryColor, fontWeight: 700 }}>
-                Łącznie z zajęć: +{houseLessonPoints.reduce((s, tx) => s + tx.points, 0)} pkt
+                Bilans wszystkich źródeł: {housePointBalance > 0 ? '+' : ''}{housePointBalance} pkt
               </span>
             </div>
 
 
-            {houseLessonPoints.length === 0 ? (
+            {housePointTransactions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '1.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
-                Brak zarejestrowanych transakcji punktowych z lekcji dla tego Zakonu.
+                Brak zarejestrowanych transakcji punktowych dla tego Zakonu.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {houseLessonPoints.map((tx) => (
-                  <div
-                    key={tx.id}
-                    onClick={() => handleOpenLesson(tx.lessonId)}
-                    style={{
-                      background: 'rgba(15, 20, 30, 0.75)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
-                      borderRadius: '6px',
-                      padding: '0.8rem 1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: tx.lessonId ? 'pointer' : 'default',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = houseTheme.secondaryColor; }}
-                    onMouseLeave={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'; }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-                      <span
-                        style={{
-                          background: 'rgba(46, 196, 182, 0.15)',
-                          color: '#2ec4b6',
-                          fontWeight: 800,
-                          fontSize: '0.9rem',
-                          fontFamily: 'var(--font-heading)',
-                          padding: '0.25rem 0.55rem',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        +{tx.points}
-                      </span>
-                      <div>
-                        <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.88rem' }}>
-                          {tx.source}
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '0.1rem' }}>
-                          Uczeń: <strong>{tx.studentName}</strong> • {tx.professorName} • {tx.date}
-                        </div>
-                      </div>
-                    </div>
+                {housePointTransactions.map((tx) => {
+                  const points = Number(tx.points) || 0;
+                  const isPositive = points >= 0;
+                  const sourceLabel = POINT_SOURCE_LABELS[tx.sourceType] || (tx.lessonId ? 'Lekcja' : 'Inne źródło');
+                  const recipient = tx.studentName ? `Uczeń: ${tx.studentName}` : `Zakon ${house.name}`;
+                  const actor = tx.actorName || tx.professorName;
 
-                    {tx.lessonId && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: houseTheme.secondaryColor, fontSize: '0.78rem', fontWeight: 600 }}>
-                        <span>Zobacz Dziennik</span>
-                        <ChevronRight size={14} />
+                  return (
+                    <div
+                      key={tx.id}
+                      onClick={() => handleOpenLesson(tx.lessonId)}
+                      style={{
+                        background: 'rgba(15, 20, 30, 0.75)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: '6px',
+                        padding: '0.8rem 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: tx.lessonId ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = houseTheme.secondaryColor; }}
+                      onMouseLeave={(e) => { if (tx.lessonId) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+                        <span
+                          style={{
+                            background: isPositive ? 'rgba(46, 196, 182, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                            color: isPositive ? '#2ec4b6' : '#ef4444',
+                            fontWeight: 800,
+                            fontSize: '0.9rem',
+                            fontFamily: 'var(--font-heading)',
+                            padding: '0.25rem 0.55rem',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {points > 0 ? '+' : ''}{points}
+                        </span>
+                        <div>
+                          <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.88rem' }}>
+                            {tx.source || sourceLabel}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                            {recipient} • {sourceLabel}{actor ? ` • ${actor}` : ''}{tx.date ? ` • ${tx.date}` : ''}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {tx.lessonId && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: houseTheme.secondaryColor, fontSize: '0.78rem', fontWeight: 600 }}>
+                          <span>Zobacz Dziennik</span>
+                          <ChevronRight size={14} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

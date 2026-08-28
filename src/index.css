@@ -395,7 +395,8 @@ a:hover {
   position: relative;
   z-index: 5;
   text-align: center;
-  max-width: 960px;
+  width: 100%;
+  max-width: 1280px;
   margin-bottom: 2.8rem;
 }
 
@@ -422,9 +423,10 @@ a:hover {
 
 .hero-main-title {
   font-family: var(--font-title);
-  font-size: clamp(3.2rem, 7vw, 5.6rem);
+  font-size: clamp(1rem, 5.8vw, 5.6rem);
   font-weight: 400;
   letter-spacing: 0.1em;
+  white-space: nowrap;
   text-transform: uppercase;
   background: linear-gradient(180deg, #ffffff 0%, #ebf4fb 45%, #c59f4e 85%, #850f0f 100%);
   -webkit-background-clip: text;
@@ -5394,7 +5396,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(2.4rem, 6vw, 4.2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 4.2rem) !important;
   }
 
   .hero-motto {
@@ -5500,8 +5502,8 @@ table {
 .orders-board__header {
   position: relative;
   display: flex;
-  min-height: 64px;
-  padding: 0.62rem 1.2rem 0.58rem 1.45rem;
+  min-height: 82px;
+  padding: 0.78rem 1.4rem 0.72rem 1.65rem;
   align-items: center;
   justify-content: space-between;
   gap: 1.2rem;
@@ -5521,7 +5523,7 @@ table {
   margin-bottom: 0.06rem;
   color: rgba(195, 177, 136, 0.6);
   font-family: var(--font-heading);
-  font-size: 0.54rem;
+  font-size: 0.66rem;
   letter-spacing: 0.24em;
   line-height: 1;
   text-transform: uppercase;
@@ -5531,7 +5533,7 @@ table {
   margin: 0;
   color: #c8b58e;
   font-family: var(--font-title);
-  font-size: clamp(1.25rem, 2vw, 1.68rem);
+  font-size: clamp(1.55rem, 2.25vw, 2.05rem);
   font-weight: 400;
   letter-spacing: 0.15em;
   line-height: 1.05;
@@ -5543,7 +5545,7 @@ table {
   margin-top: 0.14rem;
   color: rgba(196, 203, 204, 0.2);
   font-family: serif;
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 0.42em;
   white-space: nowrap;
 }
@@ -5560,8 +5562,8 @@ table {
 
 .orders-board__action {
   display: inline-flex;
-  min-height: 30px;
-  padding: 0.38rem 0.68rem;
+  min-height: 38px;
+  padding: 0.5rem 0.85rem;
   align-items: center;
   justify-content: center;
   gap: 0.38rem;
@@ -5572,7 +5574,7 @@ table {
   color: #cfba90;
   cursor: pointer;
   font-family: var(--font-heading);
-  font-size: 0.57rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.085em;
   line-height: 1;
@@ -5621,8 +5623,8 @@ table {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 194px;
-  padding: 0.85rem 1rem 0.78rem;
+  min-height: clamp(220px, 15vw, 258px);
+  padding: clamp(0.95rem, 1.1vw, 1.18rem) clamp(1rem, 1.25vw, 1.3rem) 1rem;
   overflow: hidden;
   flex-direction: column;
   justify-content: space-between;
@@ -5843,15 +5845,15 @@ table {
   display: grid;
   min-width: 0;
   align-items: center;
-  grid-template-columns: 76px minmax(0, 1fr) auto;
-  gap: 0.65rem;
+  grid-template-columns: clamp(78px, 5.6vw, 96px) minmax(0, 1fr) auto;
+  gap: clamp(0.58rem, 0.75vw, 0.86rem);
 }
 
 .order-segment__crest {
   position: relative;
   display: flex;
-  width: 76px;
-  height: 76px;
+  width: clamp(78px, 5.6vw, 96px);
+  height: clamp(78px, 5.6vw, 96px);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -5878,8 +5880,8 @@ table {
 .order-segment__crest-img {
   position: relative;
   z-index: 1;
-  width: 76px;
-  height: 76px;
+  width: clamp(78px, 5.6vw, 96px);
+  height: clamp(78px, 5.6vw, 96px);
   object-fit: contain;
   filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 5px var(--order-glow));
   transition: filter 260ms ease;
@@ -5910,7 +5912,7 @@ table {
 .order-segment__rune {
   color: var(--order-text);
   font-family: serif;
-  font-size: 0.76rem;
+  font-size: 0.9rem;
   text-shadow: 0 0 7px var(--order-glow);
 }
 
@@ -5919,7 +5921,7 @@ table {
   margin: 0;
   color: var(--order-text);
   font-family: var(--font-title);
-  font-size: clamp(0.92rem, 1.25vw, 1.18rem);
+  font-size: clamp(1.12rem, 1.25vw, 1.45rem);
   font-weight: 400;
   letter-spacing: 0.065em;
   line-height: 1;
@@ -5942,7 +5944,7 @@ table {
   margin-top: 0.22rem;
   color: rgba(203, 209, 209, 0.42);
   font-family: var(--font-heading);
-  font-size: 0.48rem;
+  font-size: 0.6rem;
   letter-spacing: 0.14em;
   line-height: 1.25;
   text-transform: uppercase;
@@ -5959,7 +5961,7 @@ table {
 .order-segment__score strong {
   color: var(--order-text);
   font-family: var(--font-lore);
-  font-size: clamp(2.55rem, 3.6vw, 3.55rem);
+  font-size: clamp(3rem, 3.6vw, 4rem);
   font-variant-numeric: lining-nums tabular-nums;
   font-weight: 600;
   letter-spacing: -0.015em;
@@ -5971,7 +5973,7 @@ table {
   margin-top: 0.3rem;
   color: rgba(208, 214, 214, 0.42);
   font-family: var(--font-heading);
-  font-size: 0.47rem;
+  font-size: 0.57rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -5979,8 +5981,8 @@ table {
 .order-segment__people {
   display: grid;
   min-width: 0;
-  margin-top: 0.62rem;
-  padding-top: 0.52rem;
+  margin-top: 0.82rem;
+  padding-top: 0.68rem;
   border-top: 1px solid rgba(174, 183, 184, 0.1);
   grid-template-columns: 1fr 1fr;
   gap: 0.78rem;
@@ -5999,7 +6001,7 @@ table {
   margin-bottom: 0.14rem;
   color: rgba(194, 201, 201, 0.38);
   font-family: var(--font-heading);
-  font-size: 0.45rem;
+  font-size: 0.55rem;
   letter-spacing: 0.14em;
   line-height: 1;
   text-transform: uppercase;
@@ -6009,7 +6011,7 @@ table {
   min-height: 2.05em;
   color: rgba(235, 237, 233, 0.84);
   font-family: var(--font-lore);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   font-weight: 600;
   line-height: 1.05;
   overflow-wrap: anywhere;
@@ -6020,8 +6022,8 @@ table {
   position: relative;
   display: flex;
   width: 100%;
-  height: 17px;
-  margin-top: 0.58rem;
+  height: 22px;
+  margin-top: 0.76rem;
   align-items: center;
   padding-inline: 5px;
 }
@@ -6029,8 +6031,8 @@ table {
 .order-meter__cap {
   position: absolute;
   z-index: 3;
-  width: 8px;
-  height: 15px;
+  width: 10px;
+  height: 19px;
   border: 1px solid rgba(169, 176, 177, 0.42);
   background: linear-gradient(90deg, #080a0b, #676d6d 48%, #111416);
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.74);
@@ -6042,7 +6044,7 @@ table {
 .order-meter__glass {
   position: relative;
   width: 100%;
-  height: 9px;
+  height: 12px;
   overflow: hidden;
   border-top: 1px solid rgba(195, 207, 209, 0.24);
   border-bottom: 1px solid rgba(195, 207, 209, 0.17);
@@ -6090,8 +6092,8 @@ table {
   left: var(--marker-position);
   z-index: 4;
   display: flex;
-  width: 17px;
-  height: 17px;
+  width: 22px;
+  height: 22px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--order-light);
@@ -6103,7 +6105,7 @@ table {
 .order-meter__marker span {
   color: var(--order-text);
   font-family: serif;
-  font-size: 0.52rem;
+  font-size: 0.64rem;
   line-height: 1;
   text-shadow: 0 0 5px var(--order-glow);
   transform: rotate(-45deg);
@@ -6137,8 +6139,8 @@ table {
 .orders-board__footer {
   position: relative;
   display: flex;
-  min-height: 31px;
-  padding: 0.42rem 1.1rem;
+  min-height: 40px;
+  padding: 0.55rem 1.1rem;
   align-items: center;
   justify-content: center;
   gap: 1rem;
@@ -6152,7 +6154,7 @@ table {
 .orders-board__footer p {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 0.48rem;
+  font-size: 0.6rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
 }
@@ -6160,11 +6162,11 @@ table {
 .orders-board__footer > span {
   color: rgba(180, 188, 188, 0.24);
   font-family: serif;
-  font-size: 0.5rem;
+  font-size: 0.62rem;
   letter-spacing: 0.25em;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1250px) {
   .orders-board {
     width: min(100%, 850px);
   }
@@ -6193,6 +6195,35 @@ table {
 
   .order-segment__divider-rune {
     display: none;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1250px) {
+  .order-segment {
+    min-height: 250px;
+  }
+
+  .order-segment__summary {
+    grid-template-columns: 90px minmax(0, 1fr) auto;
+    gap: 0.82rem;
+  }
+
+  .order-segment__crest,
+  .order-segment__crest-img {
+    width: 90px;
+    height: 90px;
+  }
+
+  .order-segment__name-row h3 {
+    font-size: 1.25rem;
+  }
+
+  .order-segment__score strong {
+    font-size: 3.5rem;
+  }
+
+  .order-segment__person strong {
+    font-size: 0.95rem;
   }
 }
 
@@ -6350,7 +6381,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(2rem, 8vw, 3.2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 3.2rem) !important;
     letter-spacing: 0.06em;
   }
 
@@ -6832,7 +6863,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1.6rem, 9vw, 2.4rem) !important;
+    font-size: clamp(1rem, 5.8vw, 2.4rem) !important;
     letter-spacing: 0.04em;
   }
 
@@ -7051,7 +7082,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1.4rem, 10vw, 2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 2rem) !important;
   }
 
   .hero-motto {
@@ -7112,7 +7143,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: 1.3rem !important;
+    font-size: 1rem !important;
   }
 
   .btn-durmstrang,

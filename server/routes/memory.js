@@ -792,10 +792,10 @@ router.post('/archive-year/preview', authenticateToken, requireAdmin, (req, res)
 
     // 1. Calculate active House Rankings from points / ledger / users
     const housePointsMap = {
-      reinhall: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_reinhall_points'").get()?.value || '480', 10),
-      bjornhall: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_bjornhall_points'").get()?.value || '520', 10),
-      ravnheim: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_ravnheim_points'").get()?.value || '510', 10),
-      otergard: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_otergard_points'").get()?.value || '495', 10)
+      reinhall: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_reinhall_points'").get()?.value || '0', 10),
+      bjornhall: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_bjornhall_points'").get()?.value || '0', 10),
+      ravnheim: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_ravnheim_points'").get()?.value || '0', 10),
+      otergard: parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_otergard_points'").get()?.value || '0', 10)
     };
 
     // Add points from approved transactions

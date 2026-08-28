@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { Sparkles, Shield, Flame, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Sparkles, Shield, Flame, CheckCircle, ArrowRight } from 'lucide-react';
 
 export const CeremonyView = () => {
-  const { houses, ceremonyQuestions, sortIntoHouse, studentProfile, setActiveView, setActiveHouseTab } = useSchool();
+  const { houses, ceremonyQuestions, sortIntoHouse, setActiveView, setActiveHouseTab } = useSchool();
   const { playRuneChime, playSortingFanfare, playWandSwoosh } = useSound();
 
   const [currentStep, setCurrentStep] = useState(0); // 0 = intro, 1..N = questions, 8 = calculating/reveal, 9 = final
@@ -60,13 +60,6 @@ export const CeremonyView = () => {
         sortIntoHouse(winningHouse);
       }
     }, 3200);
-  };
-
-  const resetCeremony = () => {
-    playWandSwoosh();
-    setCurrentStep(0);
-    setAnswers([]);
-    setSelectedHouse(null);
   };
 
   const houseObj = selectedHouse
@@ -342,22 +335,6 @@ export const CeremonyView = () => {
               <Sparkles size={18} /> Zobacz Swój Profil Adepta
             </button>
 
-            <button
-              onClick={resetCeremony}
-              title="Powtórz ceremonię"
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '4px',
-                color: '#9ca3af',
-                padding: '0.8rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <RefreshCw size={16} />
-            </button>
           </div>
         </div>
       )}

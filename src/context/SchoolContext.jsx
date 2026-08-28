@@ -9,6 +9,14 @@ function tryParse(key, fallback) {
     return fallback;
   }
 }
+
+function normalizePointValue(value) {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) return Math.max(0, numericValue);
+
+  const recoveredValue = typeof value === 'string' ? Number.parseFloat(value) : 0;
+  return Number.isFinite(recoveredValue) ? Math.max(0, recoveredValue) : 0;
+}
 import { api } from '../api';
 import { HOUSES } from '../data/seedHouses';
 import { SUBJECTS } from '../data/seedSubjects';
@@ -413,10 +421,12 @@ export const SchoolProvider = ({ children }) => {
   const [users, setUsers] = useState(() => {
     const sanitizeUsers = (list) => {
       return (list || []).map(u => {
+        const sanitizedUser = { ...u, points: normalizePointValue(u.points) };
+
         if (u.role === 'professor' || u.role === 'teacher' || u.role === 'admin' || u.role === 'headmaster') {
-          return { ...u, house: null };
+          return { ...sanitizedUser, house: null };
         }
-        return u;
+        return sanitizedUser;
       });
     };
 
@@ -492,7 +502,8 @@ Dyrektor Cytadeli Durmstrang`
 
   // Current active user profiles for backward compatibility
   const [studentProfile, setStudentProfile] = useState(() => {
-    return tryParse('durmstrang_student', DEMO_ACCOUNTS.student);
+    const profile = tryParse('durmstrang_student', DEMO_ACCOUNTS.student);
+    return { ...profile, points: normalizePointValue(profile.points) };
   });
 
   const [professorProfile, setProfessorProfile] = useState(() => {
@@ -1003,10 +1014,10 @@ Dyrektor Cytadeli Durmstrang`
       schoolYear: 'XIX Rok Szkolny (2026/2027)',
       term: 'Semestr Zimowy',
       standings: [
-        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: 'ᚦ', color: '#7a2632', secondaryColor: '#a8384b', basePoints: 480, lessonPoints: 30, totalPoints: 510, txCount: 2, momentum: 30, rank: 3 },
-        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: 'ᛉ', color: '#35536f', secondaryColor: '#5b8aaf', basePoints: 520, lessonPoints: 10, totalPoints: 530, txCount: 1, momentum: 10, rank: 2 },
-        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: 'ᚱ', color: '#42385f', secondaryColor: '#7a6ea0', basePoints: 510, lessonPoints: 30, totalPoints: 540, txCount: 2, momentum: 30, rank: 1 },
-        { houseKey: 'otergard', name: 'Otergard', crestIcon: 'ᛞ', color: '#23615b', secondaryColor: '#3aaa9f', basePoints: 495, lessonPoints: 10, totalPoints: 505, txCount: 1, momentum: 10, rank: 4 }
+        { houseKey: 'reinhall', name: 'Reinhall', crestIcon: 'ᚦ', color: '#7a2632', secondaryColor: '#a8384b', basePoints: 0, lessonPoints: 0, totalPoints: 0, txCount: 0, momentum: 0, rank: 1 },
+        { houseKey: 'bjornhall', name: 'Björnhall', crestIcon: 'ᛉ', color: '#35536f', secondaryColor: '#5b8aaf', basePoints: 0, lessonPoints: 0, totalPoints: 0, txCount: 0, momentum: 0, rank: 2 },
+        { houseKey: 'ravnheim', name: 'Ravnheim', crestIcon: 'ᚱ', color: '#42385f', secondaryColor: '#7a6ea0', basePoints: 0, lessonPoints: 0, totalPoints: 0, txCount: 0, momentum: 0, rank: 3 },
+        { houseKey: 'otergard', name: 'Otergard', crestIcon: 'ᛞ', color: '#23615b', secondaryColor: '#3aaa9f', basePoints: 0, lessonPoints: 0, totalPoints: 0, txCount: 0, momentum: 0, rank: 4 }
       ]
     };
   });
@@ -1061,7 +1072,8 @@ Dyrektor Cytadeli Durmstrang`
   });
 
   const [students, setStudents] = useState(() => {
-    return tryParse('durmstrang_students', LEADERBOARD_STUDENTS);
+    return tryParse('durmstrang_students', LEADERBOARD_STUDENTS)
+      .map(student => ({ ...student, points: normalizePointValue(student.points) }));
   });
 
   const [staffRanking, setStaffRanking] = useState(() => {
@@ -1192,10 +1204,13 @@ Dyrektor Cytadeli Durmstrang`
 
       // Load users
       const usersRes = await api.getUsers();
+      const apiUsers = usersRes.ok
+        ? usersRes.data.map(user => ({ ...user, points: normalizePointValue(user.points) }))
+        : null;
       if (usersRes.ok && usersRes.data.length > 0) {
-        setUsers(usersRes.data);
+        setUsers(apiUsers);
       }
-      const loadedUsers = (usersRes.ok && usersRes.data) ? usersRes.data : users;
+      const loadedUsers = apiUsers || users;
       const freshCurrentUser = loadedUsers.find(u => u.id === currentUserId) || null;
       const isAdminSession = freshCurrentUser?.role === 'admin';
 
@@ -1616,6 +1631,12 @@ Dyrektor Cytadeli Durmstrang`
 
   // Award House Points & Student XP from activities/games
   const awardHousePoints = (houseKey, points, reason, studentId = null) => {
+    const numericPoints = Number(points);
+    if (!Number.isFinite(numericPoints) || numericPoints <= 0) {
+      console.error('[awardHousePoints] Odrzucono nieprawidłową wartość punktów:', points);
+      return false;
+    }
+
     const targetHouse = houseKey || currentUser?.house || 'ravnheim';
     const targetStudentId = studentId || currentUser?.id || 'usr-valdemar';
     const targetStudentName = currentUser?.fullName || currentUser?.username || 'Valdemar Krag-Hansen';
@@ -1624,7 +1645,7 @@ Dyrektor Cytadeli Durmstrang`
     setHouseRankings(prev => {
       const updatedStandings = (prev.standings || []).map(s => {
         if (s.houseKey === targetHouse) {
-          const newLessonPts = (s.lessonPoints || 0) + points;
+          const newLessonPts = (s.lessonPoints || 0) + numericPoints;
           const newTotalPts = (s.basePoints || 0) + newLessonPts;
           return { ...s, lessonPoints: newLessonPts, totalPoints: newTotalPts, txCount: (s.txCount || 0) + 1 };
         }
@@ -1654,7 +1675,7 @@ Dyrektor Cytadeli Durmstrang`
       studentId: targetStudentId,
       studentName: targetStudentName,
       house: targetHouse,
-      points: points,
+      points: numericPoints,
       source: reason || 'Aktywność / Grywalizacja w Cytadeli',
       date: new Date().toISOString().slice(0, 10),
       isRevoked: false,
@@ -1664,10 +1685,10 @@ Dyrektor Cytadeli Durmstrang`
 
     // 4. Update Current User points & XP
     if (currentUser) {
-      const currentPts = currentUser.points || 0;
+      const currentPts = normalizePointValue(currentUser.points);
       const currentXp = currentUser.xp || 0;
       const nextXp = currentUser.nextLevelXp || 1000;
-      const addedXp = points * 10;
+      const addedXp = numericPoints * 10;
       let newXp = currentXp + addedXp;
       let newLevel = currentUser.level || 1;
 
@@ -1678,7 +1699,7 @@ Dyrektor Cytadeli Durmstrang`
       }
 
       updateCurrentUser({
-        points: currentPts + points,
+        points: currentPts + numericPoints,
         xp: newXp,
         level: newLevel
       });
@@ -1687,7 +1708,7 @@ Dyrektor Cytadeli Durmstrang`
     // 5. Update student ranking
     setStudents(prev => {
       const updated = prev.map(s =>
-        s.id === targetStudentId ? { ...s, points: (s.points || 0) + points } : s
+        s.id === targetStudentId ? { ...s, points: normalizePointValue(s.points) + numericPoints } : s
       );
       updated.sort((a, b) => (b.points || 0) - (a.points || 0));
       return updated;
@@ -1699,10 +1720,12 @@ Dyrektor Cytadeli Durmstrang`
         studentId: targetStudentId,
         studentName: targetStudentName,
         house: targetHouse,
-        points: points,
+        points: numericPoints,
         reason: reason
       }).catch(() => {});
     }
+
+    return true;
   };
 
   // Add Currency (Skirniry) to User & Bank
@@ -1895,6 +1918,15 @@ Dyrektor Cytadeli Durmstrang`
 
   // Sort into House after Sorting Ceremony
   const sortIntoHouse = async (houseId) => {
+    if (currentRole !== 'student') {
+      showNotification(
+        'Rytuał Niedostępny',
+        'Ceremonia Przydziału jest przeznaczona wyłącznie dla adeptów. Profesorowie i Dyrekcja nie należą do Zakonów.',
+        'warning'
+      );
+      return false;
+    }
+
     const targetHouse = houseId?.toLowerCase() || 'reinhall';
     const houseObj = houses[targetHouse] || Object.values(houses).find(h => h.id === targetHouse);
     const houseName = houseObj?.name || targetHouse;
@@ -1929,6 +1961,7 @@ Dyrektor Cytadeli Durmstrang`
     }
 
     showNotification('Przydział Dokonany!', `Kamień Przysięgi ogłosił Twoją przynależność do Zakonu: ${houseName}! (+25 HP, +150 XP)`, 'success');
+    return true;
   };
 
   // Craft Rune Formula on Galdrastofa Altar
@@ -1970,7 +2003,7 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    awardHousePoints(15, `Ukucie Formuły: ${formulaName}`);
+    awardHousePoints(null, 15, `Ukucie Formuły: ${formulaName}`);
     addCurrency(20, 'Nagroda za pracę rzemieślniczą (Galdrastofa)');
 
     const result = {
@@ -2009,7 +2042,7 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    awardHousePoints(10, `Odkrycie Prastarej Runy Cytadeli (${secretId})`);
+    awardHousePoints(null, 10, `Odkrycie Prastarej Runy Cytadeli (${secretId})`);
     addCurrency(15, 'Skarb ukryty w runicznej szczelinie');
     showNotification('Tajemnica Odkryta! ᚱ', 'Odczytałeś ukrytą runę Cytadeli! Zdobywasz +10 Punktów Domu i +15 Skirnirów!', 'success');
   };
@@ -2062,7 +2095,7 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    awardHousePoints(rewardPoints, `Side Quest Mapy: ${questTitle || questId}`);
+    awardHousePoints(null, rewardPoints, `Side Quest Mapy: ${questTitle || questId}`);
     addCurrency(rewardGalleons, `Nagroda za quest w lokacji: ${locationName || 'Cytadela'}`);
     showNotification('Misja z Mapy Ukończona! 🧭', `Brawo! Zdobywasz +${rewardPoints} pkt, +${rewardXp} XP i +${rewardGalleons} Skirnirów!`, 'success');
   };

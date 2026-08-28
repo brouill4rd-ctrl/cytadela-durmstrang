@@ -124,6 +124,7 @@ export const api = {
     if (filters.house) params.append('house', filters.house);
     if (filters.studentId) params.append('studentId', filters.studentId);
     if (filters.lessonId) params.append('lessonId', filters.lessonId);
+    if (filters.limit) params.append('limit', filters.limit);
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiFetch(`/lessons/ledger/transactions${query}`);
   },

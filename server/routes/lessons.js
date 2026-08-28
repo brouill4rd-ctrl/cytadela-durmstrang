@@ -96,7 +96,7 @@ router.get('/rankings/houses', (req, res) => {
 // GET /api/lessons/ledger/transactions - Historia transakcji punktowych
 router.get('/ledger/transactions', requireAuth, (req, res) => {
   try {
-    const { house, studentId, lessonId, limit = 100 } = req.query;
+    const { house, studentId, lessonId, limit } = req.query;
     let query = 'SELECT * FROM point_transactions WHERE 1=1';
     const params = [];
 
@@ -113,8 +113,12 @@ router.get('/ledger/transactions', requireAuth, (req, res) => {
       params.push(lessonId);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ?';
-    params.push(parseInt(limit, 10));
+    query += ' ORDER BY created_at DESC';
+    if (limit) {
+      const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 1000);
+      query += ' LIMIT ?';
+      params.push(parsedLimit);
+    }
 
     const rows = db.prepare(query).all(...params);
     res.json(rows.map(dbPointTxToFrontend));
@@ -485,8 +489,9 @@ router.post('/recalculate-rankings', requireAuth, requireRole('admin'), (req, re
 router.post('/points/award', requireAuth, (req, res) => {
   try {
     const { studentId, studentName, house, points, reason } = req.body;
-    if (!house || !points) {
-      return res.status(400).json({ error: 'Wymagany dom i punkty.' });
+    const numericPoints = Number(points);
+    if (!house || !Number.isFinite(numericPoints) || numericPoints <= 0) {
+      return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów.' });
     }
 
     // Studenci mogą przyznawać punkty tylko sobie (gry i aktywności)
@@ -494,7 +499,7 @@ router.post('/points/award', requireAuth, (req, res) => {
       if (studentId && studentId !== req.user.id) {
         return res.status(403).json({ error: 'Nie możesz przyznawać punktów imieniem innego użytkownika.' });
       }
-      if (points > 100) {
+      if (numericPoints > 100) {
         return res.status(400).json({ error: 'Maksymalna wartość punktów per akcja wynosi 100.' });
       }
     }
@@ -503,7 +508,7 @@ router.post('/points/award', requireAuth, (req, res) => {
       studentId: studentId || null,
       studentName: studentName || 'Adept',
       house,
-      points,
+      points: numericPoints,
       source: reason || 'Grywalizacja & Aktywność w Cytadeli',
       sourceType: 'ACTIVITY',
       actorId: req.user.id,

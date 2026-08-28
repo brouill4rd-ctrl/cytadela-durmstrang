@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { SubjectIcon } from '../components/SubjectIcon';
+import { getSubjectBannerImage } from '../data/subjectBanners';
 import {
   BookOpen, ArrowLeft, User, MapPin, ScrollText, FileText,
   Star, Award, Trophy, ChevronDown, ChevronUp, Edit3, Save,
@@ -271,6 +272,7 @@ export const SubjectDetailView = () => {
   };
 
   const houseArr = Object.values(houses || {});
+  const subjectBannerImage = getSubjectBannerImage(subject);
 
   const TABS = [
     { id: 'overview', icon: <BookOpen size={15} />, label: 'Przegląd' },
@@ -303,7 +305,13 @@ export const SubjectDetailView = () => {
           boxShadow: '0 15px 40px rgba(0,0,0,0.6)'
         }}>
           <div style={{
-            background: subject.bannerGradient || 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)',
+            backgroundColor: '#0d0618',
+            backgroundImage: subjectBannerImage
+              ? `linear-gradient(180deg, rgba(7, 10, 15, 0.2) 0%, rgba(7, 10, 15, 0.48) 52%, rgba(7, 10, 15, 0.78) 100%), url("${subjectBannerImage}")`
+              : subject.bannerGradient || 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 44%',
+            backgroundRepeat: 'no-repeat',
             padding: '2.5rem 2rem',
             position: 'relative'
           }}>

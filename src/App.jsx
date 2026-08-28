@@ -169,6 +169,9 @@ export const App = () => {
     }
 
     // Role-specific view guards
+    if (activeView === 'ceremony' && currentUser?.role !== 'student') {
+      return <RestrictedAccessView targetName="Ceremonii Przydziału (wyłącznie dla adeptów — kadra i Dyrekcja nie należą do Zakonów)" />;
+    }
     if (activeView === 'admin' && currentUser?.role !== 'admin') {
       return <RestrictedAccessView targetName="Komnat Najwyższej Rady Dyrekcji (Wymagana rola: Arcymistrz Dyrekcji)" />;
     }

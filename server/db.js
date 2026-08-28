@@ -1918,11 +1918,22 @@ if (configCount === 0) {
   insertConfig.run('current_term', 'Semestr Zimowy');
   insertConfig.run('term_start', '2026-08-01');
   insertConfig.run('term_end', '2027-06-30');
-  insertConfig.run('base_reinhall_points', '480');
-  insertConfig.run('base_bjornhall_points', '520');
-  insertConfig.run('base_ravnheim_points', '510');
-  insertConfig.run('base_otergard_points', '495');
+  insertConfig.run('base_reinhall_points', '0');
+  insertConfig.run('base_bjornhall_points', '0');
+  insertConfig.run('base_ravnheim_points', '0');
+  insertConfig.run('base_otergard_points', '0');
 }
+
+// Every edition starts from zero. Existing installations are normalized too,
+// so a legacy configured balance can never bypass the point ledger.
+const zeroBasePoints = db.prepare(`
+  INSERT INTO school_config (key, value) VALUES (?, '0')
+  ON CONFLICT(key) DO UPDATE SET value = '0'
+`);
+for (const key of ['base_reinhall_points', 'base_bjornhall_points', 'base_ravnheim_points', 'base_otergard_points']) {
+  zeroBasePoints.run(key);
+}
+db.prepare('UPDATE houses SET starting_points = 0 WHERE starting_points != 0').run();
 
 // Seed default bot config
 const botConfigCount = db.prepare('SELECT COUNT(*) as count FROM discord_bot_config').get().count;
@@ -2525,10 +2536,10 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
   if (housesCount === 0) {
     console.log('[DB] Seeding houses...');
     const ins = db.prepare(`INSERT INTO houses (id, name, full_name, symbol_animal, crest_icon, crest_image, element, founder, colors, gem_name, motto, latin_motto, traits, common_room, relic, head_of_house, prefect, members_count, starting_points, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    ins.run('reinhall','Reinhall','Zakon Reinhall (Ordo Rangiferi)','Renifer Północy (Rangifer)','ᚦ','/crest_stag.jpg','Krew i Wieczna Zmarzlina','Eirik Krwawy Róg (Eiríkr Blóðhorn)',JSON.stringify({primary:'#7a2632',secondary:'#a8384b',border:'rgba(122, 38, 50, 0.6)',glow:'rgba(122, 38, 50, 0.35)',text:'#e8bfc6',gem:'#5a1c25'}),'Rubiny Krwi i Złoty Pył','„Krew nie kłamie, mróz nie wybacza."','Sanguis non mentitur, gelu non parcit.',JSON.stringify(['Wytrwałość','Duma rodowa','Magia krwi','Lojalność paktu','Pradawna tradycja']),'Sala Rodowa Skandzy — wyciosana w litej granitowej skale pod zachodnim skrzydłem, z wiecznym paleniskiem z kości mamuta tundrowego i gobelinami haftowanymi złotą nicią.','Kielich Przymierza Krwi (Blóðkálkr) — naczynie ze srebra i rogu, w którym założyciele pieczętowali Pakt Czterech Koron w 1294 roku.','Prof. Sigrid Hällström','Magnus Blom',63,480,1);
-    ins.run('bjornhall','Björnhall','Zakon Björnhall (Ordo Ursi)','Niedźwiedź Jaskiniowy (Ursus Spelaeus)','ᛉ','/crest_bear.jpg','Żelazo i Pęknięta Skala','Torvald Żelaznoręki (Torvaldr Járnhönd)',JSON.stringify({primary:'#35536f',secondary:'#5b8aaf',border:'rgba(53, 83, 111, 0.6)',glow:'rgba(53, 83, 111, 0.35)',text:'#c4d8e8',gem:'#263d52'}),'Okruchy Czarnego Żelaza i Krwawe Granaty','„Pancerz z woli, miecz z wiedzy."','Lorica ex voluntate, gladius ex scientia.',JSON.stringify(['Siła woli','Magia bojowa','Niezłomność','Klątwy niszczące','Dyscyplina wojenna']),'Bastion Żelaza — warowna wieża z widokiem na wzburzony fiord, wyposażona w prywatną arenę pojedynkową, stojaki z runicznymi puklerzami i kowadło alchemiczne.','Puklerz Pękniętego Żelaza (Járnskjöldr) — stalowa tarcza odbijająca najczarniejsze uroki niszczące.','Prof. Gunnar Vargson','Astrid Vargadottir',68,520,2);
-    ins.run('ravnheim','Ravnheim','Zakon Ravnheim (Ordo Corvi)','Kruk Mądrości (Corvus Corax)','ᚱ','/crest_raven.jpg','Cień i Astralna Noc','Morana Cień-Krocząca (Morana Skuggaganga)',JSON.stringify({primary:'#42385f',secondary:'#7a6ea0',border:'rgba(66, 56, 95, 0.6)',glow:'rgba(66, 56, 95, 0.35)',text:'#d0c8e2',gem:'#312a47'}),'Ametysty Nocy i Odłamki Obsydianu','„W ciszy cienia kryje się potęga."','In umbrae silentio potestas latet.',JSON.stringify(['Tajemnica','Nekromancja','Wróżbiarstwo z kości','Opanowanie','Astralna intuicja']),'Wieża Nocnych Szeptów — najwyższy punkt Cytadeli, gdzie okna z ciemnego kryształu wychodzą na zorzę polarną, a pod sufitem krążą astralne kruki posłańcze.','Astrolabium Siedmiu Gwiazd (Himinúrfang) — mechanizm pozwalający przepowiadać zaćmienia i ruchy cieni.','Prof. Morana Vane','Valdemar Krag-Hansen',72,510,3);
-    ins.run('otergard','Otergard','Zakon Otergard (Ordo Lutrae)','Wydra Polarna (Lutra Borealis)','ᛞ','/crest_otter.jpg','Lodowcowe Wody i Toksyny','Astrid Złotooka (Astrid Gullauga)',JSON.stringify({primary:'#23615b',secondary:'#3aaa9f',border:'rgba(35, 97, 91, 0.6)',glow:'rgba(35, 97, 91, 0.35)',text:'#b4e0da',gem:'#1a4a45'}),'Szmaragdy Fiordu i Akwamaryny','„Płyń pod lodem, uderzaj bez śladu."','Sub glacie natato, sine vestigio percutito.',JSON.stringify(['Spryt alchemiczny','Warzenie toksyn','Transmutacja lodu','Elastyczność','Analityczny umysł']),'Ogrody Lodowych Cieplic — podziemne atrium zasilane podwodnymi gorącymi źródłami fiordu, wypełnione rzadkimi arktycznymi mchami i retortami alchemicznymi.','Alembik Nieskończonej Destylacji (Algildi) — naczynie ze smoczego szkła, potrafiące wyekstrahować esencję z każdego żywiołu.','Prof. Klaus Lindqvist','Sigrun Lindqvist',65,495,4);
+    ins.run('reinhall','Reinhall','Zakon Reinhall (Ordo Rangiferi)','Renifer Północy (Rangifer)','ᚦ','/crest_stag.jpg','Krew i Wieczna Zmarzlina','Eirik Krwawy Róg (Eiríkr Blóðhorn)',JSON.stringify({primary:'#7a2632',secondary:'#a8384b',border:'rgba(122, 38, 50, 0.6)',glow:'rgba(122, 38, 50, 0.35)',text:'#e8bfc6',gem:'#5a1c25'}),'Rubiny Krwi i Złoty Pył','„Krew nie kłamie, mróz nie wybacza."','Sanguis non mentitur, gelu non parcit.',JSON.stringify(['Wytrwałość','Duma rodowa','Magia krwi','Lojalność paktu','Pradawna tradycja']),'Sala Rodowa Skandzy — wyciosana w litej granitowej skale pod zachodnim skrzydłem, z wiecznym paleniskiem z kości mamuta tundrowego i gobelinami haftowanymi złotą nicią.','Kielich Przymierza Krwi (Blóðkálkr) — naczynie ze srebra i rogu, w którym założyciele pieczętowali Pakt Czterech Koron w 1294 roku.','Prof. Sigrid Hällström','Magnus Blom',63,0,1);
+    ins.run('bjornhall','Björnhall','Zakon Björnhall (Ordo Ursi)','Niedźwiedź Jaskiniowy (Ursus Spelaeus)','ᛉ','/crest_bear.jpg','Żelazo i Pęknięta Skala','Torvald Żelaznoręki (Torvaldr Járnhönd)',JSON.stringify({primary:'#35536f',secondary:'#5b8aaf',border:'rgba(53, 83, 111, 0.6)',glow:'rgba(53, 83, 111, 0.35)',text:'#c4d8e8',gem:'#263d52'}),'Okruchy Czarnego Żelaza i Krwawe Granaty','„Pancerz z woli, miecz z wiedzy."','Lorica ex voluntate, gladius ex scientia.',JSON.stringify(['Siła woli','Magia bojowa','Niezłomność','Klątwy niszczące','Dyscyplina wojenna']),'Bastion Żelaza — warowna wieża z widokiem na wzburzony fiord, wyposażona w prywatną arenę pojedynkową, stojaki z runicznymi puklerzami i kowadło alchemiczne.','Puklerz Pękniętego Żelaza (Járnskjöldr) — stalowa tarcza odbijająca najczarniejsze uroki niszczące.','Prof. Gunnar Vargson','Astrid Vargadottir',68,0,2);
+    ins.run('ravnheim','Ravnheim','Zakon Ravnheim (Ordo Corvi)','Kruk Mądrości (Corvus Corax)','ᚱ','/crest_raven.jpg','Cień i Astralna Noc','Morana Cień-Krocząca (Morana Skuggaganga)',JSON.stringify({primary:'#42385f',secondary:'#7a6ea0',border:'rgba(66, 56, 95, 0.6)',glow:'rgba(66, 56, 95, 0.35)',text:'#d0c8e2',gem:'#312a47'}),'Ametysty Nocy i Odłamki Obsydianu','„W ciszy cienia kryje się potęga."','In umbrae silentio potestas latet.',JSON.stringify(['Tajemnica','Nekromancja','Wróżbiarstwo z kości','Opanowanie','Astralna intuicja']),'Wieża Nocnych Szeptów — najwyższy punkt Cytadeli, gdzie okna z ciemnego kryształu wychodzą na zorzę polarną, a pod sufitem krążą astralne kruki posłańcze.','Astrolabium Siedmiu Gwiazd (Himinúrfang) — mechanizm pozwalający przepowiadać zaćmienia i ruchy cieni.','Prof. Morana Vane','Valdemar Krag-Hansen',72,0,3);
+    ins.run('otergard','Otergard','Zakon Otergard (Ordo Lutrae)','Wydra Polarna (Lutra Borealis)','ᛞ','/crest_otter.jpg','Lodowcowe Wody i Toksyny','Astrid Złotooka (Astrid Gullauga)',JSON.stringify({primary:'#23615b',secondary:'#3aaa9f',border:'rgba(35, 97, 91, 0.6)',glow:'rgba(35, 97, 91, 0.35)',text:'#b4e0da',gem:'#1a4a45'}),'Szmaragdy Fiordu i Akwamaryny','„Płyń pod lodem, uderzaj bez śladu."','Sub glacie natato, sine vestigio percutito.',JSON.stringify(['Spryt alchemiczny','Warzenie toksyn','Transmutacja lodu','Elastyczność','Analityczny umysł']),'Ogrody Lodowych Cieplic — podziemne atrium zasilane podwodnymi gorącymi źródłami fiordu, wypełnione rzadkimi arktycznymi mchami i retortami alchemicznymi.','Alembik Nieskończonej Destylacji (Algildi) — naczynie ze smoczego szkła, potrafiące wyekstrahować esencję z każdego żywiołu.','Prof. Klaus Lindqvist','Sigrun Lindqvist',65,0,4);
     console.log('[DB] Seeded 4 houses.');
   }
 }
@@ -2666,6 +2677,53 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
   }
 }
 
+// ==================== PROLOGUE KIT STORE ITEMS ====================
+{
+  // Idempotent: seed mandatory kit items if the store is empty
+  const kitCount = db.prepare("SELECT COUNT(*) as c FROM store_items WHERE id LIKE 'kit-%'").get().c;
+  if (kitCount === 0) {
+    console.log('[DB] Seeding prologue kit store items...');
+    const ins = db.prepare(`
+      INSERT OR IGNORE INTO store_items
+        (id, name, category, category_slug, shop_id, shop_name, price, icon, rarity, description, lore, placeholder_type)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `);
+    ins.run('kit-rozdzka','Różdżka Uczniowska — Cis i Rdzeń Smoczej Łuski','Różdżki','wands','wands-brokkur','Kuźnia Różdżek Brokkura & Oivinda',55,'🪄','Rzadki','Solidna różdżka uczniowska z drewna cisowego, rdzeniem z łuski smoka północy.','Każdy adept Durmstrangu zaczyna od jednej różdżki. Ta jest godna zarówno pierwszego zaklęcia, jak i ostatniej bitwy.','wand_nordic');
+    ins.run('kit-szaty','Szaty Szkolne Durmstrangu (Zestaw Adepta)','Szaty & Opończe','robes','tailor-robes','Dom Krawiecki Nordyckich Opończy & Szat',45,'🧥','Zwykły','Komplet szat ceremonialnych i codziennych — ciemnogranatowe z runicznym haftem Twierdzy.','Szaty adeptów Durmstrangu są skrojone z wełny wzmocnionej ochronną runą Algiz.','robe_dark');
+    ins.run('kit-podreczniki','Podstawowe Grimuary i Podręczniki (Komplet)','Grimuary & Księgi','books','antiquarian-books','Antykwariat Run i Zakazanych Ksiąg Snorriego',40,'📚','Zwykły','Zestaw podręczników obowiązkowych dla pierwszorocznych adeptów wszystkich Zakonów.','Wiedza to pierwsza broń czarodzieja. Pierwsza — i często decydująca.','book_grimoire');
+    ins.run('kit-kociolek','Kociołek Alchemiczny ze Stali Nordyckiej (Typ III)','Wyposażenie Bojowe','equipment','apothecary-potions','Apteka Alchemiczna i Składnica Ziół Północy',30,'🫕','Zwykły','Kociołek odporny na temperatury aż do wrzenia magmy, z runicznym zabezpieczeniem przed eksplozją.','Bez kociołka żaden eliksir się nie uda. Bez dobrego kociołka — nawet herbata.','cauldron');
+    ins.run('kit-fiolki','Zestaw Fiolek Szklanych z Korkowym Uszczelnieniem (×12)','Eliksiry & Toksyny','potions','apothecary-potions','Apteka Alchemiczna i Składnica Ziół Północy',20,'🧪','Zwykły','Dwanaście fiolek ze szkła magicznego, odpornych na większość substancji alchemicznych.','Zestaw startowy dla każdego, kto planuje warzyć, przechowywać lub — co gorsza — rzucać.','potion_vials');
+    ins.run('kit-przybory','Przybory Piśmiennicze i Atrament Runiczno-Magiczny','Grimuary & Księgi','books','antiquarian-books','Antykwariat Run i Zakazanych Ksiąg Snorriego',15,'🖊️','Zwykły','Gęsie pióro, zapasowe stalówki i flakonik magicznego atramentu odpornego na zaklęcia usuwania.','Notatki adepta są tak ważne jak jego różdżka — zwłaszcza podczas egzaminów.','supplies_writing');
+    console.log('[DB] Seeded 6 prologue kit store items.');
+  }
+}
+
+// ==================== PROLOGUE KIT SHOPPING LIST ====================
+{
+  const kitListCount = db.prepare("SELECT COUNT(*) as c FROM shopping_lists WHERE id = 'list-prologue-kit'").get().c;
+  if (kitListCount === 0) {
+    console.log('[DB] Seeding prologue kit shopping list...');
+    db.prepare(`
+      INSERT OR IGNORE INTO shopping_lists
+        (id, title, slug, subtitle, category, required_item_ids, reward_points, reward_skirnirs, icon, badge, lore)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      'list-prologue-kit',
+      'Wyprawka Adepta Durmstrangu',
+      'wyprawka-adepta',
+      'Obowiązkowy ekwipunek pierwszorocznego adepta',
+      'prologue',
+      JSON.stringify(['kit-rozdzka','kit-szaty','kit-podreczniki','kit-kociolek','kit-fiolki','kit-przybory']),
+      75,
+      100,
+      '🎒',
+      'Gotowy Adept Durmstrangu',
+      'Kto kompletuje wyprawkę przed wyruszeniem, nie wraca po nią w trakcie drogi.'
+    );
+    console.log('[DB] Seeded prologue kit shopping list.');
+  }
+}
+
 // Salary config into school_config
 {
   const salaryKeys = [
@@ -2687,6 +2745,7 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
 
 export function dbUserToFrontend(row) {
   if (!row) return null;
+  const isStudent = row.role === 'student';
   return {
     id: row.id,
     username: row.username,
@@ -2696,7 +2755,7 @@ export function dbUserToFrontend(row) {
     fullName: row.full_name,
     role: row.role,
     status: row.status,
-    house: row.house,
+    house: isStudent ? row.house : null,
     title: row.title || '',
     avatar: row.avatar || '',
     department: row.department,
@@ -2878,12 +2937,17 @@ export function dbPointTxToFrontend(row) {
     house: row.house,
     points: row.points,
     source: row.source,
+    sourceType: row.source_type || 'LEGACY',
+    sourceId: row.source_id || '',
     lessonId: row.lesson_id || '',
     professorId: row.professor_id || '',
     professorName: row.professor_name,
+    actorId: row.actor_id || '',
+    actorName: row.actor_name || '',
     date: row.date,
     comment: row.comment || '',
     isRevoked: !!row.is_revoked,
+    schoolYear: row.school_year || '',
     createdAt: row.created_at
   };
 }
@@ -3042,11 +3106,11 @@ export function dbTimetableEntryToFrontend(row) {
 // ===================== RANKING CALCULATION (SINGLE SOURCE OF TRUTH) =====================
 
 export function calculateHouseRankings(period = 'overall') {
-  // Base starting points from configuration
-  const baseReinhall = parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_reinhall_points'").get()?.value || '480', 10);
-  const baseBjornhall = parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_bjornhall_points'").get()?.value || '520', 10);
-  const baseRavnheim = parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_ravnheim_points'").get()?.value || '510', 10);
-  const baseOtergard = parseInt(db.prepare("SELECT value FROM school_config WHERE key = 'base_otergard_points'").get()?.value || '495', 10);
+  // House rankings are always built exclusively from ledger transactions.
+  const baseReinhall = 0;
+  const baseBjornhall = 0;
+  const baseRavnheim = 0;
+  const baseOtergard = 0;
 
   let dateFilter = '';
   const now = new Date();

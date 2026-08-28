@@ -137,14 +137,16 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
           <div className="orders-board__actions">
             {currentUser ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => { playWandSwoosh(); setActiveView('ceremony'); }}
-                  className="orders-board__action"
-                >
-                  <Flame size={13} aria-hidden="true" />
-                  <span>Rytuał Kamienia Przysięgi</span>
-                </button>
+                {currentUser.role === 'student' && (
+                  <button
+                    type="button"
+                    onClick={() => { playWandSwoosh(); setActiveView('ceremony'); }}
+                    className="orders-board__action"
+                  >
+                    <Flame size={13} aria-hidden="true" />
+                    <span>Rytuał Kamienia Przysięgi</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => { playWandSwoosh(); setActiveView('rune-workshop'); }}

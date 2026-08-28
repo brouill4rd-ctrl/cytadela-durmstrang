@@ -39,6 +39,12 @@ router.patch('/:id', requireAuth, requireSelfOrRole('admin'), (req, res) => {
   const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'User not found' });
 
+  if (fields.house !== undefined && existing.role !== 'student') {
+    return res.status(400).json({
+      error: 'Zakon może zostać przypisany wyłącznie adeptowi. Kadra i Dyrekcja nie należą do Zakonów.'
+    });
+  }
+
   // Pola dozwolone per rola
   const STUDENT_FIELDS = [
     'name', 'surname', 'full_name', 'email', 'avatar',

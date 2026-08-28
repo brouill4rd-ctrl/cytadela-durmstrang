@@ -89,6 +89,12 @@ export const Navbar = () => {
       setMobileMenuOpen(false);
       return;
     }
+    if (view === 'ceremony' && currentRole !== 'student') {
+      showNotification('Rytuał Niedostępny', 'Kamień Przysięgi przydziela wyłącznie adeptów. Kadra i Dyrekcja nie należą do Zakonów.', 'warning');
+      setOpenDropdown(null);
+      setMobileMenuOpen(false);
+      return;
+    }
     if (houseTab) setActiveHouseTab(houseTab);
     setActiveView(view);
     setOpenDropdown(null);
@@ -497,26 +503,28 @@ export const Navbar = () => {
                       </span>
                     </button>
 
-                    <button
-                      onClick={() => handleNavClick('ceremony')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.6rem 0.8rem',
-                        background: activeView === 'ceremony' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                        borderRadius: '4px',
-                        border: 'none',
-                        color: '#ffffff',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Flame size={14} color="var(--gold-ancient)" /> Kamień Przysięgi
-                      </span>
-                    </button>
+                    {currentRole === 'student' && (
+                      <button
+                        onClick={() => handleNavClick('ceremony')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.6rem 0.8rem',
+                          background: activeView === 'ceremony' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
+                          borderRadius: '4px',
+                          border: 'none',
+                          color: '#ffffff',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Flame size={14} color="var(--gold-ancient)" /> Kamień Przysięgi
+                        </span>
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -1220,7 +1228,7 @@ export const Navbar = () => {
           >
             🛡️ Cztery Zakony
           </button>
-          {currentUser && (
+          {currentRole === 'student' && (
             <button
               onClick={() => handleNavClick('ceremony')}
               style={{

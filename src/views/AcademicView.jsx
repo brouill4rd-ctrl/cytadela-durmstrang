@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { SubjectIcon } from '../components/SubjectIcon';
+import { getSubjectBannerImage } from '../data/subjectBanners';
 import {
   BookOpen,
   GraduationCap,
@@ -1016,11 +1017,19 @@ export const AcademicView = () => {
             const catStyle = getCategoryColor(s.category);
             const houseBadge = getHouseBadge(s.house);
             const lessonCount = s.lessons?.length || 0;
+            const subjectBannerImage = getSubjectBannerImage(s);
 
             return (
               <div
                 key={s.id}
                 className="durmstrang-aurora-card"
+                style={subjectBannerImage ? {
+                  backgroundColor: '#070a10',
+                  backgroundImage: `linear-gradient(180deg, rgba(7, 10, 15, 0.6) 0%, rgba(7, 10, 15, 0.84) 52%, rgba(7, 10, 15, 0.97) 100%), url("${subjectBannerImage}")`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                } : undefined}
               >
                 {/* Dynamic Shifting Aurora Borealis Veil on each card */}
                 {auroraEnabled && <div className="aurora-flowing-veil" />}

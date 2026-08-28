@@ -596,6 +596,11 @@ export const PortalRightSidebar = ({
                   const h = houses[stud.house] || Object.values(houses).find(x => x.id === stud.house);
                   const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
                   const fullName = stud.fullName || `${stud.name} ${stud.surname || ''}`.trim() || stud.name;
+                  const numericPoints = Number(stud.points);
+                  const recoveredPoints = typeof stud.points === 'string' ? Number.parseFloat(stud.points) : 0;
+                  const displayPoints = Number.isFinite(numericPoints)
+                    ? numericPoints
+                    : (Number.isFinite(recoveredPoints) ? recoveredPoints : 0);
 
                   return (
                     <div
@@ -636,7 +641,7 @@ export const PortalRightSidebar = ({
                         </div>
                       </div>
                       <span style={{ color: 'var(--gold-glow)', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0, textAlign: 'right' }}>
-                        {stud.points} pkt
+                        {displayPoints} pkt
                       </span>
                     </div>
                   );

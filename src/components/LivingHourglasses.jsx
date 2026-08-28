@@ -4,10 +4,19 @@ import { Sparkles, Trophy } from 'lucide-react';
 import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from './HeraldicEmblems';
 
 export const LivingHourglasses = () => {
-  const { houses } = useSchool();
+  const { houses, houseRankings } = useSchool();
 
   const houseList = Array.isArray(houses) ? houses : Object.values(houses || {});
-  const maxPoints = Math.max(...houseList.map(h => (h.startingPoints || h.points || 0)), 100);
+  const rankingByHouse = new Map(
+    (houseRankings?.standings || []).map((standing) => [normalizeHouseKey(standing.houseKey), standing])
+  );
+  const getHousePoints = (house) => (
+    rankingByHouse.get(normalizeHouseKey(house.id))?.totalPoints
+      ?? house.startingPoints
+      ?? house.points
+      ?? 0
+  );
+  const maxPoints = Math.max(...houseList.map(getHousePoints), 100);
 
   const houseThemes = {
     reinhall: {
@@ -66,7 +75,7 @@ export const LivingHourglasses = () => {
         {houseList.map((house) => {
           const normKey = normalizeHouseKey(house.id);
           const theme = houseThemes[normKey] || houseThemes.reinhall;
-          const points = house.startingPoints || house.points || 0;
+          const points = getHousePoints(house);
           const fillPercent = Math.min(Math.max((points / maxPoints) * 100, 15), 100);
 
           return (
@@ -174,4 +183,3 @@ export const LivingHourglasses = () => {
     </div>
   );
 };
-

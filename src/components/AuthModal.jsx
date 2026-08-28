@@ -22,7 +22,6 @@ import {
   Heart,
   Image as ImageIcon,
   Flame,
-  RefreshCw,
   Award
 } from 'lucide-react';
 
@@ -159,7 +158,6 @@ export const AuthModal = ({ isOpen, onClose }) => {
     authModalTab,
     setAuthModalTab,
     setPasswordRecoveryModalOpen,
-    studentProfile,
     showNotification,
     subjects,
     houses,
@@ -202,20 +200,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
   const [regMagicTalent, setRegMagicTalent] = useState('Nekromancja & Wiązanie Cieni');
 
   // Mandatory Interactive Ceremony in Registration (NO manual selection)
-  const hasPriorGuestRitual = Boolean(studentProfile?.house && studentProfile.house !== 'reinhall');
-  const [regPreferredHouse, setRegPreferredHouse] = useState(() => hasPriorGuestRitual ? studentProfile.house : null);
-  const [ceremonyCompleted, setCeremonyCompleted] = useState(() => hasPriorGuestRitual);
-  const [ceremonyStep, setCeremonyStep] = useState(() => hasPriorGuestRitual ? 0 : 1); // 1..4 = active questions, 5 = calculating, 0 = completed decree
+  const [regPreferredHouse, setRegPreferredHouse] = useState(null);
+  const [ceremonyCompleted, setCeremonyCompleted] = useState(false);
+  const [ceremonyStep, setCeremonyStep] = useState(1); // 1..4 = active questions, 5 = calculating, 0 = completed decree
   const [ceremonyAnswers, setCeremonyAnswers] = useState([]);
-
-  // Sync if studentProfile had house assigned earlier
-  useEffect(() => {
-    if (studentProfile?.house && studentProfile.house !== 'reinhall') {
-      setRegPreferredHouse(studentProfile.house);
-      setCeremonyCompleted(true);
-      setCeremonyStep(0);
-    }
-  }, [studentProfile]);
 
   // Wand
   const [regWandWood, setRegWandWood] = useState('Cis Arktyczny');
@@ -981,7 +969,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     {/* Step 0 & Completed: Official Decree */}
                     {ceremonyStep === 0 && ceremonyCompleted && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.2rem', alignItems: 'center', background: 'rgba(0,0,0,0.55)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: `1px solid ${currentHouseObj?.colors?.secondary || 'var(--gold-ancient)'}66` }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.2rem', alignItems: 'center', background: 'rgba(0,0,0,0.55)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: `1px solid ${currentHouseObj?.colors?.secondary || 'var(--gold-ancient)'}66` }}>
                           <div
                             style={{
                               width: '64px',
@@ -1017,20 +1005,6 @@ export const AuthModal = ({ isOpen, onClose }) => {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              playWandSwoosh();
-                              setCeremonyStep(1);
-                              setCeremonyAnswers([]);
-                              setCeremonyCompleted(false);
-                            }}
-                            className="btn-durmstrang-secondary"
-                            style={{ padding: '0.6rem 1.1rem', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
-                            title="Przejdź 4 próby Kamienia ponownie"
-                          >
-                            <RefreshCw size={13} /> Powtórz Rytuał
-                          </button>
                         </div>
                       </div>
                     )}
