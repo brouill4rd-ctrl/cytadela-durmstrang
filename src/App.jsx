@@ -270,6 +270,42 @@ export const App = () => {
       <AuroraCanvas enabled={auroraEnabled && effectiveMode !== 'QUIET'} intensity={worldState.skyState === 'AURORA' ? (effectiveMode === 'FULL' ? 1 : 0.55) : 0.2} />
       <CitadelAstrolabe />
 
+      {/* Global Notification Toast — kept above the Magiczna Północ indicator */}
+      {notification && (
+        <div
+          className="toast-notification"
+          style={{
+            position: 'fixed',
+            bottom: '82px',
+            right: '18px',
+            background: 'rgba(10, 14, 22, 0.96)',
+            border: typeof notification === 'object' && notification?.type === 'success' ? '1px solid #10b981' : typeof notification === 'object' && notification?.type === 'warning' ? '1px solid #f59e0b' : '1px solid var(--gold-ancient)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.85), 0 0 15px rgba(197, 159, 78, 0.3)',
+            borderRadius: '8px',
+            padding: '1rem 1.4rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.8rem',
+            zIndex: 99999,
+            animation: 'slideUp 0.3s ease-out',
+            boxSizing: 'border-box',
+            maxWidth: 'min(420px, calc(100vw - 36px))'
+          }}
+        >
+          <Sparkles size={20} color={typeof notification === 'object' && notification?.type === 'success' ? '#10b981' : typeof notification === 'object' && notification?.type === 'warning' ? '#f59e0b' : 'var(--gold-ancient)'} />
+          <div style={{ minWidth: 0, fontSize: '0.88rem', color: '#f3f4f6', lineHeight: 1.4 }}>
+            {typeof notification === 'string' ? (
+              notification
+            ) : (
+              <>
+                {notification.title && <div style={{ fontWeight: 700, color: 'var(--gold-ancient)', marginBottom: '0.2rem' }}>{notification.title}</div>}
+                <div>{notification.message || ''}</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Lumos Torchlight Cursor Trail */}
       <TorchCursor enabled={torchEnabled} size={300} />
 
@@ -400,41 +436,6 @@ export const App = () => {
         >
           ᛞ
         </button>
-
-        {/* Global Notification Toast */}
-        {notification && (
-          <div
-            className="toast-notification"
-            style={{
-              position: 'fixed',
-              bottom: '25px',
-              right: '25px',
-              background: 'rgba(10, 14, 22, 0.96)',
-              border: typeof notification === 'object' && notification?.type === 'success' ? '1px solid #10b981' : typeof notification === 'object' && notification?.type === 'warning' ? '1px solid #f59e0b' : '1px solid var(--gold-ancient)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.85), 0 0 15px rgba(197, 159, 78, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem 1.4rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.8rem',
-              zIndex: 99999,
-              animation: 'slideUp 0.3s ease-out',
-              maxWidth: '420px'
-            }}
-          >
-            <Sparkles size={20} color={typeof notification === 'object' && notification?.type === 'success' ? '#10b981' : typeof notification === 'object' && notification?.type === 'warning' ? '#f59e0b' : 'var(--gold-ancient)'} />
-            <div style={{ fontSize: '0.88rem', color: '#f3f4f6', lineHeight: 1.4 }}>
-              {typeof notification === 'string' ? (
-                notification
-              ) : (
-                <>
-                  {notification.title && <div style={{ fontWeight: 700, color: 'var(--gold-ancient)', marginBottom: '0.2rem' }}>{notification.title}</div>}
-                  <div>{notification.message || ''}</div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <Footer />
