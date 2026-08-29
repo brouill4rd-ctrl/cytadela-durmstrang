@@ -338,21 +338,28 @@ export const LessonDetailView = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchDetails = async () => {
+    const fetchDetails = async (isInitial = false) => {
       if (!activeLessonId) return;
       const data = await getLessonDetails(activeLessonId);
       if (data && isMounted) {
-        setLesson(data);
-        setLoading(false);
+        setLesson(prev => {
+          // During polls: don't overwrite existing messages with an empty array
+          // (guards against momentary API hiccups or fallback-to-local-state without messages)
+          if (!isInitial && prev?.messages?.length > 0 && (data.messages?.length ?? 0) === 0) {
+            return { ...data, messages: prev.messages };
+          }
+          return data;
+        });
+        if (isInitial) setLoading(false);
       }
     };
 
-    fetchDetails();
+    fetchDetails(true);
 
-    // Auto-polling co 3 sekundy dla aktywnego dziennika, aby odbierać nowe wiadomości z Discorda na żywo
+    // Auto-polling co 5 sekund dla aktywnego dziennika, aby odbierać nowe wiadomości z Discorda na żywo
     const pollInterval = setInterval(() => {
-      fetchDetails();
-    }, 3000);
+      fetchDetails(false);
+    }, 5000);
 
     return () => {
       isMounted = false;

@@ -898,13 +898,16 @@ export class DurmstrangDiscordBot {
             const lessonId = `les-discord-export-${Date.now()}`;
             const channelName = thread.name || 'Wątek Discord';
             const professorName = interaction.member?.displayName || interaction.user.username;
+            // Użyj portalu ID (nie Discord ID) żeby uprawnienia działały poprawnie
+            const portalUser = db.prepare('SELECT id FROM users WHERE discord_id = ?').get(interaction.user.id);
+            const professorPortalId = portalUser?.id || interaction.user.id;
             db.prepare(`
               INSERT INTO lessons (id, discord_thread_id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, date, status, total_points)
               VALUES (?, ?, 'inne', 'Wątek Discord', 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)
             `).run(
               lessonId, thread.id, channelName,
               `Wyeksportowany wątek Discord: #${channelName}`,
-              interaction.user.id, professorName,
+              professorPortalId, professorName,
               new Date().toISOString().split('T')[0]
             );
             lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(lessonId);
