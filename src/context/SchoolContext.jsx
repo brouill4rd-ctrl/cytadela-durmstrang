@@ -430,16 +430,8 @@ export const SchoolProvider = ({ children }) => {
       });
     };
 
-    const saved = localStorage.getItem('durmstrang_users_db');
-    if (!saved) return sanitizeUsers(SEED_USERS);
-    try {
-      const parsed = JSON.parse(saved);
-      const existingIds = new Set(parsed.map(u => u.id));
-      const missing = SEED_USERS.filter(s => !existingIds.has(s.id));
-      return sanitizeUsers([...parsed, ...missing]);
-    } catch {
-      return sanitizeUsers(SEED_USERS);
-    }
+    localStorage.removeItem('durmstrang_users_db');
+    return sanitizeUsers(SEED_USERS);
   });
 
   const [currentUserId, setCurrentUserId] = useState(() => {
@@ -1513,9 +1505,9 @@ Dyrektor Cytadeli Durmstrang`
     return () => clearInterval(pollInterval);
   }, [rankingPeriod, currentUserId]);
 
-  // Sync to LocalStorage (fallback persistence)
+  // Dane użytkowników są prywatne i pozostają wyłącznie w pamięci bieżącej sesji.
   useEffect(() => {
-    localStorage.setItem('durmstrang_users_db', JSON.stringify(users));
+    localStorage.removeItem('durmstrang_users_db');
   }, [users]);
 
   useEffect(() => {
@@ -1634,9 +1626,6 @@ Dyrektor Cytadeli Durmstrang`
       const nextUsers = exists
         ? prev.map(u => u.id === targetId ? { ...u, ...finalUpdates } : u)
         : [{ ...(currentUser || studentProfile || {}), id: targetId, ...finalUpdates }, ...prev];
-      try {
-        localStorage.setItem('durmstrang_users_db', JSON.stringify(nextUsers));
-      } catch (_) {}
       return nextUsers;
     });
 
@@ -1656,9 +1645,6 @@ Dyrektor Cytadeli Durmstrang`
         if (res.ok && res.data) {
           setUsers(prev => {
             const next = prev.map(u => u.id === targetId ? res.data : u);
-            try {
-              localStorage.setItem('durmstrang_users_db', JSON.stringify(next));
-            } catch (_) {}
             return next;
           });
           if (currentUser?.role === 'student' || !currentUser) {
@@ -1680,6 +1666,29 @@ Dyrektor Cytadeli Durmstrang`
       console.error('[awardHousePoints] Odrzucono nieprawidłową wartość punktów:', points);
       return false;
     }
+
+    if (currentUser?.role === 'admin' && backendAvailable && houseKey) {
+      api.adminAwardHousePoints({ house: houseKey, points: numericPoints, reason })
+        .then(res => {
+          if (!res.ok) {
+            showNotification('Nie zapisano punktów', res.error || 'Operacja została odrzucona.', 'warning');
+            return;
+          }
+          api.getHouseRankings(rankingPeriod).then(rankRes => {
+            if (rankRes.ok && rankRes.data) setHouseRankings(rankRes.data);
+          });
+        });
+      return true;
+    }
+
+    showNotification(
+      'Tryb treningowy',
+      'Ta aktywność nie ma jeszcze serwerowej weryfikacji, dlatego nie przyznaje punktów.',
+      'info'
+    );
+    return false;
+
+    /* Stary optymistyczny mechanizm pozostaje poniżej tylko do czasu usunięcia wywołań legacy. */
 
     const isStaff = currentUser && currentUser.role !== 'student';
     // Kadra zdobywa punkty wyłącznie w osobnym rankingu osobistym.
@@ -1789,6 +1798,14 @@ Dyrektor Cytadeli Durmstrang`
   // Add Currency (Skirniry) to User & Bank
   const addCurrency = async (amount, reason = 'Nagroda z aktywności') => {
     if (!currentUser || !amount) return;
+    showNotification(
+      'Tryb treningowy',
+      'Ta aktywność nie ma jeszcze serwerowej weryfikacji, dlatego nie zmienia salda Skirnirów.',
+      'info'
+    );
+    return false;
+
+    /* Stary optymistyczny mechanizm pozostaje poniżej tylko do czasu usunięcia wywołań legacy. */
     const currentCurr = currentUser.currency || 0;
     const newCurr = currentCurr + amount;
 
@@ -1829,6 +1846,14 @@ Dyrektor Cytadeli Durmstrang`
   // Deduct Currency (Skirniry) from User & Bank
   const deductCurrency = async (amount, reason = 'Wydatek') => {
     if (!currentUser || !amount) return false;
+    showNotification(
+      'Operacja niedostępna',
+      'Ten starszy sklep nie ma bezpiecznego rozliczenia serwerowego. Użyj oficjalnego Rynku Cytadeli.',
+      'warning'
+    );
+    return false;
+
+    /* Stary optymistyczny mechanizm pozostaje poniżej tylko do czasu usunięcia wywołań legacy. */
     const currentCurr = currentUser.currency || 0;
     if (currentCurr < amount) {
       showNotification('Brak Skirnirów', `Brakuje Ci ${amount - currentCurr} Skirnirów do wykonania tej transakcji.`, 'warning');
@@ -2032,6 +2057,46 @@ Dyrektor Cytadeli Durmstrang`
       return fRunes.length === sortedRunes.length && fRunes.every((val, idx) => val.toLowerCase() === sortedRunes[idx].toLowerCase());
     });
 
+    if (!foundFormula) {
+      showNotification('Nieznana formuła', 'Tylko formuły z katalogu mogą zostać rozliczone przez Warsztat.', 'warning');
+      return null;
+    }
+    if (!backendAvailable) {
+      showNotification('Backend Niedostępny', 'Wykuwanie z nagrodą wymaga bezpiecznego połączenia z serwerem.', 'warning');
+      return null;
+    }
+
+    const craftRes = await api.craftFormula({
+      formulaId: foundFormula.id,
+      catalyst,
+      runes: sortedRunes
+    });
+    if (!craftRes.ok) {
+      showNotification('Nie wykuto formuły', craftRes.error || 'Serwer odrzucił formułę.', 'warning');
+      return null;
+    }
+    if (craftRes.data?.user) {
+      setUsers(prev => prev.map(user => user.id === currentUserId ? craftRes.data.user : user));
+    }
+    if (!craftedFormulas.includes(foundFormula.id)) {
+      setCraftedFormulas(prev => [foundFormula.id, ...prev]);
+    }
+    const securedResult = {
+      ...foundFormula,
+      catalyst,
+      rewardPoints: craftRes.data?.formula?.rewardPoints || 0,
+      rewardCurrency: craftRes.data?.formula?.rewardCurrency || 0,
+      alreadyCrafted: !!craftRes.data?.alreadyCrafted
+    };
+    showNotification(
+      craftRes.data?.alreadyCrafted ? 'Formuła już znana' : 'Ukuto Formułę Runiczną!',
+      craftRes.data?.message || `Stworzono: ${foundFormula.name}`,
+      craftRes.data?.alreadyCrafted ? 'info' : 'success'
+    );
+    return securedResult;
+
+    /* Stary klientowski mechanizm nagród pozostaje poniżej tylko do czasu usunięcia kodu legacy. */
+
     const formulaId = foundFormula?.id || `formula-custom-${Date.now()}`;
     const formulaName = foundFormula?.name || `Formuła Runiczna ${sortedRunes.map(r => r.toUpperCase()).join('-')}`;
     const formulaType = foundFormula?.type || 'Bojowa / Ochronna';
@@ -2086,6 +2151,28 @@ Dyrektor Cytadeli Durmstrang`
       return;
     }
 
+    if (!backendAvailable) {
+      showNotification('Backend Niedostępny', 'Odkrycie sekretu musi zostać potwierdzone przez serwer.', 'warning');
+      return false;
+    }
+    const secretRes = await api.discoverSecret({ secretId });
+    if (!secretRes.ok) {
+      showNotification('Nieznana tajemnica', secretRes.error || 'Serwer odrzucił odkrycie.', 'warning');
+      return false;
+    }
+    if (secretRes.data?.user) {
+      setUsers(prev => prev.map(user => user.id === currentUserId ? secretRes.data.user : user));
+    }
+    setDiscoveredSecrets(prev => prev.includes(secretId) ? prev : [...prev, secretId]);
+    showNotification(
+      secretRes.data?.alreadyDiscovered ? 'Znana Tajemnica' : 'Tajemnica Odkryta! ᚱ',
+      secretRes.data?.message || 'Odkrycie zostało zapisane przez Cytadelę.',
+      secretRes.data?.alreadyDiscovered ? 'info' : 'success'
+    );
+    return true;
+
+    /* Stary klientowski mechanizm nagród pozostaje poniżej tylko do czasu usunięcia kodu legacy. */
+
     const nextSecrets = [...discoveredSecrets, secretId];
     setDiscoveredSecrets(nextSecrets);
     try {
@@ -2107,6 +2194,14 @@ Dyrektor Cytadeli Durmstrang`
 
   // Complete Quest from Marauder's Map
   const completeMapQuest = async (questData) => {
+    showNotification(
+      'Zadania Mapy w przebudowie',
+      'Starsze zadania nie przyznają już nagród. Skorzystaj z serwerowo weryfikowanych Ekspedycji.',
+      'info'
+    );
+    return false;
+
+    /* Stary klientowski mechanizm nagród pozostaje poniżej tylko do czasu migracji na Ekspedycje. */
     const { questId, questTitle, locationId, locationName, rewardPoints = 20, rewardXp = 50, rewardGalleons = 15, rewardItem } = questData;
     
     if (completedQuests.some(q => q.questId === questId || q.id === questId)) {
@@ -2825,8 +2920,8 @@ Dyrektor Cytadeli Durmstrang`
   const loginUser = async (username, password) => {
     const res = await api.login(username, password);
     if (res.ok) {
-      const { user, token } = res.data;
-      if (token) localStorage.setItem('durmstrang_auth_token', token);
+      const { user } = res.data;
+      localStorage.removeItem('durmstrang_auth_token');
       setUsers(prev => {
         const exists = prev.find(u => u.id === user.id);
         return exists ? prev.map(u => u.id === user.id ? user : u) : [user, ...prev];
@@ -2846,7 +2941,8 @@ Dyrektor Cytadeli Durmstrang`
     }
   };
 
-  const logoutUser = () => {
+  const logoutUser = async () => {
+    await api.logout();
     setCurrentUserId(null);
     localStorage.setItem('durmstrang_current_user_id', 'guest');
     localStorage.removeItem('durmstrang_auth_token');
@@ -2854,11 +2950,7 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const switchUser = (userId) => {
-    const found = users.find(u => u.id === userId);
-    if (found) {
-      setCurrentUserId(found.id);
-      showNotification('Zmiana Tożsamości', `Aktywna postać: ${found.fullName}`, 'info');
-    }
+    if (userId !== currentUserId) showNotification('Zmiana Niedostępna', 'Zmiana konta wymaga wylogowania i ponownego uwierzytelnienia.', 'warning');
   };
 
   const hasPermission = (permission) => {
@@ -2951,14 +3043,10 @@ Dyrektor Cytadeli Durmstrang`
   };
 
   const resetPassword = async (username, newPassword) => {
-    const user = users.find(u => u.username.toLowerCase() === (username || '').trim().toLowerCase());
-    if (backendAvailable && user) {
-      const res = await api.resetPassword(user.id, newPassword);
-      if (res.ok) {
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, password: newPassword } : u));
-        showNotification('Pieczęć Odnowiona', 'Hasło zostało zmienione.', 'success');
-      }
-    }
+    void username;
+    void newPassword;
+    showNotification('Bezpieczne Odzyskiwanie', 'Użyj jednorazowego kodu wysłanego na przypisany adres e-mail.', 'info');
+    return false;
   };
 
   // Create Admin Account (from CMS)
@@ -2978,29 +3066,12 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    // Fallback
-    const newId = `usr-${Date.now()}`;
-    const newAdmin = {
-      id: newId,
-      username: (adminData.username || '').trim().toLowerCase(),
-      password: adminData.password || '123',
-      name: (adminData.name || '').trim(),
-      surname: (adminData.surname || '').trim(),
-      fullName: `${(adminData.name || '').trim()} ${(adminData.surname || '').trim()}`,
-      role: 'admin',
-      status: 'approved',
-      title: adminData.title || 'Arcymistrz Cytadeli Durmstrang',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-      office: adminData.office || 'Komnaty Najwyższej Wieży Durmstrang',
-      email: `${(adminData.username || '').trim().toLowerCase()}@durmstrang.edu`,
-      level: 10,
-      xp: 9999,
-      points: 500,
-      currency: 1000
-    };
-    setUsers(prev => [newAdmin, ...prev]);
-    showNotification('Nowy Arcymistrz Mianowany', `Konto dla ${newAdmin.fullName} zostało utworzone.`, 'success');
-    return true;
+    showNotification(
+      'Backend Niedostępny',
+      'Konta administratora nie można utworzyć lokalnie. Uruchom bezpieczne API i spróbuj ponownie.',
+      'warning'
+    );
+    return false;
   };
 
   const approveApplication = async (appId) => {
@@ -3452,11 +3523,11 @@ Dyrektor Cytadeli Durmstrang`
 
     if (backendAvailable) {
       const res = await api.transferFunds({
-        senderId: currentUser.id,
         recipientId,
         amount: numAmount,
         title,
-        note
+        note,
+        idempotencyKey: globalThis.crypto?.randomUUID?.() || `web-${Date.now()}-${Math.random().toString(36).slice(2)}`
       });
       if (res.ok) {
         setUsers(prev => prev.map(u => {
@@ -3474,7 +3545,10 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    // Local fallback
+    showNotification('Bank Niedostępny', 'Przelewy wymagają bezpiecznego połączenia z serwerem.', 'warning');
+    return false;
+
+    // Nieaktywna pozostałość dawnego trybu lokalnego.
     const targetUser = users.find(u => u.id === recipientId);
     const recipientName = targetUser ? targetUser.fullName : recipientId;
     const tx = {
@@ -3767,7 +3841,6 @@ Dyrektor Cytadeli Durmstrang`
 
     if (backendAvailable) {
       const res = await api.buyLotteryTicket({
-        userId: currentUser.id,
         chosenRunes,
         roundId: currentLottery.id
       });
@@ -3784,7 +3857,10 @@ Dyrektor Cytadeli Durmstrang`
       }
     }
 
-    // Local fallback
+    showNotification('Loteria Niedostępna', 'Zakup losu wymaga bezpiecznego połączenia z serwerem.', 'warning');
+    return false;
+
+    // Nieaktywna pozostałość dawnego trybu lokalnego.
     const newCurrency = (currentUser.currency || 0) - ticketPrice;
     setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, currency: newCurrency } : u));
     setBankAccount(prev => ({ ...prev, balance: newCurrency }));

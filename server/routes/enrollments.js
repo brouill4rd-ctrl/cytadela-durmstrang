@@ -40,9 +40,9 @@ router.put('/config', requireAuth, requireAdmin, (req, res) => {
 
 // ── GET /api/enrollments/stats  (public) ─────────────────────────────────────
 router.get('/stats', (req, res) => {
-  const studentsEnrolled = db.prepare(`SELECT COUNT(*) as c FROM users WHERE role = 'student' AND status = 'active'`).get().c;
+  const studentsEnrolled = db.prepare(`SELECT COUNT(*) as c FROM users WHERE role = 'student' AND status IN ('approved','active')`).get().c;
   const studentsPending = db.prepare(`SELECT COUNT(*) as c FROM users WHERE role = 'student' AND status = 'pending'`).get().c;
-  const professorsEnrolled = db.prepare(`SELECT COUNT(*) as c FROM users WHERE role IN ('professor','admin') AND status = 'active'`).get().c;
+  const professorsEnrolled = db.prepare(`SELECT COUNT(*) as c FROM users WHERE role IN ('professor','admin') AND status IN ('approved','active')`).get().c;
   const professorsPending = db.prepare(`SELECT COUNT(*) as c FROM professor_subject_applications WHERE status = 'pending'`).get().c;
   res.json({ studentsEnrolled, studentsPending, professorsEnrolled, professorsPending });
 });

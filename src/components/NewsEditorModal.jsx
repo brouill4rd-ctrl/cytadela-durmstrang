@@ -44,8 +44,6 @@ function estimateReadTime(htmlOrText) {
 }
 
 export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
-  if (!isOpen) return null;
-
   const {
     currentRole,
     currentUser,
@@ -264,6 +262,7 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
     onClose();
   };
 
+  if (!isOpen) return null;
 
   return (
     <div

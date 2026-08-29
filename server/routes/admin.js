@@ -12,6 +12,7 @@ import {
   reverse as reverseSkirnir,
   recalculateBalance, recalculateAllBalances
 } from '../services/skirnirService.js';
+import { validatePassword } from '../utils/passwordPolicy.js';
 
 const router = Router();
 
@@ -32,6 +33,11 @@ router.post('/create-account', (req, res) => {
     return res.status(409).json({ error: 'Taki login już istnieje.' });
   }
 
+  const passwordCheck = validatePassword(data.password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ error: passwordCheck.error });
+  }
+
   const newId = `usr-${Date.now()}`;
   const userEmail = (data.email || '').trim() || `${trimmedUsername}@durmstrang.edu`;
 
@@ -39,7 +45,7 @@ router.post('/create-account', (req, res) => {
     INSERT INTO users (id, username, password, email, name, surname, full_name, role, status, house, title, avatar, department, department_name, default_banner_category, office, specialization, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'admin', 'approved', NULL, ?, ?, 'edykty', 'Rada Dyrekcji Cytadeli', 'edykty', ?, 'Najwyższa Magia Północy, Starożytne Pieczęcie i Prawa Cytadeli', ?)
   `).run(
-    newId, trimmedUsername, bcrypt.hashSync(data.password || '123', 10), userEmail,
+    newId, trimmedUsername, bcrypt.hashSync(data.password, 10), userEmail,
     (data.name || '').trim(), (data.surname || '').trim(),
     `${(data.name || '').trim()} ${(data.surname || '').trim()}`,
     data.title || 'Arcymistrz Cytadeli Durmstrang',
@@ -151,6 +157,10 @@ router.get('/system-stats', (req, res) => {
 
 // GET /api/admin/backup-export — Full JSON dump of all SQLite tables
 router.get('/backup-export', (req, res) => {
+  return res.status(410).json({
+    error: 'Eksport JSON został wyłączony, ponieważ zawierał hashe haseł, dane osobowe i sekrety integracji. Użyj szyfrowanego backupu SQLite poza aplikacją.'
+  });
+  /* c8 ignore start -- kod legacy pozostawiony tymczasowo wyłącznie do migracji */
   try {
     const getAll = (tbl) => {
       try {
@@ -213,6 +223,10 @@ router.get('/backup-export', (req, res) => {
 
 // POST /api/admin/backup-import — Restore entire SQLite database from JSON
 router.post('/backup-import', (req, res) => {
+  return res.status(410).json({
+    error: 'Import JSON został wyłączony z powodu ryzyka częściowego i destrukcyjnego restore. Przywracaj zweryfikowany plik SQLite offline.'
+  });
+  /* c8 ignore start -- kod legacy pozostawiony tymczasowo wyłącznie do migracji */
   try {
     const { backup } = req.body;
     if (!backup || !backup.database) {
@@ -417,136 +431,19 @@ router.get('/db/table/:tableName', (req, res) => {
   }
 });
 
-// POST /api/admin/db/table/:tableName — Insert new row
-router.post('/db/table/:tableName', (req, res) => {
-  try {
-    const { tableName } = req.params;
-    const allowed = getAllowedTables();
-    if (!allowed.includes(tableName)) {
-      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
-    }
-
-    const data = req.body || {};
-    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
-    const colNames = columns.map(c => c.name);
-
-    // If ID is missing and table has an id column, generate one
-    if (colNames.includes('id') && !data.id) {
-      data.id = `${tableName.slice(0, 4)}-${Date.now()}`;
-    }
-
-    // Filter to valid columns only
-    const validCols = Object.keys(data).filter(k => colNames.includes(k));
-    if (validCols.length === 0) {
-      return res.status(400).json({ error: 'Brak poprawnych pól do wstawienia.' });
-    }
-
-    const placeholders = validCols.map(() => '?').join(', ');
-    const values = validCols.map(k => typeof data[k] === 'object' && data[k] !== null ? JSON.stringify(data[k]) : data[k]);
-
-    const stmt = db.prepare(`INSERT INTO "${tableName}" (${validCols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`);
-    stmt.run(...values);
-
-    // Audit log
-    db.prepare(`
-      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      `log-${Date.now()}`,
-      new Date().toISOString(),
-      req.user.fullName || 'Dyrekcja Cytadeli',
-      `Wstawiono rekord do tabeli [${tableName}]`,
-      `Klucz: ${data.id || 'nowy rekord'}`
-    );
-
-    res.status(201).json({ ok: true, message: `Dodano rekord do tabeli ${tableName}`, data });
-  } catch (err) {
-    res.status(500).json({ error: 'Błąd dodawania rekordu: ' + err.message });
-  }
+// POST /api/admin/db/table/:tableName — disabled (use domain services instead)
+router.post('/db/table/:tableName', (_req, res) => {
+  res.status(410).json({ error: 'Bezpośrednie wstawianie rekordów przez DB Explorer jest wyłączone. Użyj właściwego API domeny.' });
 });
 
-// PUT /api/admin/db/table/:tableName/:id — Update row
-router.put('/db/table/:tableName/:id', (req, res) => {
-  try {
-    const { tableName, id } = req.params;
-    const allowed = getAllowedTables();
-    if (!allowed.includes(tableName)) {
-      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
-    }
-
-    const data = req.body || {};
-    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
-    const pkCol = (columns.find(c => c.pk) || columns.find(c => c.name === 'id') || { name: 'id' }).name;
-    const colNames = columns.map(c => c.name);
-
-    const validCols = Object.keys(data).filter(k => colNames.includes(k) && k !== pkCol);
-    if (validCols.length === 0) {
-      return res.status(400).json({ error: 'Brak pól do zaktualizowania.' });
-    }
-
-    const setClauses = validCols.map(c => `"${c}" = ?`).join(', ');
-    const values = validCols.map(k => typeof data[k] === 'object' && data[k] !== null ? JSON.stringify(data[k]) : data[k]);
-
-    const stmt = db.prepare(`UPDATE "${tableName}" SET ${setClauses} WHERE "${pkCol}" = ?`);
-    const info = stmt.run(...values, id);
-
-    if (info.changes === 0) {
-      return res.status(404).json({ error: `Nie znaleziono rekordu o identyfikatorze "${id}" w tabeli ${tableName}.` });
-    }
-
-    // Audit log
-    db.prepare(`
-      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      `log-${Date.now()}`,
-      new Date().toISOString(),
-      req.user.fullName || 'Dyrekcja Cytadeli',
-      `Zaktualizowano rekord w tabeli [${tableName}]`,
-      `ID: ${id} • Zmodyfikowane pola: ${validCols.join(', ')}`
-    );
-
-    res.json({ ok: true, message: `Zaktualizowano rekord w tabeli ${tableName}`, changes: info.changes });
-  } catch (err) {
-    res.status(500).json({ error: 'Błąd edycji rekordu: ' + err.message });
-  }
+// PUT /api/admin/db/table/:tableName/:id — disabled (use domain services instead)
+router.put('/db/table/:tableName/:id', (_req, res) => {
+  res.status(410).json({ error: 'Bezpośrednia edycja rekordów przez DB Explorer jest wyłączona. Użyj właściwego API domeny.' });
 });
 
-// DELETE /api/admin/db/table/:tableName/:id — Delete row
-router.delete('/db/table/:tableName/:id', (req, res) => {
-  try {
-    const { tableName, id } = req.params;
-    const allowed = getAllowedTables();
-    if (!allowed.includes(tableName)) {
-      return res.status(404).json({ error: `Tabela "${tableName}" nie istnieje.` });
-    }
-
-    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
-    const pkCol = (columns.find(c => c.pk) || columns.find(c => c.name === 'id') || { name: 'id' }).name;
-
-    const stmt = db.prepare(`DELETE FROM "${tableName}" WHERE "${pkCol}" = ?`);
-    const info = stmt.run(id);
-
-    if (info.changes === 0) {
-      return res.status(404).json({ error: `Nie znaleziono rekordu o ID "${id}" do usunięcia.` });
-    }
-
-    // Audit log
-    db.prepare(`
-      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      `log-${Date.now()}`,
-      new Date().toISOString(),
-      req.user.fullName || 'Dyrekcja Cytadeli',
-      `Usunięto rekord z tabeli [${tableName}]`,
-      `ID: ${id}`
-    );
-
-    res.json({ ok: true, message: `Pomyślnie usunięto rekord o ID "${id}" z tabeli ${tableName}.` });
-  } catch (err) {
-    res.status(500).json({ error: 'Błąd usuwania rekordu: ' + err.message });
-  }
+// DELETE /api/admin/db/table/:tableName/:id — disabled (use domain services instead)
+router.delete('/db/table/:tableName/:id', (_req, res) => {
+  res.status(410).json({ error: 'Bezpośrednie usuwanie rekordów przez DB Explorer jest wyłączone. Użyj właściwego API domeny.' });
 });
 
 // ==========================================
@@ -918,5 +815,3 @@ router.post('/legacy-import', (req, res) => {
 });
 
 export default router;
-
-

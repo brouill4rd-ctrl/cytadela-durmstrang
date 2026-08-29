@@ -1,19 +1,29 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import db, { dbUserToFrontend, dbEmailToFrontend } from '../db.js';
 import { EMAIL_TYPES, HOUSE_EMAIL_THEMES } from '../email/emailTemplates.js';
 import { deliverTransactionalEmail, queueTransactionalEmail } from '../email/transactionalEmailService.js';
 import { discordBot } from '../discordBot.js';
+import { JWT_EXPIRY, JWT_SECRET } from '../config/security.js';
+import { validatePassword } from '../utils/passwordPolicy.js';
+import { getMailRuntimeConfig, getMailTransport } from '../email/mailTransport.js';
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294';
-const JWT_EXPIRY = '7d';
-
 function signToken(user) {
   return jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+}
+
+function setSessionCookie(res, token) {
+  res.cookie('durmstrang_session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 2 * 60 * 60 * 1000
+  });
 }
 
 // POST /api/auth/login
@@ -43,7 +53,72 @@ router.post('/login', (req, res) => {
   }
 
   const token = signToken(user);
-  res.json({ user, token });
+  setSessionCookie(res, token);
+  res.json({ user });
+});
+
+router.post('/logout', (_req, res) => {
+  res.clearCookie('durmstrang_session', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
+  res.json({ success: true });
+});
+
+router.post('/password-recovery/request', (req, res) => {
+  const identifier = String(req.body?.identifier || '').trim().toLowerCase();
+  const genericResponse = { message: 'Jeśli konto istnieje, instrukcja odnowienia hasła została wysłana na przypisany adres e-mail.' };
+  if (!identifier) return res.status(202).json(genericResponse);
+
+  const user = db.prepare('SELECT id, email, full_name FROM users WHERE LOWER(username) = ? OR LOWER(email) = ?').get(identifier, identifier);
+  if (!user || !user.email) return res.status(202).json(genericResponse);
+
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  const id = `pwd-${randomUUID()}`;
+  db.transaction(() => {
+    db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL").run(user.id);
+    db.prepare('INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)').run(id, user.id, tokenHash, expiresAt);
+  })();
+
+  setImmediate(async () => {
+    try {
+      const config = getMailRuntimeConfig();
+      const transport = getMailTransport();
+      await transport.sendMail({
+        from: { name: config.fromName, address: config.fromAddress },
+        replyTo: config.replyTo || undefined,
+        to: { name: user.full_name, address: user.email },
+        subject: 'Twierdza Magii Durmstrang — kod odnowienia hasła',
+        text: `Kod odnowienia hasła: ${token}\n\nKod jest jednorazowy i wygasa po 30 minutach. Jeśli nie proszono o zmianę hasła, zignoruj tę wiadomość.`,
+        html: `<p>Kod odnowienia hasła:</p><p style="font:700 18px monospace;word-break:break-all">${token}</p><p>Kod jest jednorazowy i wygasa po 30 minutach. Jeśli nie proszono o zmianę hasła, zignoruj tę wiadomość.</p>`
+      });
+    } catch (error) {
+      console.warn('[Auth] Nie udało się wysłać wiadomości odzyskiwania hasła:', error.message);
+    }
+  });
+
+  res.status(202).json(genericResponse);
+});
+
+router.post('/password-recovery/confirm', (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  const passwordCheck = validatePassword(req.body?.newPassword);
+  if (!token || !passwordCheck.valid) return res.status(400).json({ error: passwordCheck.error || 'Podaj kod odnowienia.' });
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const record = db.prepare("SELECT * FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')").get(tokenHash);
+  if (!record) return res.status(400).json({ error: 'Kod jest nieprawidłowy, wykorzystany albo wygasł.' });
+  const passwordHash = bcrypt.hashSync(req.body.newPassword, 12);
+  db.transaction(() => {
+    const claimed = db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL").run(record.id);
+    if (claimed.changes !== 1) throw new Error('Kod został już wykorzystany.');
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(passwordHash, record.user_id);
+    db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL").run(record.user_id);
+  })();
+  res.json({ success: true, message: 'Hasło zostało bezpiecznie zmienione.' });
 });
 
 // POST /api/auth/register
@@ -79,7 +154,12 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Rytuał Przydziału nie wskazał prawidłowego Zakonu.' });
   }
 
-  const rawPassword = data.password || '123';
+  const passwordCheck = validatePassword(data.password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ error: passwordCheck.error });
+  }
+
+  const rawPassword = data.password;
   const hashedPassword = bcrypt.hashSync(rawPassword, 10);
 
   const newId = `usr-${randomUUID()}`;

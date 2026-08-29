@@ -11,41 +11,42 @@ import {
   User,
   ArrowRight
 } from 'lucide-react';
+import { api } from '../api';
 
 export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
-  const { users, resetPassword, showNotification } = useSchool();
+  const { showNotification } = useSchool();
   const { playWandSwoosh, playRuneChime } = useSound();
 
   const [usernameInput, setUsernameInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [step, setStep] = useState(1); // 1: identify | 2: new password | 3: success
   const [matchedUser, setMatchedUser] = useState(null);
+  const [resetToken, setResetToken] = useState('');
 
-  const handleIdentify = (e) => {
+  const handleIdentify = async (e) => {
     e.preventDefault();
     const trimmed = usernameInput.trim().toLowerCase();
-    const found = users.find(u => u.username.toLowerCase() === trimmed);
-    if (!found) {
-      showNotification('Brak Zapisów', 'Nie odnaleziono adepta lub profesora o takim loginie w księdze Cytadeli.', 'warning');
-      return;
-    }
-
+    if (!trimmed) return;
+    await api.requestPasswordRecovery(trimmed);
     playRuneChime();
-    setMatchedUser(found);
+    setMatchedUser({ username: trimmed });
     setStep(2);
+    showNotification('Sprawdź Pocztę', 'Jeśli konto istnieje, wysłaliśmy jednorazowy kod ważny przez 30 minut.', 'info');
   };
 
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!newPassword.trim()) {
       showNotification('Brak Hasła', 'Podaj nową pieczęć hasła.', 'warning');
       return;
     }
 
+    const result = await api.confirmPasswordRecovery(resetToken.trim(), newPassword.trim());
+    if (!result.ok) {
+      showNotification('Nie Zmieniono Hasła', result.error, 'warning');
+      return;
+    }
     playWandSwoosh();
-    resetPassword(matchedUser.username, newPassword.trim());
     setStep(3);
   };
 
@@ -54,6 +55,7 @@ export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
     setUsernameInput('');
     setNewPassword('');
     setMatchedUser(null);
+    setResetToken('');
     onClose();
   };
 
@@ -66,6 +68,8 @@ export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -165,20 +169,22 @@ export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
 
           {step === 2 && matchedUser && (
             <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              <div style={{ padding: '0.8rem', background: 'rgba(197, 159, 78, 0.1)', border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                <img
-                  src={matchedUser.avatar}
-                  alt={matchedUser.fullName}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--gold-ancient)' }}
+              <p style={{ fontSize: '0.85rem', color: '#cfd7e4', lineHeight: 1.5 }}>
+                Wpisz jednorazowy kod otrzymany pocztą. Kod wygasa po 30 minutach i działa tylko raz.
+              </p>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem' }}>
+                  Jednorazowy kod odnowienia *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoComplete="one-time-code"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  className="gothic-input"
                 />
-                <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
-                    {matchedUser.fullName}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-glow)' }}>
-                    @{matchedUser.username} • {matchedUser.role === 'admin' ? (matchedUser.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz') : matchedUser.role === 'professor' ? 'Profesor' : 'Adept'}
-                  </div>
-                </div>
               </div>
 
               <div>
@@ -188,6 +194,8 @@ export const PasswordRecoveryModal = ({ isOpen, onClose }) => {
                 <input
                   type="password"
                   required
+                  minLength={12}
+                  autoComplete="new-password"
                   placeholder="Wpisz nowe hasło..."
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}

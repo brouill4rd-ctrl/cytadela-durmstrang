@@ -9,22 +9,43 @@ import {
   getUserEmailDeliveries,
   queueTransactionalEmail
 } from '../email/transactionalEmailService.js';
+import { validatePassword } from '../utils/passwordPolicy.js';
 
 const router = Router();
+
+function toDirectoryUser(row) {
+  const user = dbUserToFrontend(row);
+  return {
+    id: user.id,
+    username: user.username,
+    fullName: user.fullName,
+    role: user.role,
+    status: user.status,
+    house: user.house,
+    title: user.title,
+    avatar: user.avatar,
+    departmentName: user.departmentName,
+    classYear: user.classYear
+  };
+}
 
 // GET /api/users — all users (zalogowani)
 router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
-  res.json(rows.map(row => ({
-    ...dbUserToFrontend(row),
-    ...(req.user.role === 'admin' ? { transactionalEmails: getUserEmailDeliveries(db, row.id) } : {})
-  })));
+  res.json(rows.map(row => {
+    if (req.user.role !== 'admin' && row.id !== req.user.id) return toDirectoryUser(row);
+    return {
+      ...dbUserToFrontend(row),
+      ...(req.user.role === 'admin' ? { transactionalEmails: getUserEmailDeliveries(db, row.id) } : {})
+    };
+  }));
 });
 
 // GET /api/users/:id — single user (zalogowani)
 router.get('/:id', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'User not found' });
+  if (req.user.role !== 'admin' && row.id !== req.user.id) return res.json(toDirectoryUser(row));
   res.json({
     ...dbUserToFrontend(row),
     ...(req.user.role === 'admin' ? { transactionalEmails: getUserEmailDeliveries(db, row.id) } : {})
@@ -299,7 +320,8 @@ router.patch('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
 // PATCH /api/users/:id/reset-password — Wymaga: admin
 router.patch('/:id/reset-password', requireAuth, requireRole('admin'), (req, res) => {
   const { newPassword } = req.body;
-  if (!newPassword) return res.status(400).json({ error: 'Podaj nowe hasło.' });
+  const passwordCheck = validatePassword(newPassword);
+  if (!passwordCheck.valid) return res.status(400).json({ error: passwordCheck.error });
   const hashed = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashed, req.params.id);
   res.json({ success: true });

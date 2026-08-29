@@ -25,17 +25,11 @@ router.get('/rune-formulas', (req, res) => {
 });
 
 // GET /api/workshop/formulas — List crafted formulas for user
-router.get('/formulas', (req, res) => {
+router.get('/formulas', requireAuth, (req, res) => {
   try {
-    const userId = req.query.userId || req.headers['x-user-id'];
-    let query = 'SELECT * FROM crafted_formulas';
-    const params = [];
-    if (userId && userId !== 'guest') {
-      query += ' WHERE user_id = ?';
-      params.push(userId);
-    }
-    query += ' ORDER BY rowid DESC';
-    const rows = db.prepare(query).all(...params);
+    const rows = db.prepare(
+      'SELECT * FROM crafted_formulas WHERE user_id = ? ORDER BY rowid DESC'
+    ).all(req.user.id);
     res.json(rows.map(dbCraftedFormulaToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania wykutych formuł: ' + err.message });
@@ -45,30 +39,48 @@ router.get('/formulas', (req, res) => {
 // POST /api/workshop/craft — Craft rune formula on altar
 router.post('/craft', requireAuth, (req, res) => {
   try {
-    const {
-      formulaId,
-      name,
-      type = 'Bojowa / Ochronna',
-      catalyst = 'Krew Renifera',
-      runes = [],
-      rewardPoints = 15,
-      rewardCurrency = 20
-    } = req.body;
+    const { formulaId, catalyst = 'Krew Renifera', runes = [] } = req.body;
 
     const userId = req.user.id;
-    if (!name) {
-      return res.status(400).json({ error: 'Nazwa formuły jest wymagana.' });
+    if (!formulaId) return res.status(400).json({ error: 'Wybierz formułę z katalogu Warsztatu.' });
+
+    const catalogFormula = db.prepare('SELECT * FROM rune_formulas WHERE id = ?').get(formulaId);
+    if (!catalogFormula) return res.status(404).json({ error: 'Nieznana formuła runiczna.' });
+
+    const expectedRunes = JSON.parse(catalogFormula.runes || '[]').map(String).sort();
+    const submittedRunes = Array.isArray(runes) ? runes.map(String).sort() : [];
+    if (expectedRunes.length !== submittedRunes.length || expectedRunes.some((rune, index) => rune !== submittedRunes[index])) {
+      return res.status(400).json({ error: 'Zestaw run nie odpowiada wybranej formule.' });
     }
 
+    const existing = db.prepare(
+      'SELECT * FROM crafted_formulas WHERE user_id = ? AND formula_id = ?'
+    ).get(userId, formulaId);
+    if (existing) {
+      return res.json({
+        ok: true,
+        alreadyCrafted: true,
+        message: 'Ta formuła została już przez Ciebie wykuta.',
+        formula: dbCraftedFormulaToFrontend(existing),
+        user: dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(userId)),
+        rankings: calculateHouseRankings('overall')
+      });
+    }
+
+    const name = catalogFormula.name;
+    const type = catalogFormula.type || 'Bojowa / Ochronna';
+    const rewardPoints = Math.max(0, Number(catalogFormula.reward_points) || 0);
+    const rewardCurrency = Math.max(0, Number(catalogFormula.reward_currency) || 0);
+
     const tx = db.transaction(() => {
-      const id = `craft-${userId}-${formulaId || Date.now()}-${Date.now()}`;
+      const id = `craft-${userId}-${formulaId}`;
       db.prepare(`
         INSERT INTO crafted_formulas (id, user_id, formula_id, name, type, catalyst, runes, reward_points, reward_currency, crafted_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `).run(
         id,
         userId,
-        formulaId || id,
+        formulaId,
         name,
         type,
         catalyst,
@@ -79,7 +91,7 @@ router.post('/craft', requireAuth, (req, res) => {
 
       const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
       if (userRow) {
-        const idemKey = `craft-${userId}-${formulaId || name}-${Date.now()}`;
+        const idemKey = `craft-${userId}-${formulaId}`;
         if (rewardPoints > 0 && userRow.house) {
           awardPoints({
             studentId: userId,
@@ -88,7 +100,7 @@ router.post('/craft', requireAuth, (req, res) => {
             points: rewardPoints,
             source: `Warsztat Runiczny: ${name}`,
             sourceType: 'WORKSHOP',
-            sourceId: formulaId || id,
+            sourceId: formulaId,
             comment: `Ukucie formuły z katalizatorem: ${catalyst}`,
             idempotencyKey: `pt-${idemKey}`
           });
@@ -101,7 +113,7 @@ router.post('/craft', requireAuth, (req, res) => {
             category: 'warsztat',
             title: `Nagroda za formułę: ${name}`,
             sourceType: 'WORKSHOP',
-            sourceId: formulaId || id,
+            sourceId: formulaId,
             idempotencyKey: `skr-${idemKey}`
           });
         }

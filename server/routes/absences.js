@@ -26,6 +26,7 @@ function getRequestWithLessons(id) {
 function findMatchingTimetableEntries(startAt, endAt) {
   const start = new Date(startAt);
   const end = new Date(endAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start) return [];
   const entries = db.prepare(`SELECT * FROM timetable_entries WHERE is_active = 1`).all();
   const matched = [];
 
@@ -218,6 +219,33 @@ router.put('/config', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // GET /api/absences/:id
+router.get('/timetable-preview', requireAuth, (req, res) => {
+  try {
+    const { startAt, endAt } = req.query;
+    if (!startAt || !endAt) return res.status(400).json({ error: 'Wymagane: startAt, endAt.' });
+    const start = new Date(startAt);
+    const end = new Date(endAt);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start || end - start > 31 * 86400000) return res.status(400).json({ error: 'Zakres dat jest nieprawidłowy lub przekracza 31 dni.' });
+    const classYear = db.prepare('SELECT class_year FROM users WHERE id = ?').get(req.user.id)?.class_year || '';
+    const matched = findMatchingTimetableEntries(startAt, endAt).filter(({ entry }) =>
+      req.user.role !== 'student' || !entry.class_year || entry.class_year === 'Wszystkie' || entry.class_year === classYear
+    );
+    res.json(matched.map(({ entry, date }) => ({
+      timetableEntryId: entry.id,
+      subjectId: entry.subject_id || '',
+      subjectName: entry.subject_name,
+      subjectIcon: entry.subject_icon || '📚',
+      professorName: entry.professor_name,
+      lessonDate: date,
+      lessonStart: entry.start_time,
+      lessonEnd: entry.end_time,
+      classroom: entry.classroom
+    })));
+  } catch (err) {
+    res.status(500).json({ error: 'Błąd podglądu planu.' });
+  }
+});
+
 router.get('/:id', requireAuth, (req, res) => {
   try {
     const row = db.prepare(`SELECT * FROM absence_requests WHERE id = ?`).get(req.params.id);
@@ -225,6 +253,10 @@ router.get('/:id', requireAuth, (req, res) => {
     const { user } = req;
     if (user.role === 'student' && row.user_id !== user.id) {
       return res.status(403).json({ error: 'Brak dostępu.' });
+    }
+    if (user.role === 'professor') {
+      const ownsLinkedLesson = db.prepare('SELECT 1 FROM absence_request_lessons arl JOIN lessons l ON l.id = arl.lesson_id WHERE arl.request_id = ? AND l.professor_id = ? LIMIT 1').get(row.id, user.id);
+      if (!ownsLinkedLesson) return res.status(403).json({ error: 'Wniosek nie dotyczy prowadzonej przez Ciebie lekcji.' });
     }
     res.json(getRequestWithLessons(req.params.id));
   } catch (err) {
@@ -236,7 +268,7 @@ router.get('/:id', requireAuth, (req, res) => {
 router.post('/', requireAuth, (req, res) => {
   try {
     const { user } = req;
-    const { type, startAt, endAt, reason, extraInfo, schoolYear } = req.body;
+    const { type, startAt, endAt, reason, extraInfo, schoolYear, participantId = '' } = req.body;
 
     if (!type || !startAt || !endAt || !reason?.trim()) {
       return res.status(400).json({ error: 'Wymagane pola: type, startAt, endAt, reason.' });
@@ -244,12 +276,44 @@ router.post('/', requireAuth, (req, res) => {
     if (!['planned', 'post_factum'].includes(type)) {
       return res.status(400).json({ error: 'Nieprawidłowy typ wniosku.' });
     }
+    const requestedStart = new Date(startAt);
+    const requestedEnd = new Date(endAt);
+    if (!Number.isFinite(requestedStart.getTime()) || !Number.isFinite(requestedEnd.getTime()) || requestedEnd < requestedStart || requestedEnd - requestedStart > 31 * 86400000) {
+      return res.status(400).json({ error: 'Zakres nieobecności jest nieprawidłowy lub przekracza 31 dni.' });
+    }
+
+    let effectiveStartAt = startAt;
+    let effectiveEndAt = endAt;
+    let validatedLessonLinks = [];
+
+    if (type === 'post_factum') {
+      if (!participantId) return res.status(400).json({ error: 'Wskaż własną nieobecność do usprawiedliwienia.' });
+      const participant = db.prepare(`
+        SELECT lp.id AS participant_id, l.id AS lesson_id, l.subject_id, l.subject_name,
+               l.professor_id, l.professor_name, l.date
+        FROM lesson_participants lp
+        JOIN lessons l ON l.id = lp.lesson_id
+        WHERE lp.id = ? AND lp.student_id = ? AND lp.is_present = 0 AND l.status = 'published'
+      `).get(participantId, user.id);
+      if (!participant) return res.status(403).json({ error: 'Wskazana nieobecność nie należy do Twojego konta.' });
+      effectiveStartAt = `${participant.date.slice(0, 10)}T00:00:00`;
+      effectiveEndAt = `${participant.date.slice(0, 10)}T23:59:59`;
+      validatedLessonLinks = [{
+        lessonId: participant.lesson_id,
+        subjectId: participant.subject_id,
+        subjectName: participant.subject_name,
+        professorId: participant.professor_id,
+        professorName: participant.professor_name,
+        lessonDate: participant.date.slice(0, 10),
+        participantId: participant.participant_id
+      }];
+    }
 
     // Post-factum deadline check
     if (type === 'post_factum') {
       const deadlineDays = getDeadlineDays();
       if (deadlineDays > 0) {
-        const lessonDate = new Date(startAt);
+        const lessonDate = new Date(effectiveStartAt);
         const daysDiff = (Date.now() - lessonDate.getTime()) / (1000 * 60 * 60 * 24);
         if (daysDiff > deadlineDays) {
           return res.status(400).json({ error: `Upłynął termin na usprawiedliwienie (${deadlineDays} dni).` });
@@ -258,10 +322,9 @@ router.post('/', requireAuth, (req, res) => {
     }
 
     // Check for duplicate on same participant (post_factum)
-    const participantId = req.body.participantId || '';
     if (participantId) {
       const existing = db.prepare(
-        `SELECT id FROM absence_request_lessons WHERE participant_id = ? AND request_id IN (
+        `SELECT id, request_id FROM absence_request_lessons WHERE participant_id = ? AND request_id IN (
           SELECT id FROM absence_requests WHERE status IN ('pending','approved')
         )`
       ).get(participantId);
@@ -283,16 +346,19 @@ router.post('/', requireAuth, (req, res) => {
     `).run(
       id, user.id, userRow?.full_name || user.id,
       userRow?.house || '', userRow?.class_year || '',
-      type, startAt, endAt, reason.trim(), extraInfo || '',
+      type, effectiveStartAt, effectiveEndAt, reason.trim(), extraInfo || '',
       now, schoolYear || '', now, now
     );
 
     // Create lesson links
-    const lessonLinks = req.body.lessonLinks || [];
+    const lessonLinks = validatedLessonLinks;
 
     if (type === 'planned' && lessonLinks.length === 0) {
       // Auto-detect from timetable
-      const matched = findMatchingTimetableEntries(startAt, endAt);
+      const userClassYear = userRow?.class_year || '';
+      const matched = findMatchingTimetableEntries(effectiveStartAt, effectiveEndAt).filter(({ entry }) =>
+        !entry.class_year || entry.class_year === 'Wszystkie' || entry.class_year === userClassYear
+      );
       for (const { entry, date } of matched) {
         const linkId = genId('arl');
         db.prepare(`
@@ -372,8 +438,8 @@ router.delete('/:id', requireAuth, (req, res) => {
     const links = db.prepare(`SELECT participant_id FROM absence_request_lessons WHERE request_id = ?`).all(row.id);
     for (const link of links) {
       if (link.participant_id) {
-        db.prepare(`UPDATE lesson_participants SET excuse_status = NULL, excuse_request_id = '' WHERE id = ? AND excuse_request_id = ?`)
-          .run(link.participant_id, row.id);
+        db.prepare(`UPDATE lesson_participants SET excuse_status = NULL, excuse_request_id = '' WHERE id = ? AND student_id = ? AND excuse_request_id = ?`)
+          .run(link.participant_id, row.user_id, row.id);
       }
     }
 
@@ -415,8 +481,8 @@ router.post('/:id/review', requireAuth, requireRole('admin'), (req, res) => {
     const links = db.prepare(`SELECT * FROM absence_request_lessons WHERE request_id = ?`).all(row.id);
     for (const link of links) {
       if (link.participant_id) {
-        db.prepare(`UPDATE lesson_participants SET excuse_status = ? WHERE id = ? AND is_present = 0`)
-          .run(excuseStatus, link.participant_id);
+        db.prepare(`UPDATE lesson_participants SET excuse_status = ? WHERE id = ? AND student_id = ? AND is_present = 0`)
+          .run(excuseStatus, link.participant_id, row.user_id);
       } else if (link.lesson_id && row.user_id) {
         // Try to find participant
         const part = db.prepare(`SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ? LIMIT 1`)
@@ -444,7 +510,7 @@ router.post('/:id/review', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 // GET /api/absences/lesson/:lessonId/participants — lesson participants with excuse status (professor view)
-router.get('/lesson/:lessonId/participants', requireAuth, (req, res) => {
+router.get('/lesson/:lessonId/participants', requireAuth, requireRole('professor', 'admin'), (req, res) => {
   try {
     const { lessonId } = req.params;
     const lesson = db.prepare(`SELECT * FROM lessons WHERE id = ?`).get(lessonId);
@@ -499,28 +565,6 @@ router.get('/lesson/:lessonId/participants', requireAuth, (req, res) => {
   } catch (err) {
     console.error('[absences lesson participants]', err);
     res.status(500).json({ error: 'Błąd pobierania uczestników.' });
-  }
-});
-
-// GET /api/absences/timetable-preview — what timetable entries fall in date range
-router.get('/timetable-preview', requireAuth, (req, res) => {
-  try {
-    const { startAt, endAt } = req.query;
-    if (!startAt || !endAt) return res.status(400).json({ error: 'Wymagane: startAt, endAt.' });
-    const matched = findMatchingTimetableEntries(startAt, endAt);
-    res.json(matched.map(({ entry, date }) => ({
-      timetableEntryId: entry.id,
-      subjectId: entry.subject_id || '',
-      subjectName: entry.subject_name,
-      subjectIcon: entry.subject_icon || '📚',
-      professorName: entry.professor_name,
-      lessonDate: date,
-      lessonStart: entry.start_time,
-      lessonEnd: entry.end_time,
-      classroom: entry.classroom
-    })));
-  } catch (err) {
-    res.status(500).json({ error: 'Błąd podglądu planu.' });
   }
 });
 

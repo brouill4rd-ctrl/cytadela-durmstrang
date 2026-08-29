@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import db, { dbLessonToFrontend, dbMessageToFrontend, dbParticipantToFrontend, dbRoleMappingToFrontend, dbVerificationToFrontend, dbUserToFrontend } from '../db.js';
+import db, { dbLessonToFrontend, dbMessageToFrontend, dbParticipantToFrontend, dbRoleMappingToFrontend, dbVerificationToFrontend, dbUserToFrontend, isProfessorOfSubject } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { discordBot, sendWelcomeToGuild } from '../discordBot.js';
 
@@ -29,7 +29,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 } // 25MB
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMime = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']);
+    const allowedExt = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (!allowedMime.has(file.mimetype) || !allowedExt.has(ext)) {
+      return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'file'));
+    }
+    cb(null, true);
+  }
 });
 
 const router = express.Router();
@@ -38,7 +47,7 @@ const router = express.Router();
 let activeSessions = new Map();
 
 // GET /api/discord/status - Status bota i aktywnych sesji
-router.get('/status', (req, res) => {
+router.get('/status', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const botConfig = db.prepare('SELECT * FROM discord_bot_config LIMIT 1').get() || {
       id: 'bot-default',
@@ -127,21 +136,24 @@ router.post('/test-welcome', requireAuth, requireRole('admin'), async (req, res)
 });
 
 // POST /api/discord/start-lesson - Komenda: /lekcja rozpocznij
-router.post('/start-lesson', (req, res) => {
+router.post('/start-lesson', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const {
       threadId = `thread-${Date.now()}`,
       threadName = 'Wątek Lekcji',
       channelId = 'chan-lekcje-1',
       guildId = 'guild-durmstrang-1294',
-      professorName = '',
-      professorId = '',
       professorAvatar = '',
       subjectId = 'eliksiry',
       subjectName = 'Eliksiry',
       classYear = 'Klasa II',
       topic = 'Właściwości Eliksiru Wiggenowego'
     } = req.body;
+    const professorName = req.user.fullName;
+    const professorId = req.user.id;
+    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, subjectId)) {
+      return res.status(403).json({ error: 'Możesz symulować wyłącznie lekcje własnego przedmiotu.' });
+    }
 
     const lessonId = `les-${Date.now()}`;
     const threadUrl = `https://discord.com/channels/${guildId}/${channelId}/${threadId}`;
@@ -224,7 +236,7 @@ router.post('/start-lesson', (req, res) => {
 });
 
 // POST /api/discord/post-message - Dodaj wiadomość do aktywnej sesji lekcyjnej
-router.post('/post-message', (req, res) => {
+router.post('/post-message', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
     const {
       threadId,
@@ -252,6 +264,9 @@ router.post('/post-message', (req, res) => {
       return res.status(404).json({
         error: `Brak aktywnej sesji lekcyjnej dla wątku "${threadId}". Uruchom najpierw /lekcja rozpocznij.`
       });
+    }
+    if (req.user.role !== 'admin' && session.professorId !== req.user.id) {
+      return res.status(403).json({ error: 'Nie możesz modyfikować sesji innego profesora.' });
     }
 
     const newMsg = {
@@ -310,13 +325,14 @@ router.post('/post-message', (req, res) => {
 });
 
 // POST /api/discord/upload-attachment - Zapisz fizyczny plik załącznika (zdjęcie, PDF, etc.)
-router.post('/upload-attachment', upload.single('file'), (req, res) => {
+router.post('/upload-attachment', requireAuth, requireRole('admin', 'professor'), upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Brak przesłanego pliku.' });
     }
 
-    const { authorName = 'Adept', originalUrl = '' } = req.body;
+    const { originalUrl = '' } = req.body;
+    const authorName = req.user.fullName;
     const fileUrl = `/uploads/lessons/${req.file.filename}`;
 
     const attachment = {
@@ -342,9 +358,10 @@ router.post('/upload-attachment', upload.single('file'), (req, res) => {
 });
 
 // POST /api/discord/end-lesson - Komenda: /lekcja zakoncz (generuje szkic i link do panelu)
-router.post('/end-lesson', (req, res) => {
+router.post('/end-lesson', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
-    const { threadId, professorId } = req.body;
+    const { threadId } = req.body;
+    const professorId = req.user.id;
 
     const session = activeSessions.get(threadId);
     if (!session) {
@@ -353,7 +370,7 @@ router.post('/end-lesson', (req, res) => {
       });
     }
 
-    if (professorId && session.professorId && professorId !== session.professorId) {
+    if (req.user.role !== 'admin' && session.professorId && professorId !== session.professorId) {
       return res.status(403).json({
         error: 'Tylko profesor, który rozpoczął tę lekcję, może ją zakończyć.'
       });
@@ -641,7 +658,7 @@ router.get('/verification/status', requireAuth, (req, res) => {
 });
 
 // POST /api/discord/verification/verify-manual - Ręczna / symulowana weryfikacja (działa dla bota i testów w UI)
-router.post('/verification/verify-manual', (req, res) => {
+router.post('/verification/verify-manual', requireAuth, (req, res) => {
   try {
     const { code, discordUserId = '112233445566778899', discordUsername = 'Adept#1294', discordAvatar = '' } = req.body;
 
@@ -662,6 +679,9 @@ router.post('/verification/verify-manual', (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(verif.user_id);
     if (!user) {
       return res.status(404).json({ error: 'Nie znaleziono adepta powiązanego z tym kodem.' });
+    }
+    if (req.user.role !== 'admin' && req.user.id !== user.id) {
+      return res.status(403).json({ error: 'Kod należy do innego użytkownika.' });
     }
 
     const rolesToAssign = resolveRolesForUser(user);
@@ -829,4 +849,3 @@ router.get('/verifications', requireAuth, requireRole('admin'), (req, res) => {
 });
 
 export default router;
-

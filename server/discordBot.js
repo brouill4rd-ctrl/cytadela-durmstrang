@@ -1416,15 +1416,28 @@ export class DurmstrangDiscordBot {
       if (message.author.id === this.client.user?.id) return;
 
       const threadId = message.channel.id;
+
+      // Sprawdź czy sesja jest aktywna — po /lekcja zakoncz sesja jest usunięta z mapy
+      if (!activeLessonSessions.has(threadId)) return;
+
       const lesson = db.prepare("SELECT id FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
       if (!lesson) return;
 
-      // Wykryj dom / rolę użytkownika
-      let userHouse = 'reinhall';
-      const memberRoles = message.member?.roles?.cache?.map(r => r.name.toLowerCase()) || [];
-      if (memberRoles.some(r => r.includes('bjorn') || r.includes('niedźwiedź'))) userHouse = 'bjornhall';
-      else if (memberRoles.some(r => r.includes('ravn') || r.includes('kruk'))) userHouse = 'ravnheim';
-      else if (memberRoles.some(r => r.includes('oter') || r.includes('wydra'))) userHouse = 'otergard';
+      // Wykryj dom — boty nie mają domów
+      let userHouse = '';
+      if (!message.author.bot) {
+        const memberRoles = message.member?.roles?.cache?.map(r => r.name.toLowerCase()) || [];
+        if (memberRoles.some(r => r.includes('bjorn') || r.includes('niedźwiedź'))) userHouse = 'bjornhall';
+        else if (memberRoles.some(r => r.includes('ravn') || r.includes('kruk'))) userHouse = 'ravnheim';
+        else if (memberRoles.some(r => r.includes('oter') || r.includes('wydra'))) userHouse = 'otergard';
+        else if (memberRoles.some(r => r.includes('rein') || r.includes('jeleń'))) userHouse = 'reinhall';
+
+        // Jeśli nie wykryto z ról Discord, sprawdź w bazie Cytadeli
+        if (!userHouse) {
+          const dbUser = db.prepare('SELECT house FROM users WHERE discord_id = ?').get(message.author.id);
+          if (dbUser?.house) userHouse = dbUser.house.toLowerCase();
+        }
+      }
 
       // Obsługa załączników (pobranie lokalne na serwer)
       const localAttachments = [];

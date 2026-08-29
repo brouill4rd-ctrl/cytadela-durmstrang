@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Environment variables & secrets
 .env
@@ -11,12 +10,20 @@ package-lock.json
 dist/
 dist-ssr/
 
-# SQLite WAL and journal files
+# SQLite database and journal files (NEVER commit DB — contains passwords, PII and Discord tokens)
+server/durmstrang.db
 server/durmstrang.db-shm
 server/durmstrang.db-wal
 
 # Uploads
 server/uploads/
+
+# Runtime logs and diagnostic scripts (should not be versioned)
+server_out.txt
+server_runtime_out.txt
+server_err.txt
+server_runtime_err.txt
+scratch_check_thread.js
 
 # Logs
 npm-debug.log*

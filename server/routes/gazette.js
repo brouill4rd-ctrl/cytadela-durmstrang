@@ -10,6 +10,7 @@ import db, {
 } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import crypto from 'crypto';
+import { JWT_SECRET } from '../config/security.js';
 
 const router = Router();
 const uid = () => crypto.randomUUID().slice(0, 12);
@@ -59,17 +60,12 @@ router.get('/sections', (req, res) => {
 // GET /api/gazette/issues — list published issues
 router.get('/issues', (req, res) => {
   try {
-    const { status, year } = req.query;
+    const { year } = req.query;
     let query = 'SELECT * FROM gazette_issues';
     const params = [];
     const conditions = [];
 
-    if (status) {
-      conditions.push('status = ?');
-      params.push(status);
-    } else {
-      conditions.push("status = 'published'");
-    }
+    conditions.push("status = 'published'");
     if (year) {
       conditions.push('school_year LIKE ?');
       params.push(`%${year}%`);
@@ -125,7 +121,7 @@ router.get('/issues/:id', (req, res) => {
         try {
           const payload = jwt.verify(
             authHeader.slice(7),
-            process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294'
+            JWT_SECRET
           );
           userId = payload.id;
         } catch {
@@ -425,11 +421,11 @@ router.post('/articles', requireAuth, requireGazetteRole(), (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, b.issueId || '', b.title || 'Bez tytułu', b.supertitle || '', b.subtitle || '',
-      b.lead || '', b.content || '', b.authorId || req.user.id, b.authorName || req.user.fullName || '',
+      b.lead || '', b.content || '', req.user.id, req.user.fullName || '',
       b.coauthorId || '', b.coauthorName || '', b.sectionId || '', b.sectionName || '',
       b.featuredImage || '', JSON.stringify(b.additionalImages || []),
       b.featuredQuote || '', b.sources || '', b.editorialNote || '',
-      b.status || 'idea', b.isAnonymous ? 1 : 0
+      'idea', b.isAnonymous ? 1 : 0
     );
 
     const created = db.prepare('SELECT * FROM gazette_articles WHERE id = ?').get(id);
@@ -498,9 +494,27 @@ router.patch('/articles/:id/status', requireAuth, requireGazetteRole(), (req, re
       return res.status(400).json({ error: 'Nieprawidłowy status artykułu.' });
     }
 
-    // Only editor_in_chief or admin can approve/reject
+    const isChief = req.user.role === 'admin' || req.gazetteRoles.includes('editor_in_chief');
+    const isAuthor = existing.author_id === req.user.id;
+    const allowedTransitions = {
+      idea: ['draft'],
+      draft: ['idea', 'review'],
+      review: ['draft', 'pending_approval'],
+      pending_approval: ['review', 'approved'],
+      approved: ['review', 'in_issue'],
+      in_issue: ['approved', 'published'],
+      published: []
+    };
+    if (status !== existing.status && !allowedTransitions[existing.status]?.includes(status)) {
+      return res.status(409).json({ error: `Niedozwolone przejście statusu: ${existing.status} → ${status}.` });
+    }
+    if (!isChief && !isAuthor && !(req.gazetteRoles.includes('editor') && ['review', 'pending_approval'].includes(existing.status) && ['review', 'pending_approval'].includes(status))) {
+      return res.status(403).json({ error: 'Nie możesz zmieniać statusu cudzego artykułu.' });
+    }
+
+    // Only editor_in_chief or admin can approve/publish
     const chiefOnly = ['approved', 'in_issue', 'published'];
-    if (chiefOnly.includes(status) && req.user.role !== 'admin' && !req.gazetteRoles.includes('editor_in_chief')) {
+    if (chiefOnly.includes(status) && !isChief) {
       return res.status(403).json({ error: 'Tylko Redaktor Naczelny może zatwierdzić artykuł.' });
     }
 

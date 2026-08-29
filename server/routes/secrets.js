@@ -5,18 +5,16 @@ import { awardPoints } from '../services/pointsService.js';
 import { credit as creditSkirnir } from '../services/skirnirService.js';
 
 const router = Router();
+const SECRET_REWARDS = new Map([
+  ['rune-fehu-home', { points: 10, currency: 15 }],
+  ['rune-ansuz-lore', { points: 10, currency: 15 }],
+  ['rune-algiz-store', { points: 10, currency: 15 }]
+]);
 
 // GET /api/secrets — Get discovered secrets for user
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req, res) => {
   try {
-    const userId = req.query.userId || req.headers['x-user-id'];
-    let query = 'SELECT * FROM discovered_secrets';
-    const params = [];
-    if (userId && userId !== 'guest') {
-      query += ' WHERE user_id = ?';
-      params.push(userId);
-    }
-    const rows = db.prepare(query).all(...params);
+    const rows = db.prepare('SELECT * FROM discovered_secrets WHERE user_id = ?').all(req.user.id);
     res.json(rows.map(dbSecretToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania odkrytych sekretów: ' + err.message });
@@ -26,11 +24,14 @@ router.get('/', (req, res) => {
 // POST /api/secrets/discover — Discover a secret rune / hidden passage
 router.post('/discover', requireAuth, (req, res) => {
   try {
-    const { secretId, points = 10, currency = 15 } = req.body;
+    const { secretId } = req.body;
     const userId = req.user.id;
     if (!secretId) {
       return res.status(400).json({ error: 'Brak identyfikatora sekretu.' });
     }
+    const reward = SECRET_REWARDS.get(secretId);
+    if (!reward) return res.status(404).json({ error: 'Nieznany sekret Cytadeli.' });
+    const { points, currency } = reward;
 
     const existing = db.prepare('SELECT id FROM discovered_secrets WHERE user_id = ? AND secret_id = ?').get(userId, secretId);
     if (existing) {

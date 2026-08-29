@@ -53,6 +53,8 @@ import { initSkirnirService, recalculateAllBalances } from './services/skirnirSe
 import { initDungeonEscapeService } from './services/dungeonEscapeService.js';
 import { initRunicDuelService } from './services/runicDuelService.js';
 import { initBestiaryService } from './services/bestiaryService.js';
+import { isCorsOriginAllowed, parseCorsOrigins } from './config/security.js';
+import { rateLimit } from './middleware/rateLimit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -69,29 +71,45 @@ recalculateAllUserPoints();
 recalculateAllBalances();
 const distPath = path.join(__dirname, '..', 'dist');
 const app = express();
-const PORT = process.env.SERVER_PORT || 3001;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3001;
+app.disable('x-powered-by');
 
 // Allowed CORS origins
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
-  : ['http://localhost:5173', 'http://localhost:3001', 'http://127.0.0.1:5173', 'http://localhost:3000'];
+const allowedOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 
 // Middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  );
+  next();
+});
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*') || process.env.NODE_ENV === 'production') {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive for local networks
-    }
+    callback(null, isCorsOriginAllowed(origin, allowedOrigins));
   },
   credentials: true
 }));
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, scope: 'global' }));
 
 // Static files for uploads (lesson images, attachments)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  dotfiles: 'deny',
+  fallthrough: false,
+  setHeaders: (res, filePath) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    if (!/\.(?:jpe?g|png|gif|webp)$/i.test(filePath)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath).replaceAll('"', '')}"`);
+    }
+  }
+}));
 
 // Request logger
 app.use((req, res, next) => {
@@ -101,6 +119,12 @@ app.use((req, res, next) => {
 });
 
 // API Routes
+app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, scope: 'auth-login' }));
+app.use('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'auth-register' }));
+app.use('/api/auth/password-recovery', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'password-recovery' }));
+app.use('/api/homework/upload', rateLimit({ windowMs: 60 * 60 * 1000, max: 20, scope: 'homework-upload' }));
+app.use('/api/discord/upload-attachment', rateLimit({ windowMs: 60 * 60 * 1000, max: 20, scope: 'discord-upload' }));
+app.use('/api/gazette/analytics', rateLimit({ windowMs: 15 * 60 * 1000, max: 100, scope: 'gazette-analytics' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/emails', emailsRoutes);
@@ -144,14 +168,8 @@ app.use('/api/bestiary', bestiaryRoutes);
 app.use('/api/minigames/wand-fencing', wandFencingRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    name: 'Cytadela Durmstrang — Backend API & Lesson Journals System',
-    timestamp: new Date().toISOString(),
-    uptime: Math.floor(process.uptime()),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // Production: Serve React frontend build from dist folder

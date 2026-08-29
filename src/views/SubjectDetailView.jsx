@@ -50,43 +50,6 @@ const GradeBadge = ({ grade, size = 'md' }) => {
 };
 
 // ===================================================================
-// Simple Markdown renderer (subset)
-// ===================================================================
-function renderMarkdownLite(text) {
-  if (!text) return null;
-  const lines = text.split('\n');
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-      {lines.map((line, i) => {
-        if (!line.trim()) return <div key={i} style={{ height: '0.4rem' }} />;
-        if (line.startsWith('# ')) return <h2 key={i} style={{ margin: '0.5rem 0 0.2rem', color: '#fff', fontSize: '1.3rem', fontFamily: 'var(--font-heading)', borderBottom: '1px solid rgba(197,159,78,0.25)', paddingBottom: '0.3rem' }}>{line.slice(2)}</h2>;
-        if (line.startsWith('## ')) return <h3 key={i} style={{ margin: '0.4rem 0 0.15rem', color: 'var(--gold-glow)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>{line.slice(3)}</h3>;
-        if (line.startsWith('### ')) return <h4 key={i} style={{ margin: '0.3rem 0 0.1rem', color: '#cbd5e1', fontSize: '0.95rem', fontWeight: 700 }}>{line.slice(4)}</h4>;
-        if (/^\d+\./.test(line)) {
-          const content = line.replace(/^\d+\.\s*/, '');
-          return (
-            <div key={i} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', paddingLeft: '0.5rem' }}>
-              <span style={{ color: 'var(--gold-ancient)', fontWeight: 700, minWidth: '1.2rem', fontFamily: 'var(--font-heading)', flexShrink: 0 }}>{line.match(/^\d+/)[0]}.</span>
-              <span style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: content.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;font-weight:800">$1</strong>') }} />
-            </div>
-          );
-        }
-        if (line.startsWith('- ')) return (
-          <div key={i} style={{ display: 'flex', gap: '0.5rem', paddingLeft: '0.5rem' }}>
-            <span style={{ color: 'var(--gold-ancient)', marginTop: '0.3rem', flexShrink: 0 }}>•</span>
-            <span style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;font-weight:800">$1</strong>') }} />
-          </div>
-        );
-        return (
-          <p key={i} style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}
-            dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;font-weight:800">$1</strong>') }} />
-        );
-      })}
-    </div>
-  );
-}
-
-// ===================================================================
 // Bezpieczny opis HTML katedry
 // ===================================================================
 const SUBJECT_DESCRIPTION_TAGS = new Set([

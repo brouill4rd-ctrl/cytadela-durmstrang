@@ -148,8 +148,6 @@ const COMPANION_PRESETS = [
 ];
 
 export const AuthModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
   const {
     users,
     currentUser,
@@ -296,7 +294,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
     const userData = {
       username: regUsername.trim(),
       email: regEmail.trim(),
-      password: regPassword.trim() || '123',
+      password: regPassword,
       name: regName.trim(),
       surname: regSurname.trim(),
       role: regRole,
@@ -334,6 +332,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -601,11 +601,15 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     <input
                       type="password"
                       required
-                      placeholder="Wpisz hasło..."
+                      minLength={12}
+                      placeholder="Minimum 12 znaków..."
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       className="gothic-input"
                     />
+                    <small style={{ display: 'block', marginTop: '0.3rem', color: '#94a3b8', fontSize: '0.68rem' }}>
+                      Minimum 12 znaków, w tym litera oraz cyfra lub znak specjalny.
+                    </small>
                   </div>
 
                   <div>

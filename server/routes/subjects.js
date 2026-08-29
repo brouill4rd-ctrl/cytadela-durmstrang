@@ -58,7 +58,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/subjects/:id - Pełne szczegóły wybranego przedmiotu
-router.get('/:id', (req, res) => {
+router.get('/:id', requireAuth, (req, res) => {
   try {
     const subjectRow = db.prepare('SELECT * FROM subjects WHERE id = ?').get(req.params.id);
     if (!subjectRow) {
@@ -68,13 +68,22 @@ router.get('/:id', (req, res) => {
     const categories = db.prepare('SELECT * FROM grade_categories WHERE subject_id = ? ORDER BY sort_order ASC').all(subjectRow.id);
 
     // Oceny wraz z nazwą kategorii
-    const gradesRows = db.prepare(`
+    let gradesQuery = `
       SELECT g.*, gc.name as category_name, gc.icon as category_icon
       FROM grades g
       LEFT JOIN grade_categories gc ON g.category_id = gc.id
       WHERE g.subject_id = ?
-      ORDER BY g.date DESC, g.created_at DESC
-    `).all(subjectRow.id);
+    `;
+    const gradeParams = [subjectRow.id];
+    if (req.user.role === 'student') {
+      gradesQuery += ' AND g.student_id = ?';
+      gradeParams.push(req.user.id);
+    } else if (req.user.role === 'professor') {
+      const ownsSubject = db.prepare("SELECT 1 FROM teacher_subject_assignments WHERE professor_id = ? AND subject_id = ? AND status = 'active'").get(req.user.id, subjectRow.id);
+      if (!ownsSubject) gradesQuery += ' AND 1 = 0';
+    }
+    gradesQuery += ' ORDER BY g.date DESC, g.created_at DESC';
+    const gradesRows = db.prepare(gradesQuery).all(...gradeParams);
 
     // Powiązane dzienniki lekcyjne z Discorda
     const lessonRows = db.prepare(`
@@ -85,7 +94,9 @@ router.get('/:id', (req, res) => {
     `).all(subjectRow.id, `%${subjectRow.name}%`);
 
     const recentLessons = lessonRows.map(l => {
-      const participants = db.prepare('SELECT * FROM lesson_participants WHERE lesson_id = ?').all(l.id);
+      const participants = req.user.role === 'admin' || (req.user.role === 'professor' && l.professor_id === req.user.id)
+        ? db.prepare('SELECT * FROM lesson_participants WHERE lesson_id = ?').all(l.id)
+        : [];
       return dbLessonToFrontend(l, [], participants);
     });
 
@@ -329,7 +340,7 @@ router.delete('/:id', requireAuth, requireRole('admin'), (req, res) => {
 // ==================== SYSTEM OCEN W SKALI HP ====================
 
 // GET /api/subjects/:id/grades - Pobierz oceny przedmiotu
-router.get('/:id/grades', (req, res) => {
+router.get('/:id/grades', requireAuth, (req, res) => {
   try {
     const { studentId, categoryId, house } = req.query;
     let query = `
@@ -340,7 +351,15 @@ router.get('/:id/grades', (req, res) => {
     `;
     const params = [req.params.id];
 
-    if (studentId) {
+    if (req.user.role === 'student') {
+      query += ' AND g.student_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role === 'professor') {
+      const ownsSubject = db.prepare("SELECT 1 FROM teacher_subject_assignments WHERE professor_id = ? AND subject_id = ? AND status = 'active'").get(req.user.id, req.params.id);
+      if (!ownsSubject) return res.status(403).json({ error: 'Możesz przeglądać oceny tylko z prowadzonych przedmiotów.' });
+    }
+
+    if (studentId && req.user.role !== 'student') {
       query += ' AND g.student_id = ?';
       params.push(studentId);
     }
@@ -369,20 +388,23 @@ router.post('/:id/grades', requireAuth, requireSubjectOwnerOrAdmin, (req, res) =
     const {
       categoryId,
       studentId,
-      studentName,
-      house,
       grade,
       title,
       comment = '',
-      professorId,
-      professorName,
       lessonId = '',
       date = new Date().toISOString().split('T')[0]
     } = req.body;
 
-    if (!studentId || !studentName || !grade || !categoryId) {
+    if (!studentId || !grade || !categoryId) {
       return res.status(400).json({ error: 'Wymagane pola: adept, kategoria oraz ocena HP (W, P, Z, N, T).' });
     }
+
+    const student = db.prepare("SELECT id, full_name, house FROM users WHERE id = ? AND role = 'student'").get(studentId);
+    if (!student) return res.status(404).json({ error: 'Nie znaleziono adepta.' });
+    const category = db.prepare('SELECT id FROM grade_categories WHERE id = ? AND subject_id = ?').get(categoryId, req.params.id);
+    if (!category) return res.status(400).json({ error: 'Kategoria nie należy do tego przedmiotu.' });
+    const studentName = student.full_name;
+    const house = student.house;
 
     const hpInfo = HP_GRADES[grade.toUpperCase()];
     if (!hpInfo) {
@@ -406,8 +428,8 @@ router.post('/:id/grades', requireAuth, requireSubjectOwnerOrAdmin, (req, res) =
       hpInfo.value,
       title || 'Ocena cząstkowa',
       comment,
-      professorId || '',
-      professorName || 'Profesor Katedry',
+      req.user.id,
+      req.user.fullName,
       lessonId || '',
       date
     );

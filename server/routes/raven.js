@@ -26,6 +26,12 @@ router.post('/', requireAuth, (req, res) => {
     if (!recipient || !subject || !body) {
       return res.status(400).json({ error: 'Odbiorca, temat i treść listu są wymagane.' });
     }
+    if (recipient.trim() === 'Wszyscy Kadeci' && req.user.role !== 'admin' && req.user.role !== 'professor') {
+      return res.status(403).json({ error: 'Wiadomości do wszystkich kadetów może wysyłać wyłącznie kadra.' });
+    }
+    if (subject.trim().length > 160 || body.trim().length > 10000) {
+      return res.status(400).json({ error: 'Temat lub treść wiadomości są zbyt długie.' });
+    }
 
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const sender = req.user;
@@ -66,11 +72,8 @@ router.patch('/:id/read', requireAuth, (req, res) => {
     const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
     if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
 
-    const isRecipient = msg.recipient === req.user.fullName
-      || msg.recipient === req.user.username
-      || msg.recipient === 'Wszyscy Kadeci';
-    const isSender = msg.sender_id === req.user.id;
-    if (!isRecipient && !isSender && req.user.role !== 'admin') {
+    const isRecipient = msg.recipient === req.user.fullName || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
+    if (!isRecipient && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
     }
 
@@ -88,10 +91,11 @@ router.patch('/:id/star', requireAuth, (req, res) => {
     const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
     if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
 
-    const isRecipient = msg.recipient === req.user.fullName
-      || msg.recipient === req.user.username
-      || msg.recipient === 'Wszyscy Kadeci';
+    const isRecipient = msg.recipient === req.user.fullName || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
     const isSender = msg.sender_id === req.user.id;
+    if ((!isRecipient && !isSender) || msg.recipient === 'Wszyscy Kadeci') {
+      if (req.user.role !== 'admin') return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
+    }
     if (!isRecipient && !isSender && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
     }

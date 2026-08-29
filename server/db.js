@@ -105,6 +105,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_transactional_email_status
     ON transactional_email_deliveries(status, created_at);
 
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_password_reset_user
+    ON password_reset_tokens(user_id, expires_at);
+
   CREATE TABLE IF NOT EXISTS news (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -586,6 +599,9 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_lottery_one_active_round
+    ON lottery_rounds(status) WHERE status = 'active';
+
   -- ==================== DOKUMENTY, DEKRETY, STATUT & KODEX ====================
   CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
@@ -696,6 +712,13 @@ db.exec(`
     crafted_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_completed_quests_user_quest
+    ON completed_quests(user_id, quest_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_discovered_secrets_user_secret
+    ON discovered_secrets(user_id, secret_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_crafted_formulas_user_formula
+    ON crafted_formulas(user_id, formula_id);
 
   -- ==================== ZADANIA DOMOWE I WYPRACOWANIA (TMD SYSTEM) ====================
   CREATE TABLE IF NOT EXISTS homework_assignments (

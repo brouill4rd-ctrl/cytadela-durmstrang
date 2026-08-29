@@ -28,7 +28,6 @@
     "@tiptap/starter-kit": "^3.30.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
-    "concurrently": "^10.0.5",
     "cors": "^2.8.6",
     "discord.js": "^14.27.0",
     "dompurify": "^3.4.14",
@@ -44,6 +43,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.5",
     "vite": "^6.2.0"
   }
 }

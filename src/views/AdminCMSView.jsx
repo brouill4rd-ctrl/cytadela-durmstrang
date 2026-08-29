@@ -1494,7 +1494,8 @@ export const AdminCMSView = () => {
                 <input
                   type="password"
                   required
-                  placeholder="Hasło dostępowe..."
+                  minLength={12}
+                  placeholder="Minimum 12 znaków..."
                   value={newAdminPassword}
                   onChange={(e) => setNewAdminPassword(e.target.value)}
                   className="gothic-input"

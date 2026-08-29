@@ -69,6 +69,22 @@ function createNotification(recipientId, recipientName, subject, body, type = 'h
   }
 }
 
+function requireHomeworkOwner(resolveHomeworkId) {
+  return (req, res, next) => {
+    const homeworkId = resolveHomeworkId(req);
+    const homework = homeworkId ? db.prepare('SELECT id, professor_id, subject_id FROM homework_assignments WHERE id = ?').get(homeworkId) : null;
+    if (!homework) return res.status(404).json({ error: 'Nie odnaleziono zadania.' });
+    if (req.user.role !== 'admin' && homework.professor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Możesz zarządzać wyłącznie własnym zadaniem.' });
+    }
+    req.homeworkResource = homework;
+    next();
+  };
+}
+
+const homeworkFromParam = req => req.params.id;
+const homeworkFromSubmission = req => db.prepare('SELECT homework_id FROM homework_submissions WHERE id = ?').get(req.params.subId)?.homework_id;
+
 // Calculate grade label based on percentage
 function computeGradeLabel(percentage) {
   if (percentage >= 90) return 'Wybitny (W)';
@@ -91,11 +107,20 @@ router.get('/', requireAuth, (req, res) => {
       status,
       type,
       search,
-      studentId
+      studentId: requestedStudentId
     } = req.query;
+    const studentId = req.user.role === 'admin' || req.user.role === 'professor' ? requestedStudentId : req.user.id;
 
     let query = 'SELECT * FROM homework_assignments WHERE is_archived = 0';
     const params = [];
+    if (req.user.role === 'professor') {
+      query += ' AND professor_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role !== 'admin') {
+      const ownClassYear = db.prepare('SELECT class_year FROM users WHERE id = ?').get(req.user.id)?.class_year || '';
+      query += " AND is_published = 1 AND (class_year = ? OR class_year = 'Wszystkie' OR class_year = '')";
+      params.push(ownClassYear);
+    }
 
     if (subjectId && subjectId !== 'all') {
       query += ' AND subject_id = ?';
@@ -342,7 +367,9 @@ router.get('/archive', requireAuth, (req, res) => {
 // GET /api/homework/templates — Templates library
 router.get('/templates', requireAuth, (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM homework_templates ORDER BY created_at DESC').all();
+    const rows = req.user.role === 'admin'
+      ? db.prepare('SELECT * FROM homework_templates ORDER BY created_at DESC').all()
+      : db.prepare('SELECT * FROM homework_templates WHERE created_by = ? ORDER BY created_at DESC').all(req.user.id);
     res.json(rows.map(dbHomeworkTemplateToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania szablonów: ' + err.message });
@@ -382,6 +409,9 @@ router.post('/templates', requireAuth, requireRole('professor', 'admin'), (req, 
 // DELETE /api/homework/templates/:id — Delete template
 router.delete('/templates/:id', requireAuth, requireRole('professor', 'admin'), (req, res) => {
   try {
+    const template = db.prepare('SELECT created_by FROM homework_templates WHERE id = ?').get(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Nie znaleziono szablonu.' });
+    if (req.user.role !== 'admin' && template.created_by !== req.user.id) return res.status(403).json({ error: 'Możesz usunąć wyłącznie własny szablon.' });
     db.prepare('DELETE FROM homework_templates WHERE id = ?').run(req.params.id);
     res.json({ ok: true, message: 'Szablon usunięty.' });
   } catch (err) {
@@ -392,7 +422,10 @@ router.delete('/templates/:id', requireAuth, requireRole('professor', 'admin'), 
 // GET /api/homework/quick-comments — List quick comments
 router.get('/quick-comments', requireAuth, (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM homework_quick_comments ORDER BY category ASC, id ASC').all();
+    if (req.user.role !== 'admin' && req.user.role !== 'professor') return res.status(403).json({ error: 'Brak uprawnień.' });
+    const rows = req.user.role === 'admin'
+      ? db.prepare('SELECT * FROM homework_quick_comments ORDER BY category ASC, id ASC').all()
+      : db.prepare('SELECT * FROM homework_quick_comments WHERE professor_id = ? ORDER BY category ASC, id ASC').all(req.user.id);
     res.json(rows.map(dbHomeworkQuickCommentToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania komentarzy: ' + err.message });
@@ -421,6 +454,9 @@ router.post('/quick-comments', requireAuth, requireRole('professor', 'admin'), (
 // DELETE /api/homework/quick-comments/:id — Delete quick comment
 router.delete('/quick-comments/:id', requireAuth, requireRole('professor', 'admin'), (req, res) => {
   try {
+    const comment = db.prepare('SELECT professor_id FROM homework_quick_comments WHERE id = ?').get(req.params.id);
+    if (!comment) return res.status(404).json({ error: 'Nie znaleziono komentarza.' });
+    if (req.user.role !== 'admin' && comment.professor_id !== req.user.id) return res.status(403).json({ error: 'Możesz usunąć wyłącznie własny komentarz.' });
     db.prepare('DELETE FROM homework_quick_comments WHERE id = ?').run(req.params.id);
     res.json({ ok: true, message: 'Komentarz usunięty.' });
   } catch (err) {
@@ -436,6 +472,11 @@ router.get('/:id', requireAuth, (req, res) => {
     const { id } = req.params;
     const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
     if (!hw) return res.status(404).json({ error: 'Nie odnaleziono zadania domowego.' });
+    if (req.user.role === 'professor' && hw.professor_id !== req.user.id) return res.status(403).json({ error: 'Możesz przeglądać wyłącznie własne zadania.' });
+    if (req.user.role !== 'admin' && req.user.role !== 'professor') {
+      const ownClassYear = db.prepare('SELECT class_year FROM users WHERE id = ?').get(req.user.id)?.class_year || '';
+      if (!hw.is_published || (hw.class_year && hw.class_year !== 'Wszystkie' && hw.class_year !== ownClassYear)) return res.status(403).json({ error: 'To zadanie nie jest dostępne dla Twojej klasy.' });
+    }
 
     // Calculate aggregated stats
     const subs = db.prepare('SELECT * FROM homework_submissions WHERE homework_id = ?').all(id);
@@ -600,7 +641,7 @@ router.post('/', requireAuth, requireRole('professor', 'admin'), (req, res) => {
 });
 
 // PUT /api/homework/:id — Update assignment (Professor/Admin)
-router.put('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.put('/:id', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id } = req.params;
     const existing = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
@@ -639,6 +680,11 @@ router.put('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) =>
       isGroup,
       groupData
     } = req.body;
+
+    const nextSubjectId = subjectId || existing.subject_id;
+    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, nextSubjectId)) {
+      return res.status(403).json({ error: 'Nie możesz przenieść zadania do nieprowadzonego przedmiotu.' });
+    }
 
     db.prepare(`
       UPDATE homework_assignments SET
@@ -697,7 +743,7 @@ router.put('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) =>
 });
 
 // DELETE /api/homework/:id — Delete or archive assignment (Professor/Admin)
-router.delete('/:id', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.delete('/:id', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id } = req.params;
     const { force } = req.query;
@@ -736,7 +782,7 @@ router.delete('/:id', requireAuth, requireRole('professor', 'admin'), (req, res)
 });
 
 // POST /api/homework/:id/duplicate — Duplicate assignment (Professor/Admin)
-router.post('/:id/duplicate', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.post('/:id/duplicate', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id } = req.params;
     const existing = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
@@ -809,7 +855,7 @@ router.post('/:id/duplicate', requireAuth, requireRole('professor', 'admin'), (r
 // ==================== 6. SUBMISSIONS (STUDENT & PROFESSOR) ====================
 
 // GET /api/homework/:id/submissions — List all submissions for an assignment (Professor/Admin)
-router.get('/:id/submissions', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.get('/:id/submissions', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id } = req.params;
     const { status, house } = req.query;
@@ -930,6 +976,9 @@ router.get('/submissions/:subId', requireAuth, (req, res) => {
     }
 
     const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(sub.homework_id);
+    if ((req.user.role === 'professor' && hw?.professor_id !== req.user.id) || (!hw && req.user.role !== 'admin')) {
+      return res.status(403).json({ error: 'Ta praca należy do innego profesora.' });
+    }
     const versions = db.prepare('SELECT * FROM homework_submission_versions WHERE submission_id = ? ORDER BY version_number DESC').all(subId);
     const exc = db.prepare('SELECT * FROM homework_exceptions WHERE homework_id = ? AND student_id = ?').get(sub.homework_id, sub.student_id);
 
@@ -1163,7 +1212,7 @@ router.post('/:id/submit', requireAuth, (req, res) => {
 });
 
 // POST /api/homework/submissions/:subId/grade — Grade homework submission (Professor/Admin)
-router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromSubmission), (req, res) => {
   try {
     const { subId } = req.params;
     const {
@@ -1186,8 +1235,14 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
     const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(sub.homework_id);
 
     const numericScore = parseFloat(gradeScore);
-    if (isNaN(numericScore) || numericScore < 0) {
+    const numericGradeMax = Number(gradeMax);
+    const numericHousePoints = Number(housePointsAwarded);
+    const numericSkirnirs = Number(skirnirAwarded);
+    if (!Number.isFinite(numericScore) || !Number.isFinite(numericGradeMax) || numericGradeMax <= 0 || numericScore < 0 || numericScore > numericGradeMax) {
       return res.status(400).json({ error: 'Wprowadź poprawną liczbę punktów.' });
+    }
+    if (!Number.isInteger(numericHousePoints) || numericHousePoints < 0 || numericHousePoints > 100 || !Number.isInteger(numericSkirnirs) || numericSkirnirs < 0 || numericSkirnirs > 100) {
+      return res.status(400).json({ error: 'Nagroda może wynosić od 0 do 100 punktów i Skirnirów.' });
     }
 
     const percentage = Math.round((numericScore / gradeMax) * 100);
@@ -1402,7 +1457,7 @@ router.post('/submissions/:subId/grade', requireAuth, requireRole('professor', '
 });
 
 // POST /api/homework/submissions/:subId/return — Return submission for revision (Professor/Admin)
-router.post('/submissions/:subId/return', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.post('/submissions/:subId/return', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromSubmission), (req, res) => {
   try {
     const { subId } = req.params;
     const { reason = '', revisionDueDate = '' } = req.body;
@@ -1462,15 +1517,19 @@ router.post('/submissions/:subId/return', requireAuth, requireRole('professor', 
 // ==================== 7. INDIVIDUAL EXCEPTIONS ====================
 
 // POST /api/homework/:id/exceptions — Set individual student exception (Professor/Admin)
-router.post('/:id/exceptions', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.post('/:id/exceptions', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id } = req.params;
-    const { studentId, studentName, customDueDate, extraTimeHours = 0, isExempt = false, allowResubmission = true, reason = '' } = req.body;
+    const { studentId, customDueDate, extraTimeHours = 0, isExempt = false, allowResubmission = true, reason = '' } = req.body;
 
     if (!studentId) return res.status(400).json({ error: 'Wybierz ucznia.' });
 
     const hw = db.prepare('SELECT * FROM homework_assignments WHERE id = ?').get(id);
     if (!hw) return res.status(404).json({ error: 'Nie odnaleziono zadania.' });
+    const student = db.prepare("SELECT id, full_name, class_year FROM users WHERE id = ? AND role = 'student'").get(studentId);
+    if (!student) return res.status(404).json({ error: 'Nie odnaleziono ucznia.' });
+    if (hw.class_year && hw.class_year !== 'Wszystkie' && hw.class_year !== student.class_year) return res.status(400).json({ error: 'Uczeń nie należy do klasy przypisanej do zadania.' });
+    const studentName = student.full_name;
 
     const excId = genId('exc');
     const existing = db.prepare('SELECT id FROM homework_exceptions WHERE homework_id = ? AND student_id = ?').get(id, studentId);
@@ -1510,7 +1569,7 @@ router.post('/:id/exceptions', requireAuth, requireRole('professor', 'admin'), (
 });
 
 // DELETE /api/homework/:id/exceptions/:studentId — Delete student exception
-router.delete('/:id/exceptions/:studentId', requireAuth, requireRole('professor', 'admin'), (req, res) => {
+router.delete('/:id/exceptions/:studentId', requireAuth, requireRole('professor', 'admin'), requireHomeworkOwner(homeworkFromParam), (req, res) => {
   try {
     const { id, studentId } = req.params;
     db.prepare('DELETE FROM homework_exceptions WHERE homework_id = ? AND student_id = ?').run(id, studentId);
@@ -1533,7 +1592,7 @@ router.post('/upload', requireAuth, (req, res) => {
     // Safety checks
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const ext = path.extname(sanitizedName).toLowerCase();
-    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.txt', '.doc', '.docx', '.zip'];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.txt', '.docx'];
 
     if (!allowedExts.includes(ext)) {
       return res.status(400).json({ error: `Niedozwolony format pliku: ${ext}. Dozwolone: grafiki, PDF, TXT, DOCX, ZIP.` });
@@ -1546,9 +1605,21 @@ router.post('/upload', requireAuth, (req, res) => {
     const base64Data = fileData.includes('base64,') ? fileData.split('base64,')[1] : fileData;
     const buffer = Buffer.from(base64Data, 'base64');
 
-    if (buffer.length > 25 * 1024 * 1024) {
-      return res.status(400).json({ error: 'Rozmiar pliku przekracza limit 25MB.' });
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Rozmiar pliku przekracza limit 10MB.' });
     }
+
+    const signatures = {
+      '.jpg': b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+      '.jpeg': b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+      '.png': b => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+      '.gif': b => ['GIF87a', 'GIF89a'].includes(b.subarray(0, 6).toString('ascii')),
+      '.webp': b => b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP',
+      '.pdf': b => b.subarray(0, 5).toString('ascii') === '%PDF-',
+      '.docx': b => b[0] === 0x50 && b[1] === 0x4b,
+      '.txt': b => !b.includes(0)
+    };
+    if (buffer.length === 0 || !signatures[ext](buffer)) return res.status(400).json({ error: 'Zawartość pliku nie odpowiada jego rozszerzeniu.' });
 
     fs.writeFileSync(targetPath, buffer);
 

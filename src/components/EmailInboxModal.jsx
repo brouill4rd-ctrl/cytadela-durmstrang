@@ -18,8 +18,6 @@ import {
 } from 'lucide-react';
 
 export const EmailInboxModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
   const { emails, setEmails, currentUser } = useSchool();
   const { playWandSwoosh, playRuneChime } = useSound();
 
@@ -53,6 +51,8 @@ export const EmailInboxModal = ({ isOpen, onClose }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div

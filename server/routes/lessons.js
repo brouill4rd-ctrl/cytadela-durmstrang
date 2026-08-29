@@ -18,6 +18,16 @@ import {
 
 const router = express.Router();
 
+function requireLessonOwner(req, res, next) {
+  const lesson = db.prepare('SELECT id, professor_id, subject_id, status FROM lessons WHERE id = ?').get(req.params.id);
+  if (!lesson) return res.status(404).json({ error: 'Dziennik nie istnieje.' });
+  if (req.user.role !== 'admin' && lesson.professor_id !== req.user.id) {
+    return res.status(403).json({ error: 'Możesz zarządzać wyłącznie własnym dziennikiem.' });
+  }
+  req.lessonResource = lesson;
+  next();
+}
+
 // GET /api/lessons - Pobierz listę wszystkich dzienników (Tylko zalogowani)
 router.get('/', requireAuth, (req, res) => {
   try {
@@ -31,6 +41,13 @@ router.get('/', requireAuth, (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    if (req.user.role === 'professor') {
+      query += ' AND l.professor_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role !== 'admin') {
+      query += " AND l.status IN ('published','archived')";
+    }
 
     if (status) {
       query += ` AND l.status = ?`;
@@ -100,6 +117,14 @@ router.get('/ledger/transactions', requireAuth, (req, res) => {
     let query = 'SELECT * FROM point_transactions WHERE 1=1';
     const params = [];
 
+    if (req.user.role === 'professor') {
+      query += ' AND lesson_id IN (SELECT id FROM lessons WHERE professor_id = ?)';
+      params.push(req.user.id);
+    } else if (req.user.role !== 'admin') {
+      query += ' AND student_id = ?';
+      params.push(req.user.id);
+    }
+
     if (house) {
       query += ' AND house = ?';
       params.push(house.toLowerCase());
@@ -131,7 +156,9 @@ router.get('/ledger/transactions', requireAuth, (req, res) => {
 // GET /api/lessons/audit-logs - Audyt modyfikacji punktów
 router.get('/audit-logs', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM point_audit_logs ORDER BY timestamp DESC LIMIT 100').all();
+    const rows = req.user.role === 'admin'
+      ? db.prepare('SELECT * FROM point_audit_logs ORDER BY timestamp DESC LIMIT 100').all()
+      : db.prepare('SELECT * FROM point_audit_logs WHERE modified_by = ? ORDER BY timestamp DESC LIMIT 100').all(req.user.fullName);
     res.json(rows);
   } catch (err) {
     console.error('[API /lessons/audit-logs] Błąd audytu punktów:', err);
@@ -142,6 +169,7 @@ router.get('/audit-logs', requireAuth, requireRole('admin', 'professor'), (req, 
 // GET /api/lessons/stats/overview - Statystyki ogólne
 router.get('/stats/overview', requireAuth, (req, res) => {
   try {
+    if (req.user.role !== 'admin' && req.user.role !== 'professor') return res.status(403).json({ error: 'Brak uprawnień do statystyk operacyjnych.' });
     const totalLessons = db.prepare('SELECT COUNT(*) as c FROM lessons WHERE status = "published"').get().c;
     const totalDrafts = db.prepare('SELECT COUNT(*) as c FROM lessons WHERE status = "draft"').get().c;
     const totalPointsAwarded = db.prepare('SELECT COALESCE(SUM(points), 0) as s FROM point_transactions WHERE is_revoked = 0').get().s;
@@ -174,6 +202,8 @@ router.get('/:id', requireAuth, (req, res) => {
     if (!lesson) {
       return res.status(404).json({ error: 'Dziennik lekcyjny nie został odnaleziony.' });
     }
+    if (req.user.role === 'professor' && lesson.professor_id !== req.user.id) return res.status(403).json({ error: 'Możesz przeglądać wyłącznie własne dzienniki.' });
+    if (req.user.role !== 'admin' && req.user.role !== 'professor' && !['published', 'archived'].includes(lesson.status)) return res.status(403).json({ error: 'Ten dziennik nie został opublikowany.' });
 
     const messages = db.prepare('SELECT * FROM lesson_messages WHERE lesson_id = ? ORDER BY order_index ASC, timestamp ASC').all(req.params.id);
     const participants = db.prepare('SELECT * FROM lesson_participants WHERE lesson_id = ? ORDER BY house ASC, student_name ASC').all(req.params.id);
@@ -195,11 +225,7 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
       classYear = 'Klasa I',
       topic = 'Nowa lekcja',
       description = '',
-      professorId = '',
-      professorName = '',
-      professorAvatar = '',
       date = new Date().toISOString().split('T')[0],
-      status = 'draft',
       discordThreadId = '',
       discordChannelId = '',
       discordGuildId = '',
@@ -223,8 +249,8 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
     `);
 
     insertLesson.run(
-      id, subjectId, resolvedSubjectName, classYear, topic, description, professorId,
-      professorName, professorAvatar, date, status, discordThreadId,
+      id, subjectId, resolvedSubjectName, classYear, topic, description, req.user.id,
+      req.user.fullName, req.user.avatar || '', date, 'draft', discordThreadId,
       discordChannelId, discordGuildId, discordThreadUrl, 0, participants.length
     );
 
@@ -296,7 +322,7 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
 });
 
 // PUT /api/lessons/:id - Zaktualizuj szkic dziennika (Profesor / Admin)
-router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'professor'), requireLessonOwner, (req, res) => {
   try {
     const { id } = req.params;
     const existing = db.prepare('SELECT * FROM lessons WHERE id = ?').get(id);
@@ -310,12 +336,17 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
       classYear = existing.class_year,
       topic = existing.topic,
       description = existing.description,
-      professorId = existing.professor_id,
-      professorName = existing.professor_name,
       date = existing.date,
       status = existing.status,
       participants = []
     } = req.body;
+
+    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, subjectId)) {
+      return res.status(403).json({ error: 'Nie możesz przenieść dziennika do nieprowadzonego przedmiotu.' });
+    }
+    if (participants.some(p => !Number.isInteger(Number(p.pointsAwarded || 0)) || Number(p.pointsAwarded || 0) < 0 || Number(p.pointsAwarded || 0) > 100)) {
+      return res.status(400).json({ error: 'Punkty uczestnika muszą być liczbą całkowitą od 0 do 100.' });
+    }
 
     // Calculate total points from participants list
     const totalPoints = participants.reduce((sum, p) => sum + (parseInt(p.pointsAwarded, 10) || 0), 0);
@@ -328,7 +359,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
       WHERE id = ?
     `).run(
       subjectId, subjectName, classYear, topic, description,
-      professorId, professorName, date, status, totalPoints,
+      existing.professor_id, existing.professor_name, date, status, totalPoints,
       participants.length, id
     );
 
@@ -366,7 +397,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
 });
 
 // POST /api/lessons/:id/publish - Oficjalna publikacja dziennika (Profesor / Admin)
-router.post('/:id/publish', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/:id/publish', requireAuth, requireRole('admin', 'professor'), requireLessonOwner, (req, res) => {
   try {
     const { id } = req.params;
     const lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(id);
@@ -486,40 +517,10 @@ router.post('/recalculate-rankings', requireAuth, requireRole('admin'), (req, re
 });
 
 // POST /api/lessons/points/award - Bezpośrednie przyznawanie punktów z gier i aktywności (zalogowani)
-router.post('/points/award', requireAuth, (req, res) => {
-  try {
-    const { points, reason } = req.body;
-    const numericPoints = Number(points);
-    if (!Number.isFinite(numericPoints) || numericPoints <= 0) {
-      return res.status(400).json({ error: 'Wymagana dodatnia liczba punktów.' });
-    }
-    if (numericPoints > 100) {
-      return res.status(400).json({ error: 'Maksymalna wartość punktów per akcja wynosi 100.' });
-    }
-
-    // Ten endpoint obsługuje wyłącznie własne wyniki z gier. Operacje administracyjne
-    // mają osobne trasy. Kadra zdobywa punkty osobiste bez przypisania do Zakonu.
-    const house = req.user.role === 'student' ? req.user.house : null;
-
-    const txId = awardPoints({
-      studentId: req.user.id,
-      studentName: req.user.fullName || req.user.username || 'Użytkownik',
-      house,
-      points: numericPoints,
-      source: reason || 'Grywalizacja & Aktywność w Cytadeli',
-      sourceType: 'ACTIVITY',
-      actorId: req.user.id,
-      actorName: req.user.fullName || 'System',
-      comment: reason || 'Grywalizacja',
-      idempotencyKey: req.body.idempotencyKey || ''
-    });
-
-    const rankings = house ? calculateHouseRankings('overall') : null;
-    res.json({ success: true, txId, rankings });
-  } catch (err) {
-    console.error('[API POST /lessons/points/award] Error:', err);
-    res.status(500).json({ error: 'Nie udało się zapisać punktów.' });
-  }
+router.post('/points/award', requireAuth, (_req, res) => {
+  res.status(410).json({
+    error: 'Uniwersalne przyznawanie punktów zostało wyłączone. Nagrody rozlicza wyłącznie serwer konkretnej aktywności.'
+  });
 });
 
 // DELETE /api/lessons/:id - Usunięcie dziennika i wycofanie punktów (Admin)

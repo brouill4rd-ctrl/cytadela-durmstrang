@@ -26,8 +26,8 @@ router.get('/runes', (req, res) => {
 });
 
 // GET /api/lottery/current — get current active round and user's tickets
-router.get('/current', (req, res) => {
-  const { userId } = req.query;
+router.get('/current', requireAuth, (req, res) => {
+  const userId = req.user.id;
 
   let roundRow = db.prepare("SELECT * FROM lottery_rounds WHERE status = 'active' ORDER BY round_number DESC LIMIT 1").get();
 
@@ -68,9 +68,10 @@ router.get('/current', (req, res) => {
 
 // POST /api/lottery/buy-ticket — buy lottery ticket (zalogowani)
 router.post('/buy-ticket', requireAuth, (req, res) => {
-  const { userId, chosenRunes, roundId } = req.body;
+  const { chosenRunes, roundId } = req.body;
+  const userId = req.user.id;
 
-  if (!userId || !Array.isArray(chosenRunes) || chosenRunes.length !== 6) {
+  if (!Array.isArray(chosenRunes) || chosenRunes.length !== 6) {
     return res.status(400).json({ error: 'Musisz wybrać dokładnie 6 unikalnych run ze Starszego Futharku.' });
   }
 
@@ -160,10 +161,18 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
   if (!roundRow) {
     return res.status(404).json({ error: 'Runda loterii nie istnieje.' });
   }
+  if (roundRow.status !== 'active') {
+    return res.status(409).json({ error: 'Ta runda została już rozliczona.' });
+  }
 
   // Draw 6 random unique runes if not provided
   let winningRunes = customWinningRunes;
-  if (!Array.isArray(winningRunes) || winningRunes.length !== 6) {
+  if (winningRunes != null) {
+    const allowedRunes = new Set(getAllFutharkRuneIds());
+    if (!Array.isArray(winningRunes) || winningRunes.length !== 6 || new Set(winningRunes).size !== 6 || winningRunes.some(id => !allowedRunes.has(id))) {
+      return res.status(400).json({ error: 'Wynik losowania musi zawierać 6 unikalnych run Futharku.' });
+    }
+  } else {
     const shuffled = [...getAllFutharkRuneIds()].sort(() => 0.5 - Math.random());
     winningRunes = shuffled.slice(0, 6);
   }

@@ -39,6 +39,9 @@ router.get('/salary-config', (req, res) => {
 // GET /api/bank/account/:userId — get or create bank vault for user (zalogowani)
 router.get('/account/:userId', requireAuth, (req, res) => {
   const { userId } = req.params;
+  if (userId !== req.user.id && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Nie możesz przeglądać cudzej skrytki.' });
+  }
   let row = db.prepare('SELECT * FROM bank_accounts WHERE user_id = ?').get(userId);
 
   if (!row) {
@@ -74,16 +77,16 @@ router.get('/accounts', requireAuth, requireRole('admin'), (req, res) => {
 
 // POST /api/bank/transfer — transfer Skirnirs between users (zalogowani, walidacja sendera)
 router.post('/transfer', requireAuth, (req, res) => {
-  const { senderId, recipientId, amount, title, note } = req.body;
+  const { recipientId, amount, title, note, idempotencyKey } = req.body;
+  const senderId = req.user.id;
   const numAmount = parseInt(amount, 10);
 
-  // Walidacja: sender musi być zalogowanym użytkownikiem
-  if (senderId !== req.user.id && req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Możesz wykonywać przelewy tylko z własnej skrytki.' });
+  if (!recipientId || isNaN(numAmount) || numAmount <= 0) {
+    return res.status(400).json({ error: 'Nieprawidłowe dane przelewu. Kwota musi być większa od zera.' });
   }
 
-  if (!senderId || !recipientId || isNaN(numAmount) || numAmount <= 0) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane przelewu. Kwota musi być większa od zera.' });
+  if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 16 || idempotencyKey.length > 128) {
+    return res.status(400).json({ error: 'Brak prawidłowego identyfikatora operacji przelewu.' });
   }
 
   if (senderId === recipientId) {
@@ -97,7 +100,7 @@ router.post('/transfer', requireAuth, (req, res) => {
       amount: numAmount,
       title: title || 'Przelew bankowy Skirnirów',
       note: note || '',
-      idempotencyKey: `transfer-${senderId}-${recipientId}-${Date.now()}`
+      idempotencyKey: `transfer:${senderId}:${idempotencyKey}`
     });
 
     // Send notification email to recipient if regular user
@@ -151,13 +154,14 @@ Główny Bankier Kaupangr Skírnisbanki`
 // GET /api/bank/transactions — transaction history (zalogowani)
 router.get('/transactions', requireAuth, (req, res) => {
   const { userId, category, type, search } = req.query;
+  const effectiveUserId = req.user.role === 'admin' ? userId : req.user.id;
 
   let query = 'SELECT * FROM bank_transactions WHERE 1=1';
   const params = [];
 
-  if (userId) {
+  if (effectiveUserId) {
     query += ' AND (sender_id = ? OR recipient_id = ?)';
-    params.push(userId, userId);
+    params.push(effectiveUserId, effectiveUserId);
   }
 
   if (category && category !== 'all') {
@@ -166,12 +170,12 @@ router.get('/transactions', requireAuth, (req, res) => {
   }
 
   if (type && type !== 'all') {
-    if (type === 'inflow' && userId) {
+    if (type === 'inflow' && effectiveUserId) {
       query += ' AND recipient_id = ?';
-      params.push(userId);
-    } else if (type === 'outflow' && userId) {
+      params.push(effectiveUserId);
+    } else if (type === 'outflow' && effectiveUserId) {
       query += ' AND sender_id = ?';
-      params.push(userId);
+      params.push(effectiveUserId);
     }
   }
 
@@ -319,19 +323,14 @@ router.get('/salaries', requireAuth, requireRole('admin'), (req, res) => {
   res.json(rows.map(dbTeacherSalaryToFrontend));
 });
 
-// POST /api/bank/deposit — direct currency deposit/withdrawal for rewards & penalties (zalogowani)
-// Używane przez: nagrody z gier, loteria, misje, sekrety, alkemia itp.
-router.post('/deposit', requireAuth, (req, res) => {
+// POST /api/bank/deposit — ręczna korekta salda wyłącznie przez administratora.
+// Gry i aktywności muszą korzystać z własnych, serwerowo weryfikowanych endpointów.
+router.post('/deposit', requireAuth, requireRole('admin'), (req, res) => {
   const { userId, amount, type = 'inflow', title, category = 'nagroda' } = req.body;
   const numAmount = parseInt(amount, 10);
 
   if (!userId || isNaN(numAmount) || numAmount === 0) {
     return res.status(400).json({ error: 'Nieprawidłowe dane depozytu.' });
-  }
-
-  // Tylko własne konto lub admin
-  if (userId !== req.user.id && req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Brak uprawnień do modyfikacji cudzej skrytki.' });
   }
 
   const userRow = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId);

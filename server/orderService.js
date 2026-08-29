@@ -76,7 +76,12 @@ export function contribute(db, input, user) {
     if (!project || project.order_id !== user.house) throw new Error('Projekt jest niedostępny dla tego użytkownika.');
     const stage = db.prepare('SELECT * FROM order_project_stages WHERE project_id=? AND status=\'active\' ORDER BY position LIMIT 1').get(project.id);
     if (!stage || stage.requirement_key !== input.resourceKey) throw new Error('Ten zasób nie pasuje do aktywnego etapu.');
-    db.prepare('INSERT INTO order_project_contributions (id,idempotency_key,project_id,stage_id,user_id,user_name,order_id,source_type,source_ref,resource_key,amount,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(randomUUID(), input.idempotencyKey, project.id, stage.id, user.id, user.fullName || user.username, user.house, input.sourceType, input.sourceRef, input.resourceKey, Number(input.amount), now());
+    const currentProgress = db.prepare('SELECT COALESCE(SUM(amount),0) total FROM order_project_contributions WHERE stage_id=?').get(stage.id).total;
+    const remaining = stage.required_amount - currentProgress;
+    if (remaining <= 0) throw new Error('Etap został już ukończony.');
+    const clampedAmount = Math.min(Number(input.amount), remaining);
+    if (clampedAmount <= 0) throw new Error('Wkład musi być większy od zera.');
+    db.prepare('INSERT INTO order_project_contributions (id,idempotency_key,project_id,stage_id,user_id,user_name,order_id,source_type,source_ref,resource_key,amount,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(randomUUID(), input.idempotencyKey, project.id, stage.id, user.id, user.fullName || user.username, user.house, input.sourceType, input.sourceRef, input.resourceKey, clampedAmount, now());
     const total = db.prepare('SELECT COALESCE(SUM(amount),0) total FROM order_project_contributions WHERE stage_id=?').get(stage.id).total;
     let completed = false;
     if (total >= stage.required_amount) {

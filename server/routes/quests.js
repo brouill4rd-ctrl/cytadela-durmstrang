@@ -190,19 +190,12 @@ router.post('/expeditions/complete', requireAuth, (req, res) => {
   }
 });
 
-// GET /api/quests/completed — Get completed quests for current or given user
-router.get('/completed', (req, res) => {
+// GET /api/quests/completed — Get completed quests for current user
+router.get('/completed', requireAuth, (req, res) => {
   try {
-    const userId = req.query.userId || req.headers['x-user-id'];
-    let query = 'SELECT * FROM completed_quests';
-    const params = [];
-    if (userId && userId !== 'guest') {
-      query += ' WHERE user_id = ?';
-      params.push(userId);
-    }
-    query += ' ORDER BY rowid DESC';
-
-    const rows = db.prepare(query).all(...params);
+    const rows = db.prepare(
+      'SELECT * FROM completed_quests WHERE user_id = ? ORDER BY rowid DESC'
+    ).all(req.user.id);
     res.json(rows.map(dbCompletedQuestToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania ukończonych zadań: ' + err.message });
@@ -211,6 +204,10 @@ router.get('/completed', (req, res) => {
 
 // POST /api/quests/complete — Mark a quest as completed and award all rewards atomically
 router.post('/complete', requireAuth, (req, res) => {
+  return res.status(410).json({
+    error: 'Starsze zadania Mapy zostały wyłączone. Użyj serwerowo weryfikowanych Ekspedycji.'
+  });
+  /* c8 ignore start -- legacy handler pozostawiony tymczasowo do migracji danych */
   try {
     const {
       questId,

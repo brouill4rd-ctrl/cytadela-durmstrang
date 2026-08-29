@@ -47,7 +47,13 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
 
 // PATCH /api/emails/:id/read — mark as read (zalogowani)
 router.patch('/:id/read', requireAuth, (req, res) => {
-  db.prepare('UPDATE emails SET read = 1 WHERE id = ?').run(req.params.id);
+  const email = db.prepare('SELECT id, to_email, to_name FROM emails WHERE id = ?').get(req.params.id);
+  if (!email) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+  const userEmail = `${req.user.username}@durmstrang.edu`;
+  if (req.user.role !== 'admin' && email.to_email !== userEmail && email.to_name !== req.user.fullName) {
+    return res.status(403).json({ error: 'Nie możesz zmieniać stanu cudzej wiadomości.' });
+  }
+  db.prepare('UPDATE emails SET read = 1 WHERE id = ?').run(email.id);
   res.json({ success: true });
 });
 

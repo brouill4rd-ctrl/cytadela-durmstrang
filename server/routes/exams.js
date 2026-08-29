@@ -35,6 +35,44 @@ function attemptEvent(attemptId, eventType, metadata = {}) {
   );
 }
 
+function requireExamOwner(resolveExamId) {
+  return (req, res, next) => {
+    try {
+      const examId = resolveExamId(req);
+      const exam = examId ? db.prepare('SELECT id, professor_id, subject_id FROM exams WHERE id = ?').get(examId) : null;
+      if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
+      if (req.user.role !== 'admin' && exam.professor_id !== req.user.id) {
+        return res.status(403).json({ error: 'Możesz zarządzać wyłącznie własnym egzaminem.' });
+      }
+      req.examResource = exam;
+      next();
+    } catch (err) {
+      res.status(500).json({ error: 'Nie udało się zweryfikować właściciela egzaminu: ' + err.message });
+    }
+  };
+}
+
+const examFromParam = name => req => req.params[name];
+const examFromSection = req => db.prepare('SELECT exam_id FROM exam_sections WHERE id = ?').get(req.params.id)?.exam_id;
+const examFromExamQuestion = req => db.prepare('SELECT exam_id FROM exam_questions WHERE id = ?').get(req.params.id)?.exam_id;
+const examFromAttempt = name => req => db.prepare('SELECT exam_id FROM exam_attempts WHERE id = ?').get(req.params[name])?.exam_id;
+const examFromAnswer = req => db.prepare('SELECT ea.exam_id FROM attempt_answers aa JOIN exam_attempts ea ON ea.id = aa.attempt_id WHERE aa.id = ?').get(req.params.answerId)?.exam_id;
+const examFromException = req => db.prepare('SELECT exam_id FROM exam_exceptions WHERE id = ?').get(req.params.id)?.exam_id;
+
+function requireSubjectOwner(resolveSubjectId) {
+  return (req, res, next) => {
+    const subjectId = resolveSubjectId(req);
+    if (!subjectId) return res.status(404).json({ error: 'Nie znaleziono przedmiotu zasobu.' });
+    if (req.user.role !== 'admin' && !isProfessorOfSubject(req.user.id, subjectId)) {
+      return res.status(403).json({ error: 'Możesz zarządzać wyłącznie zasobami prowadzonych przedmiotów.' });
+    }
+    next();
+  };
+}
+
+const subjectFromCategory = req => db.prepare('SELECT subject_id FROM question_bank_categories WHERE id = ?').get(req.params.id)?.subject_id;
+const subjectFromQuestion = req => db.prepare('SELECT subject_id FROM questions WHERE id = ?').get(req.params.id)?.subject_id;
+
 // ==================== GRADING SCALES ====================
 
 router.get('/scales', requireAuth, (req, res) => {
@@ -154,7 +192,7 @@ router.get('/question-categories', requireAuth, (req, res) => {
   res.json(rows.map(r => ({ id: r.id, subjectId: r.subject_id, name: r.name, parentId: r.parent_id, sortOrder: r.sort_order })));
 });
 
-router.post('/question-categories', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/question-categories', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(req => req.body.subjectId), (req, res) => {
   const { subjectId, name, parentId } = req.body;
   if (!subjectId || !name) return res.status(400).json({ error: 'Podaj przedmiot i nazwę kategorii.' });
   const id = genId('qcat');
@@ -162,13 +200,13 @@ router.post('/question-categories', requireAuth, requireRole('admin', 'professor
   res.status(201).json({ id, subjectId, name, parentId: parentId || '', sortOrder: 0 });
 });
 
-router.put('/question-categories/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/question-categories/:id', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(subjectFromCategory), (req, res) => {
   const { name, sortOrder } = req.body;
   db.prepare('UPDATE question_bank_categories SET name = COALESCE(?, name), sort_order = COALESCE(?, sort_order) WHERE id = ?').run(name, sortOrder, req.params.id);
   res.json({ success: true });
 });
 
-router.delete('/question-categories/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.delete('/question-categories/:id', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(subjectFromCategory), (req, res) => {
   db.prepare('UPDATE questions SET category_id = ? WHERE category_id = ?').run('', req.params.id);
   db.prepare('DELETE FROM question_bank_categories WHERE id = ?').run(req.params.id);
   res.json({ success: true });
@@ -182,6 +220,10 @@ router.get('/questions', requireAuth, (req, res) => {
   let sql = 'SELECT * FROM questions';
   const params = [];
   const conditions = [];
+  if (req.user.role === 'professor') {
+    conditions.push("subject_id IN (SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active')");
+    params.push(req.user.id);
+  }
   if (!includeArchived) { conditions.push('is_archived = 0'); }
   if (subjectId) { conditions.push('subject_id = ?'); params.push(subjectId); }
   if (categoryId) { conditions.push('category_id = ?'); params.push(categoryId); }
@@ -203,11 +245,12 @@ router.get('/questions/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'professor') return res.status(403).json({ error: 'Brak uprawnień.' });
   const row = db.prepare('SELECT * FROM questions WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono pytania.' });
+  if (req.user.role !== 'admin' && !isProfessorOfSubject(req.user.id, row.subject_id)) return res.status(403).json({ error: 'To pytanie należy do innego przedmiotu.' });
   const opts = db.prepare('SELECT * FROM question_options WHERE question_id = ? ORDER BY sort_order ASC').all(row.id);
   res.json(dbQuestionToFrontend(row, opts));
 });
 
-router.post('/questions', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/questions', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(req => req.body.subjectId), (req, res) => {
   const { subjectId, categoryId, type, content, explanation, difficulty, tags, mediaUrl, mediaType, supplementaryMaterial, correctShortAnswers, fillGapsAnswers, options } = req.body;
   if (!subjectId || !type || !content) return res.status(400).json({ error: 'Wypełnij wymagane pola (przedmiot, typ, treść).' });
   const id = genId('q');
@@ -225,7 +268,7 @@ router.post('/questions', requireAuth, requireRole('admin', 'professor'), (req, 
   res.status(201).json(dbQuestionToFrontend(row, opts));
 });
 
-router.put('/questions/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/questions/:id', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(subjectFromQuestion), (req, res) => {
   const existing = db.prepare('SELECT * FROM questions WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Nie znaleziono pytania.' });
   const inUse = db.prepare('SELECT eq.id FROM exam_questions eq JOIN exams e ON eq.exam_id = e.id WHERE eq.question_id = ? AND e.is_locked = 1').get(req.params.id);
@@ -250,7 +293,7 @@ router.put('/questions/:id', requireAuth, requireRole('admin', 'professor'), (re
   res.json(dbQuestionToFrontend(row, opts));
 });
 
-router.delete('/questions/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.delete('/questions/:id', requireAuth, requireRole('admin', 'professor'), requireSubjectOwner(subjectFromQuestion), (req, res) => {
   db.prepare('UPDATE questions SET is_archived = 1, updated_at = ? WHERE id = ?').run(nowISO(), req.params.id);
   res.json({ success: true });
 });
@@ -262,9 +305,18 @@ router.get('/exams', requireAuth, (req, res) => {
   let sql = 'SELECT * FROM exams';
   const params = [];
   const conditions = [];
+  if (req.user.role === 'professor') {
+    conditions.push('professor_id = ?');
+    params.push(req.user.id);
+  } else if (req.user.role !== 'admin') {
+    const classYear = db.prepare('SELECT class_year FROM users WHERE id = ?').get(req.user.id)?.class_year || '';
+    conditions.push("status IN ('published','active','closed')");
+    conditions.push('(class_year = ? OR class_year = ?)');
+    params.push(classYear, '');
+  }
   if (sessionId) { conditions.push('session_id = ?'); params.push(sessionId); }
   if (subjectId) { conditions.push('subject_id = ?'); params.push(subjectId); }
-  if (professorId) { conditions.push('professor_id = ?'); params.push(professorId); }
+  if (professorId && req.user.role === 'admin') { conditions.push('professor_id = ?'); params.push(professorId); }
   if (status) { conditions.push('status = ?'); params.push(status); }
   if (classYear) { conditions.push('class_year = ?'); params.push(classYear); }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
@@ -276,6 +328,16 @@ router.get('/exams', requireAuth, (req, res) => {
 router.get('/exams/:id', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
+  const canSeeAnswerKey = req.user.role === 'admin' || (req.user.role === 'professor' && row.professor_id === req.user.id);
+  if (req.user.role === 'professor' && !canSeeAnswerKey) {
+    return res.status(403).json({ error: 'Możesz otwierać wyłącznie własne egzaminy.' });
+  }
+  if (req.user.role !== 'admin' && req.user.role !== 'professor') {
+    const classYear = db.prepare('SELECT class_year FROM users WHERE id = ?').get(req.user.id)?.class_year || '';
+    if (!['published', 'active', 'closed'].includes(row.status) || (row.class_year && row.class_year !== classYear)) {
+      return res.status(403).json({ error: 'Ten egzamin nie jest dostępny dla Twojej klasy.' });
+    }
+  }
   const sections = db.prepare('SELECT * FROM exam_sections WHERE exam_id = ? ORDER BY sort_order ASC').all(row.id);
   const examQuestions = db.prepare('SELECT eq.*, q.type, q.content, q.difficulty, q.media_url, q.media_type, q.supplementary_material FROM exam_questions eq JOIN questions q ON eq.question_id = q.id WHERE eq.exam_id = ? ORDER BY eq.sort_order ASC').all(row.id);
   const questionsWithOpts = examQuestions.map(eq => {
@@ -291,8 +353,12 @@ router.get('/exams/:id', requireAuth, (req, res) => {
       points: eq.points,
       partialCredit: eq.partial_credit,
       sortOrder: eq.sort_order,
-      question: dbQuestionToFrontend({ ...db.prepare('SELECT * FROM questions WHERE id = ?').get(eq.question_id) }, opts),
-      rubric: rubric ? { id: rubric.id, title: rubric.title, criteria: criteria.map(c => ({ id: c.id, description: c.description, points: c.points, sortOrder: c.sort_order })) } : null
+      question: canSeeAnswerKey
+        ? dbQuestionToFrontend({ ...db.prepare('SELECT * FROM questions WHERE id = ?').get(eq.question_id) }, opts)
+        : dbQuestionForStudentFrontend({ ...db.prepare('SELECT * FROM questions WHERE id = ?').get(eq.question_id) }, opts),
+      rubric: canSeeAnswerKey && rubric
+        ? { id: rubric.id, title: rubric.title, criteria: criteria.map(c => ({ id: c.id, description: c.description, points: c.points, sortOrder: c.sort_order })) }
+        : null
     };
   });
   res.json({
@@ -329,7 +395,7 @@ router.post('/exams', requireAuth, requireRole('admin', 'professor'), (req, res)
   res.status(201).json(dbExamToFrontend(db.prepare('SELECT * FROM exams WHERE id = ?').get(id)));
 });
 
-router.put('/exams/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/exams/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const existing = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   if (existing.is_locked && req.user.role !== 'admin') {
@@ -364,7 +430,7 @@ function recalcExamTotals(examId) {
   db.prepare('UPDATE exams SET total_questions = ?, total_points = ?, updated_at = ? WHERE id = ?').run(stats.cnt, stats.pts, nowISO(), examId);
 }
 
-router.post('/exams/:id/publish', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/publish', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   if (exam.total_questions === 0 && !exam.use_random_pool) return res.status(400).json({ error: 'Egzamin nie zawiera pytań.' });
@@ -377,13 +443,13 @@ router.post('/exams/:id/publish', requireAuth, requireRole('admin', 'professor')
   res.json(dbExamToFrontend(db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id)));
 });
 
-router.post('/exams/:id/close', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/close', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   db.prepare("UPDATE exams SET status = 'closed', updated_at = ? WHERE id = ?").run(nowISO(), req.params.id);
   auditLog(req.user.id, req.user.fullName, req.user.role, 'close_exam', 'exam', req.params.id, '');
   res.json(dbExamToFrontend(db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id)));
 });
 
-router.post('/exams/:id/duplicate', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/duplicate', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const src = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!src) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   const newId = genId('exam');
@@ -416,7 +482,7 @@ router.post('/exams/:id/duplicate', requireAuth, requireRole('admin', 'professor
   res.status(201).json(dbExamToFrontend(db.prepare('SELECT * FROM exams WHERE id = ?').get(newId)));
 });
 
-router.post('/exams/:id/save-template', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/save-template', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   const { name, description } = req.body;
@@ -433,7 +499,7 @@ router.post('/exams/:id/save-template', requireAuth, requireRole('admin', 'profe
 
 // ==================== EXAM SECTIONS ====================
 
-router.post('/exams/:id/sections', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/sections', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const { title, description, instructions, maxPoints } = req.body;
   if (!title) return res.status(400).json({ error: 'Podaj tytuł sekcji.' });
   const maxSort = db.prepare('SELECT MAX(sort_order) as m FROM exam_sections WHERE exam_id = ?').get(req.params.id).m || 0;
@@ -444,7 +510,7 @@ router.post('/exams/:id/sections', requireAuth, requireRole('admin', 'professor'
   res.status(201).json(dbExamSectionToFrontend(db.prepare('SELECT * FROM exam_sections WHERE id = ?').get(id)));
 });
 
-router.put('/sections/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/sections/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromSection), (req, res) => {
   const { title, description, instructions, maxPoints, sortOrder } = req.body;
   db.prepare('UPDATE exam_sections SET title=COALESCE(?,title), description=COALESCE(?,description), instructions=COALESCE(?,instructions), max_points=COALESCE(?,max_points), sort_order=COALESCE(?,sort_order) WHERE id=?').run(
     title, description, instructions, maxPoints, sortOrder, req.params.id
@@ -452,7 +518,7 @@ router.put('/sections/:id', requireAuth, requireRole('admin', 'professor'), (req
   res.json(dbExamSectionToFrontend(db.prepare('SELECT * FROM exam_sections WHERE id = ?').get(req.params.id)));
 });
 
-router.delete('/sections/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.delete('/sections/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromSection), (req, res) => {
   const sec = db.prepare('SELECT exam_id FROM exam_sections WHERE id = ?').get(req.params.id);
   db.prepare("UPDATE exam_questions SET section_id = '' WHERE section_id = ?").run(req.params.id);
   db.prepare('DELETE FROM exam_sections WHERE id = ?').run(req.params.id);
@@ -462,12 +528,15 @@ router.delete('/sections/:id', requireAuth, requireRole('admin', 'professor'), (
 
 // ==================== EXAM QUESTIONS (assigning to exam) ====================
 
-router.post('/exams/:id/exam-questions', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/exam-questions', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   if (exam.is_locked && req.user.role !== 'admin') return res.status(400).json({ error: 'Egzamin zablokowany.' });
   const { questionId, sectionId, points, partialCredit } = req.body;
   if (!questionId) return res.status(400).json({ error: 'Podaj ID pytania.' });
+  const question = db.prepare('SELECT subject_id FROM questions WHERE id = ? AND is_archived = 0').get(questionId);
+  if (!question || question.subject_id !== exam.subject_id) return res.status(400).json({ error: 'Pytanie nie należy do przedmiotu tego egzaminu.' });
+  if (sectionId && !db.prepare('SELECT 1 FROM exam_sections WHERE id = ? AND exam_id = ?').get(sectionId, exam.id)) return res.status(400).json({ error: 'Sekcja nie należy do tego egzaminu.' });
   const maxSort = db.prepare('SELECT MAX(sort_order) as m FROM exam_questions WHERE exam_id = ?').get(req.params.id).m || 0;
   const id = genId('eq');
   db.prepare('INSERT INTO exam_questions (id, exam_id, section_id, question_id, points, partial_credit, sort_order) VALUES (?,?,?,?,?,?,?)').run(
@@ -477,11 +546,14 @@ router.post('/exams/:id/exam-questions', requireAuth, requireRole('admin', 'prof
   res.status(201).json({ id, examId: req.params.id, questionId, sectionId: sectionId || '', points: points || 1, partialCredit: partialCredit || 'none', sortOrder: maxSort + 1 });
 });
 
-router.post('/exams/:id/exam-questions/bulk', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/exam-questions/bulk', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   const { questionIds, sectionId, defaultPoints } = req.body;
   if (!questionIds?.length) return res.status(400).json({ error: 'Podaj listę pytań.' });
+  if (sectionId && !db.prepare('SELECT 1 FROM exam_sections WHERE id = ? AND exam_id = ?').get(sectionId, exam.id)) return res.status(400).json({ error: 'Sekcja nie należy do tego egzaminu.' });
+  const validCount = db.prepare(`SELECT COUNT(*) AS c FROM questions WHERE subject_id = ? AND is_archived = 0 AND id IN (${questionIds.map(() => '?').join(',')})`).get(exam.subject_id, ...questionIds).c;
+  if (validCount !== new Set(questionIds).size || validCount !== questionIds.length) return res.status(400).json({ error: 'Lista zawiera pytanie z innego przedmiotu, archiwalne albo powtórzone.' });
   let maxSort = db.prepare('SELECT MAX(sort_order) as m FROM exam_questions WHERE exam_id = ?').get(req.params.id).m || 0;
   const ins = db.prepare('INSERT INTO exam_questions (id, exam_id, section_id, question_id, points, partial_credit, sort_order) VALUES (?,?,?,?,?,?,?)');
   const added = [];
@@ -495,8 +567,10 @@ router.post('/exams/:id/exam-questions/bulk', requireAuth, requireRole('admin', 
   res.status(201).json({ added: added.length });
 });
 
-router.put('/exam-questions/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.put('/exam-questions/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromExamQuestion), (req, res) => {
   const { points, partialCredit, sectionId, sortOrder } = req.body;
+  const current = db.prepare('SELECT exam_id FROM exam_questions WHERE id = ?').get(req.params.id);
+  if (sectionId && !db.prepare('SELECT 1 FROM exam_sections WHERE id = ? AND exam_id = ?').get(sectionId, current.exam_id)) return res.status(400).json({ error: 'Sekcja nie należy do tego egzaminu.' });
   db.prepare('UPDATE exam_questions SET points=COALESCE(?,points), partial_credit=COALESCE(?,partial_credit), section_id=COALESCE(?,section_id), sort_order=COALESCE(?,sort_order) WHERE id=?').run(
     points, partialCredit, sectionId, sortOrder, req.params.id
   );
@@ -505,7 +579,7 @@ router.put('/exam-questions/:id', requireAuth, requireRole('admin', 'professor')
   res.json({ success: true });
 });
 
-router.delete('/exam-questions/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.delete('/exam-questions/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromExamQuestion), (req, res) => {
   const eq = db.prepare('SELECT exam_id FROM exam_questions WHERE id = ?').get(req.params.id);
   db.prepare('DELETE FROM exam_rubric_criteria WHERE rubric_id IN (SELECT id FROM exam_rubrics WHERE exam_question_id = ?)').run(req.params.id);
   db.prepare('DELETE FROM exam_rubrics WHERE exam_question_id = ?').run(req.params.id);
@@ -514,17 +588,20 @@ router.delete('/exam-questions/:id', requireAuth, requireRole('admin', 'professo
   res.json({ success: true });
 });
 
-router.post('/exams/:id/exam-questions/reorder', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/exam-questions/reorder', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const { order } = req.body;
   if (!order?.length) return res.status(400).json({ error: 'Pusta lista kolejności.' });
-  const upd = db.prepare('UPDATE exam_questions SET sort_order = ? WHERE id = ?');
-  order.forEach((id, idx) => upd.run(idx, id));
+  const expected = db.prepare('SELECT COUNT(*) AS c FROM exam_questions WHERE exam_id = ?').get(req.params.id).c;
+  const matching = db.prepare(`SELECT COUNT(*) AS c FROM exam_questions WHERE exam_id = ? AND id IN (${order.map(() => '?').join(',')})`).get(req.params.id, ...order).c;
+  if (new Set(order).size !== expected || matching !== expected) return res.status(400).json({ error: 'Kolejność musi obejmować wyłącznie wszystkie pytania tego egzaminu.' });
+  const upd = db.prepare('UPDATE exam_questions SET sort_order = ? WHERE id = ? AND exam_id = ?');
+  order.forEach((id, idx) => upd.run(idx, id, req.params.id));
   res.json({ success: true });
 });
 
 // ==================== RUBRICS ====================
 
-router.post('/exam-questions/:id/rubric', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exam-questions/:id/rubric', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromExamQuestion), (req, res) => {
   const { title, criteria } = req.body;
   let rubric = db.prepare('SELECT * FROM exam_rubrics WHERE exam_question_id = ?').get(req.params.id);
   if (rubric) {
@@ -546,7 +623,9 @@ router.post('/exam-questions/:id/rubric', requireAuth, requireRole('admin', 'pro
 // ==================== TEMPLATES ====================
 
 router.get('/templates', requireAuth, requireRole('admin', 'professor'), (req, res) => {
-  const rows = db.prepare('SELECT * FROM exam_templates ORDER BY created_at DESC').all();
+  const rows = req.user.role === 'admin'
+    ? db.prepare('SELECT * FROM exam_templates ORDER BY created_at DESC').all()
+    : db.prepare("SELECT * FROM exam_templates WHERE created_by = ? OR subject_id IN (SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active') ORDER BY created_at DESC").all(req.user.id, req.user.id);
   res.json(rows.map(r => ({
     id: r.id, name: r.name, subjectId: r.subject_id, description: r.description,
     config: (() => { try { return JSON.parse(r.config); } catch { return {}; } })(),
@@ -556,6 +635,9 @@ router.get('/templates', requireAuth, requireRole('admin', 'professor'), (req, r
 });
 
 router.delete('/templates/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+  const template = db.prepare('SELECT created_by FROM exam_templates WHERE id = ?').get(req.params.id);
+  if (!template) return res.status(404).json({ error: 'Nie znaleziono szablonu.' });
+  if (req.user.role !== 'admin' && template.created_by !== req.user.id) return res.status(403).json({ error: 'Możesz usunąć wyłącznie własny szablon.' });
   db.prepare('DELETE FROM exam_templates WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
@@ -1018,7 +1100,7 @@ function autoGrade(question, answer, examQuestion) {
 
 // ==================== GRADING (professor) ====================
 
-router.get('/grading/exam/:examId', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.get('/grading/exam/:examId', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('examId')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.examId);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   const attempts = db.prepare('SELECT * FROM exam_attempts WHERE exam_id = ? ORDER BY student_name ASC, attempt_number ASC').all(req.params.examId);
@@ -1039,13 +1121,13 @@ router.get('/grading/exam/:examId', requireAuth, requireRole('admin', 'professor
   });
 });
 
-router.get('/grading/attempt/:attemptId', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.get('/grading/attempt/:attemptId', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromAttempt('attemptId')), (req, res) => {
   const attempt = db.prepare('SELECT * FROM exam_attempts WHERE id = ?').get(req.params.attemptId);
   if (!attempt) return res.status(404).json({ error: 'Nie znaleziono podejścia.' });
   res.json(buildAttemptResponse(attempt, req.user));
 });
 
-router.post('/grading/answer/:answerId', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/grading/answer/:answerId', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromAnswer), (req, res) => {
   const answer = db.prepare('SELECT * FROM attempt_answers WHERE id = ?').get(req.params.answerId);
   if (!answer) return res.status(404).json({ error: 'Nie znaleziono odpowiedzi.' });
   const { manualScore, professorComment, rubricScores } = req.body;
@@ -1096,7 +1178,7 @@ function recalcAttemptScore(attemptId) {
   );
 }
 
-router.post('/grading/attempt/:attemptId/approve', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/grading/attempt/:attemptId/approve', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromAttempt('attemptId')), (req, res) => {
   const attempt = db.prepare('SELECT * FROM exam_attempts WHERE id = ?').get(req.params.attemptId);
   if (!attempt) return res.status(404).json({ error: 'Nie znaleziono podejścia.' });
   const { professorComment, isFinal } = req.body;
@@ -1113,7 +1195,7 @@ router.post('/grading/attempt/:attemptId/approve', requireAuth, requireRole('adm
   res.json(dbExamAttemptToFrontend(db.prepare('SELECT * FROM exam_attempts WHERE id = ?').get(req.params.attemptId)));
 });
 
-router.post('/grading/exam/:examId/publish-all', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/grading/exam/:examId/publish-all', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('examId')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.examId);
   db.prepare("UPDATE exam_attempts SET status = 'approved', is_final = 1, updated_at = ? WHERE exam_id = ? AND (status = 'graded' OR status = 'grading' OR status = 'submitted')").run(nowISO(), req.params.examId);
   auditLog(req.user.id, req.user.fullName, req.user.role, 'publish_all_results', 'exam', req.params.examId, '');
@@ -1127,7 +1209,7 @@ router.post('/grading/exam/:examId/publish-all', requireAuth, requireRole('admin
 
 // ==================== EXAM STATISTICS ====================
 
-router.get('/statistics/exam/:examId', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.get('/statistics/exam/:examId', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('examId')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.examId);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
 
@@ -1173,7 +1255,7 @@ router.get('/statistics/exam/:examId', requireAuth, requireRole('admin', 'profes
 
 // ==================== EXCEPTIONS ====================
 
-router.post('/exceptions', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exceptions', requireAuth, requireRole('admin', 'professor'), requireExamOwner(req => req.body.examId), (req, res) => {
   const { examId, studentId, exceptionType, extraMinutes, customAccessEnd, extraAttempts, reason } = req.body;
   if (!examId || !studentId || !exceptionType) return res.status(400).json({ error: 'Wypełnij wymagane pola.' });
   const student = db.prepare('SELECT full_name FROM users WHERE id = ?').get(studentId);
@@ -1187,7 +1269,7 @@ router.post('/exceptions', requireAuth, requireRole('admin', 'professor'), (req,
   res.status(201).json({ id, success: true });
 });
 
-router.get('/exceptions/exam/:examId', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.get('/exceptions/exam/:examId', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('examId')), (req, res) => {
   const rows = db.prepare('SELECT * FROM exam_exceptions WHERE exam_id = ?').all(req.params.examId);
   res.json(rows.map(r => ({
     id: r.id, examId: r.exam_id, studentId: r.student_id, studentName: r.student_name,
@@ -1196,14 +1278,14 @@ router.get('/exceptions/exam/:examId', requireAuth, requireRole('admin', 'profes
   })));
 });
 
-router.delete('/exceptions/:id', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.delete('/exceptions/:id', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromException), (req, res) => {
   db.prepare('DELETE FROM exam_exceptions WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
 
 // ==================== TIME EXTENSIONS ====================
 
-router.post('/attempts/:id/extend-time', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/attempts/:id/extend-time', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromAttempt('id')), (req, res) => {
   const attempt = db.prepare('SELECT * FROM exam_attempts WHERE id = ?').get(req.params.id);
   if (!attempt) return res.status(404).json({ error: 'Nie znaleziono podejścia.' });
   if (attempt.status !== 'in_progress') return res.status(400).json({ error: 'Podejście nie jest aktywne.' });
@@ -1217,7 +1299,7 @@ router.post('/attempts/:id/extend-time', requireAuth, requireRole('admin', 'prof
   res.json({ newExpiresAt: newExpiry });
 });
 
-router.post('/exams/:id/extend-time-all', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.post('/exams/:id/extend-time-all', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const { extraMinutes } = req.body;
   if (!extraMinutes) return res.status(400).json({ error: 'Podaj liczbę minut.' });
   const attempts = db.prepare("SELECT * FROM exam_attempts WHERE exam_id = ? AND status = 'in_progress'").all(req.params.id);
@@ -1232,7 +1314,7 @@ router.post('/exams/:id/extend-time-all', requireAuth, requireRole('admin', 'pro
 
 // ==================== MONITORING ====================
 
-router.get('/exams/:id/monitor', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+router.get('/exams/:id/monitor', requireAuth, requireRole('admin', 'professor'), requireExamOwner(examFromParam('id')), (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Nie znaleziono egzaminu.' });
   const eligible = db.prepare("SELECT COUNT(*) as c FROM users WHERE class_year = ? AND role = 'student' AND status = 'approved'").get(exam.class_year).c;

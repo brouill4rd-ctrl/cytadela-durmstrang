@@ -3,14 +3,9 @@ const API_BASE = '/api';
 
 async function apiFetch(path, options = {}) {
   try {
-    const token = localStorage.getItem('durmstrang_auth_token');
-    const authHeaders = {};
-    if (token) {
-      authHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...authHeaders, ...options.headers },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...options.headers },
       ...options
     });
     
@@ -71,6 +66,9 @@ export const api = {
 
   // Auth
   login: (username, password) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  logout: () => apiFetch('/auth/logout', { method: 'POST' }),
+  requestPasswordRecovery: (identifier) => apiFetch('/auth/password-recovery/request', { method: 'POST', body: JSON.stringify({ identifier }) }),
+  confirmPasswordRecovery: (token, newPassword) => apiFetch('/auth/password-recovery/confirm', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
   register: (userData) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
 
   // Domain data
@@ -191,6 +189,7 @@ export const api = {
   correctPointTransaction: (data) => apiFetch('/lessons/ledger/correct', { method: 'POST', body: JSON.stringify(data) }),
   recalculateRankings: () => apiFetch('/lessons/recalculate-rankings', { method: 'POST' }),
   awardPoints: (data) => apiFetch('/lessons/points/award', { method: 'POST', body: JSON.stringify(data) }),
+  adminAwardHousePoints: (data) => apiFetch('/admin/points/award-house', { method: 'POST', body: JSON.stringify(data) }),
   getLessonStats: () => apiFetch('/lessons/stats/overview'),
 
   // Discord Bot & Verification
@@ -286,13 +285,8 @@ export const api = {
     const query = userId ? `?userId=${userId}` : '';
     return apiFetch(`/market/shopping-lists${query}`);
   },
-  checkShoppingLists: (userId) => apiFetch('/market/shopping-lists/check', { method: 'POST', body: JSON.stringify({ userId }) }),
-
   // ==================== SKANDYNAWSKA LOTERIA ODYNA ====================
-  getCurrentLottery: (userId) => {
-    const query = userId ? `?userId=${userId}` : '';
-    return apiFetch(`/lottery/current${query}`);
-  },
+  getCurrentLottery: () => apiFetch('/lottery/current'),
   buyLotteryTicket: (data) => apiFetch('/lottery/buy-ticket', { method: 'POST', body: JSON.stringify(data) }),
   drawLottery: (data = {}) => apiFetch('/lottery/draw', { method: 'POST', body: JSON.stringify(data) }),
   getLotteryHistory: () => apiFetch('/lottery/history'),

@@ -1,14 +1,18 @@
 import jwt from 'jsonwebtoken';
 import db, { isProfessorOfSubject } from '../db.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'durmstrang-cytadela-tajny-klucz-1294';
+import { JWT_SECRET } from '../config/security.js';
 
 export function requireAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
   let userId = null;
+  const cookies = Object.fromEntries(String(req.headers.cookie || '').split(';').map(part => {
+    const index = part.indexOf('=');
+    return index === -1 ? ['', ''] : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1))];
+  }).filter(([key]) => key));
+  const cookieToken = cookies.durmstrang_session;
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+  if ((authHeader && authHeader.startsWith('Bearer ')) || cookieToken) {
+    const token = cookieToken || authHeader.slice(7);
     try {
       const payload = jwt.verify(token, JWT_SECRET);
       userId = payload.id;
