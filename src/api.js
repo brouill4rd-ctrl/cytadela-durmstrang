@@ -169,6 +169,7 @@ export const api = {
   },
 
   getLesson: (id) => apiFetch(`/lessons/${id}`),
+  getLessonMessages: (id) => apiFetch(`/lessons/${id}/messages`),
   createLesson: (lessonData) => apiFetch('/lessons', { method: 'POST', body: JSON.stringify(lessonData) }),
   updateLesson: (id, lessonData) => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(lessonData) }),
   publishLesson: (id) => apiFetch(`/lessons/${id}/publish`, { method: 'POST' }),

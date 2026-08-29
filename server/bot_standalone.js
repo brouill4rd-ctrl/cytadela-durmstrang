@@ -4,7 +4,7 @@
  */
 
 import 'dotenv/config';
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ActivityType } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ActivityType, ChannelType } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -282,7 +282,17 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('odlacz')
-    .setDescription('Odłącza powiązane konto Discord od profilu w Cytadeli')
+    .setDescription('Odłącza powiązane konto Discord od profilu w Cytadeli'),
+
+  new SlashCommandBuilder()
+    .setName('eksport')
+    .setDescription('Eksportuje cały wątek Discord do Dziennika na portalu Cytadeli')
+    .addChannelOption(opt =>
+      opt.setName('watek')
+        .setDescription('Wątek Discord do eksportu (wpisz # i wybierz z listy)')
+        .setRequired(true)
+        .addChannelTypes(ChannelType.PublicThread, ChannelType.PrivateThread)
+    )
 ];
 
 client.on('clientReady', async () => {
@@ -421,11 +431,11 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   try {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply().catch(() => {});
-    }
-
     const { commandName } = interaction;
+
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: commandName === 'eksport' }).catch(() => {});
+    }
 
     // /powitaj
     if (commandName === 'powitaj') {
@@ -541,6 +551,140 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.editReply({ embeds: [summaryEmbed], components: [row] });
       }
+    }
+
+    if (commandName === 'eksport') {
+      const targetChannel = interaction.options.getChannel('watek');
+      if (!targetChannel) {
+        await interaction.editReply('⚠️ Nie wskazano wątku do eksportu.');
+        return;
+      }
+
+      let thread;
+      try {
+        thread = await interaction.guild.channels.fetch(targetChannel.id);
+      } catch (e) {
+        await interaction.editReply('⚠️ Nie udało się uzyskać dostępu do wskazanego wątku.');
+        return;
+      }
+
+      let allMessages = [];
+      let before;
+      while (true) {
+        const opts = { limit: 100 };
+        if (before) opts.before = before;
+        let batch;
+        try {
+          batch = await thread.messages.fetch(opts);
+        } catch (e) { break; }
+        if (batch.size === 0) break;
+        allMessages.push(...batch.values());
+        before = batch.last()?.id;
+        if (batch.size < 100) break;
+      }
+      allMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+      let lesson = db.prepare('SELECT * FROM lessons WHERE discord_thread_id = ? ORDER BY created_at DESC LIMIT 1').get(thread.id);
+      if (!lesson) {
+        const lessonId = `les-discord-export-${Date.now()}`;
+        const channelName = thread.name || 'Wątek Discord';
+        const professorName = interaction.member?.displayName || interaction.user.username;
+        db.prepare(`INSERT INTO lessons (id, discord_thread_id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, date, status, total_points) VALUES (?, ?, 'inne', 'Wątek Discord', 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)`)
+          .run(lessonId, thread.id, channelName, `Wyeksportowany wątek Discord: #${channelName}`, interaction.user.id, professorName, new Date().toISOString().split('T')[0]);
+        lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(lessonId);
+      }
+
+      const existingCheck = db.prepare('SELECT id FROM lesson_messages WHERE discord_message_id = ?');
+      const insertMsg = db.prepare(`INSERT INTO lesson_messages (id, lesson_id, discord_message_id, discord_user_id, author_name, author_display_name, author_avatar, author_house, content, timestamp, order_index, reply_to_id, reply_to_author, reply_to_content, is_bot, is_system, is_command, command_data, embeds, reactions, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`);
+
+      let newCount = 0;
+      for (let i = 0; i < allMessages.length; i++) {
+        const msg = allMessages[i];
+        if (existingCheck.get(msg.id)) continue;
+
+        let userHouse = '';
+        if (!msg.author.bot) {
+          let member = msg.member;
+          if (!member) { try { member = await thread.guild.members.fetch(msg.author.id); } catch (_) {} }
+          const roles = member?.roles?.cache?.map(r => r.name.toLowerCase()) || [];
+          if (roles.some(r => r.includes('bjorn') || r.includes('niedźwiedź'))) userHouse = 'bjornhall';
+          else if (roles.some(r => r.includes('ravn') || r.includes('kruk'))) userHouse = 'ravnheim';
+          else if (roles.some(r => r.includes('oter') || r.includes('wydra'))) userHouse = 'otergard';
+          else if (roles.some(r => r.includes('rein') || r.includes('jeleń'))) userHouse = 'reinhall';
+          if (!userHouse) {
+            const dbUser = db.prepare('SELECT house FROM users WHERE discord_id = ?').get(msg.author.id);
+            if (dbUser?.house) userHouse = dbUser.house.toLowerCase();
+          }
+        }
+
+        const localAttachments = [];
+        for (const att of msg.attachments.values()) {
+          try {
+            const ext = path.extname(att.name) || '.png';
+            const fn = `att-${Date.now()}-${Math.random().toString(36).substr(2, 6)}${ext}`;
+            const storageUrl = await downloadDiscordAttachment(att.url, fn);
+            localAttachments.push({ id: `att-${Date.now()}`, name: att.name, mimeType: att.contentType || 'image/png', size: att.size, originalUrl: att.url, storageUrl });
+          } catch (_) {}
+        }
+
+        const formattedEmbeds = (msg.embeds || []).map(e => ({
+          title: e.title || '', description: e.description || '', color: e.hexColor || '#E5C158',
+          author: e.author ? { name: e.author.name || '', icon_url: e.author.iconURL || '' } : null,
+          fields: (e.fields || []).map(f => ({ name: f.name || '', value: f.value || '', inline: !!f.inline })),
+          footer: e.footer ? { text: e.footer.text || '' } : null,
+          thumbnail: e.thumbnail ? { url: e.thumbnail.url } : null,
+          image: e.image ? { url: e.image.url } : null, timestamp: e.timestamp || null
+        }));
+        const formattedReactions = [...msg.reactions.cache.values()].map(r => ({ emoji: r.emoji.name || r.emoji.id, count: r.count }));
+
+        let isCommand = 0, commandData = '{}';
+        if (msg.interactionMetadata || msg.interaction) {
+          isCommand = 1;
+          const meta = msg.interactionMetadata || msg.interaction;
+          commandData = JSON.stringify({ name: meta.name || meta.commandName || '', author: meta.user?.username || msg.author.username });
+        }
+
+        try {
+          insertMsg.run(
+            `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, lesson.id, msg.id, msg.author.id,
+            msg.author.username, msg.member?.displayName || msg.author.username,
+            msg.author.displayAvatarURL?.() || '', userHouse,
+            msg.content || '', new Date(msg.createdTimestamp).toISOString(), i,
+            msg.reference?.messageId || '', '', '', msg.author.bot ? 1 : 0,
+            isCommand, commandData,
+            JSON.stringify(formattedEmbeds), JSON.stringify(formattedReactions), JSON.stringify(localAttachments)
+          );
+          newCount++;
+        } catch (_) {}
+
+        if (!msg.author.bot) {
+          const ep = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, msg.author.id);
+          if (!ep) {
+            try {
+              db.prepare(`INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment) VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')`)
+                .run(`part-${Date.now()}-${msg.author.id}`, lesson.id, msg.author.id, msg.member?.displayName || msg.author.username, userHouse);
+            } catch (_) {}
+          }
+        }
+      }
+
+      const totalMsgs = db.prepare('SELECT COUNT(*) as c FROM lesson_messages WHERE lesson_id = ?').get(lesson.id);
+      const totalParts = db.prepare('SELECT COUNT(*) as c FROM lesson_participants WHERE lesson_id = ?').get(lesson.id);
+      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+      const exportRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Otwórz Dziennik — Panel Profesora')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${frontendUrl}/#/dzienniki/edytor/${lesson.id}`)
+          .setEmoji('📖')
+      );
+
+      await interaction.editReply({
+        content: `✅ **Eksport wątku <#${thread.id}> zakończony!**\n📨 **${newCount}** nowych wiadomości zarchiwizowanych (łącznie: ${totalMsgs?.c || 0})\n👥 **${totalParts?.c || 0}** uczestników`,
+        components: [exportRow]
+      });
+      return;
     }
 
     if (commandName === 'quiz') {

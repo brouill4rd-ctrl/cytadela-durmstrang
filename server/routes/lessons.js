@@ -195,6 +195,22 @@ router.get('/stats/overview', requireAuth, (req, res) => {
   }
 });
 
+// GET /api/lessons/:id/messages - Wiadomości z wątku Discord dla danej lekcji
+router.get('/:id/messages', requireAuth, requireRole('admin', 'professor'), (req, res) => {
+  try {
+    const lesson = db.prepare('SELECT id, professor_id FROM lessons WHERE id = ?').get(req.params.id);
+    if (!lesson) return res.status(404).json({ error: 'Dziennik nie istnieje.' });
+    if (req.user.role === 'professor' && lesson.professor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Możesz przeglądać wyłącznie własne dzienniki.' });
+    }
+    const rows = db.prepare('SELECT * FROM lesson_messages WHERE lesson_id = ? ORDER BY order_index ASC, timestamp ASC').all(req.params.id);
+    res.json(rows.map(dbMessageToFrontend));
+  } catch (err) {
+    console.error(`[API /lessons/${req.params.id}/messages] Błąd:`, err);
+    res.status(500).json({ error: 'Nie udało się pobrać wiadomości.' });
+  }
+});
+
 // GET /api/lessons/:id - Pobierz szczegóły pojedynczego dziennika (Tylko zalogowani)
 router.get('/:id', requireAuth, (req, res) => {
   try {

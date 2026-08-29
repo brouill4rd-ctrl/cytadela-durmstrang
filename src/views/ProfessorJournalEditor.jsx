@@ -12,8 +12,10 @@ import {
   Sparkles,
   Save,
   Send,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
+import { DiscordThreadLog } from '../components/DiscordThreadLog';
 
 export const ProfessorJournalEditor = () => {
   const {
@@ -31,6 +33,7 @@ export const ProfessorJournalEditor = () => {
   } = useSchool();
 
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('dziennik');
   const [formData, setFormData] = useState({
     id: `les-${Date.now()}`,
     subjectId: 'eliksiry',
@@ -43,6 +46,7 @@ export const ProfessorJournalEditor = () => {
     professorAvatar: currentUser?.avatar || '',
     date: new Date().toISOString().split('T')[0],
     status: 'draft',
+    discordThreadId: '',
     participants: []
   });
 
@@ -57,6 +61,7 @@ export const ProfessorJournalEditor = () => {
             subjectId: data.subjectId || 'eliksiry',
             subjectName: data.subjectName || 'Eliksiry',
             classYear: data.classYear || 'Klasa II',
+            discordThreadId: data.discordThreadId || '',
             topic: data.topic || '',
             description: data.description || '',
             professorId: data.professorId || currentUser?.id,
@@ -248,7 +253,43 @@ export const ProfessorJournalEditor = () => {
         </div>
       </div>
 
+      {/* Tab Navigation — only for Discord-linked lessons */}
+      {formData.discordThreadId && (
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(197,159,78,0.2)', marginBottom: '1.5rem', gap: 0 }}>
+          {[
+            { key: 'dziennik', label: 'Dziennik', icon: <BookOpen size={14} /> },
+            { key: 'log', label: 'Log wątku Discord', icon: <MessageSquare size={14} /> }
+          ].map(({ key, label, icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                padding: '0.65rem 1.4rem',
+                background: activeTab === key ? 'rgba(197,159,78,0.12)' : 'transparent',
+                border: 'none',
+                borderBottom: activeTab === key ? '2px solid var(--gold-ancient)' : '2px solid transparent',
+                color: activeTab === key ? 'var(--gold-ancient)' : '#64748b',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-heading)',
+                cursor: 'pointer',
+                marginBottom: '-1px',
+                transition: 'color 0.15s, border-color 0.15s'
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Discord thread log tab */}
+      {formData.discordThreadId && activeTab === 'log' && (
+        <DiscordThreadLog lessonId={formData.id} />
+      )}
+
       {/* Main Editor Form Grid */}
+      {(!formData.discordThreadId || activeTab === 'dziennik') && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
         {/* Left Column: Lesson Metadata */}
         <div
@@ -609,6 +650,7 @@ export const ProfessorJournalEditor = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
