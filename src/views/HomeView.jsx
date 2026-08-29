@@ -430,10 +430,7 @@ export const HomeView = () => {
         })
       )}
 
-      {/* Secret Rune Embedded */}
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem 0' }}>
-        <SecretRune secretId="rune-fehu-home" />
-      </div>
+      <SecretRune secretId="rune-fehu-home" />
 
       {/* Modern Pagination Capsule */}
       {totalPages > 1 && (

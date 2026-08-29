@@ -195,8 +195,8 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
       classYear = 'Klasa I',
       topic = 'Nowa lekcja',
       description = '',
-      professorId = 'usr-astrid-vinter',
-      professorName = 'Prof. Astrid Vinter',
+      professorId = '',
+      professorName = '',
       professorAvatar = '',
       date = new Date().toISOString().split('T')[0],
       status = 'draft',
@@ -488,25 +488,22 @@ router.post('/recalculate-rankings', requireAuth, requireRole('admin'), (req, re
 // POST /api/lessons/points/award - Bezpośrednie przyznawanie punktów z gier i aktywności (zalogowani)
 router.post('/points/award', requireAuth, (req, res) => {
   try {
-    const { studentId, studentName, house, points, reason } = req.body;
+    const { points, reason } = req.body;
     const numericPoints = Number(points);
-    if (!house || !Number.isFinite(numericPoints) || numericPoints <= 0) {
-      return res.status(400).json({ error: 'Wymagany Zakon i dodatnia liczba punktów.' });
+    if (!Number.isFinite(numericPoints) || numericPoints <= 0) {
+      return res.status(400).json({ error: 'Wymagana dodatnia liczba punktów.' });
+    }
+    if (numericPoints > 100) {
+      return res.status(400).json({ error: 'Maksymalna wartość punktów per akcja wynosi 100.' });
     }
 
-    // Studenci mogą przyznawać punkty tylko sobie (gry i aktywności)
-    if (req.user.role === 'student') {
-      if (studentId && studentId !== req.user.id) {
-        return res.status(403).json({ error: 'Nie możesz przyznawać punktów imieniem innego użytkownika.' });
-      }
-      if (numericPoints > 100) {
-        return res.status(400).json({ error: 'Maksymalna wartość punktów per akcja wynosi 100.' });
-      }
-    }
+    // Ten endpoint obsługuje wyłącznie własne wyniki z gier. Operacje administracyjne
+    // mają osobne trasy. Kadra zdobywa punkty osobiste bez przypisania do Zakonu.
+    const house = req.user.role === 'student' ? req.user.house : null;
 
     const txId = awardPoints({
-      studentId: studentId || null,
-      studentName: studentName || 'Adept',
+      studentId: req.user.id,
+      studentName: req.user.fullName || req.user.username || 'Użytkownik',
       house,
       points: numericPoints,
       source: reason || 'Grywalizacja & Aktywność w Cytadeli',
@@ -517,7 +514,7 @@ router.post('/points/award', requireAuth, (req, res) => {
       idempotencyKey: req.body.idempotencyKey || ''
     });
 
-    const rankings = calculateHouseRankings('overall');
+    const rankings = house ? calculateHouseRankings('overall') : null;
     res.json({ success: true, txId, rankings });
   } catch (err) {
     console.error('[API POST /lessons/points/award] Error:', err);

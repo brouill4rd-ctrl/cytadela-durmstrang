@@ -45,10 +45,17 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
   const data = req.body;
   const newsId = data.id || `news-${Date.now()}`;
 
-  const authorUser = db.prepare('SELECT full_name, title, department_name, signature_png FROM users WHERE id = ?').get(req.user.id);
+  const authorUser = db.prepare('SELECT full_name, title, department_name, signature_png, role FROM users WHERE id = ?').get(req.user.id);
   const defaultAuthorName = authorUser?.full_name || req.user.fullName;
   const defaultAuthorRole = authorUser?.department_name || authorUser?.title || (req.user.role === 'admin' ? 'Dyrekcja Cytadeli' : 'Profesor');
   const defaultSignature = authorUser?.signature_png || '';
+
+  // Profesorowie nie mogą podpisywać się cudzym (adminskim) imieniem
+  const isProfessor = req.user.role === 'professor';
+  const finalAuthorName = isProfessor ? defaultAuthorName : (data.author || defaultAuthorName);
+  const finalAuthorId = isProfessor ? req.user.id : (data.authorId || req.user.id);
+  const finalAuthorRole = isProfessor ? defaultAuthorRole : (data.authorRole || defaultAuthorRole);
+  const finalAuthorSignature = isProfessor ? defaultSignature : (data.authorSignature ?? defaultSignature);
 
   const readTime = data.readTime || estimateReadTime(data.content || data.summary || '');
 
@@ -61,10 +68,10 @@ router.post('/', requireAuth, requireRole('admin', 'professor'), (req, res) => {
     data.title,
     data.summary || '',
     data.content || '',
-    data.author || defaultAuthorName,
-    data.authorId || req.user.id,
-    data.authorRole || defaultAuthorRole,
-    data.authorSignature ?? defaultSignature,
+    finalAuthorName,
+    finalAuthorId,
+    finalAuthorRole,
+    finalAuthorSignature,
     data.category || 'Edykty Dyrekcji',
     data.categoryKey || data.category || 'edykty',
     data.bannerCustomText || '',
@@ -93,6 +100,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
     return res.status(403).json({ error: 'Profesorowie mogą edytować tylko własne komunikaty.' });
   }
 
+  // Profesorowie nie mogą zmienić autora na inną osobę (np. dyrekcję)
+  const isProfessorEdit = req.user.role === 'professor';
+
   const readTime = data.readTime || estimateReadTime(data.content ?? existing.content ?? '');
 
   db.prepare(`
@@ -106,10 +116,10 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
     data.title ?? existing.title,
     data.summary ?? existing.summary,
     data.content ?? existing.content,
-    data.author ?? existing.author,
-    data.authorId ?? existing.author_id,
-    data.authorRole ?? existing.author_role,
-    data.authorSignature ?? existing.author_signature,
+    isProfessorEdit ? existing.author : (data.author ?? existing.author),
+    isProfessorEdit ? existing.author_id : (data.authorId ?? existing.author_id),
+    isProfessorEdit ? existing.author_role : (data.authorRole ?? existing.author_role),
+    isProfessorEdit ? existing.author_signature : (data.authorSignature ?? existing.author_signature),
     data.category ?? existing.category,
     data.categoryKey ?? existing.category_key,
     data.bannerCustomText ?? existing.banner_custom_text,

@@ -9,6 +9,7 @@ export const GazetteView = () => {
   const [recentIssues, setRecentIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submissionOpen, setSubmissionOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submissionForm, setSubmissionForm] = useState({ type: 'article', title: '', content: '' });
 
   useEffect(() => {
@@ -27,12 +28,28 @@ export const GazetteView = () => {
   };
 
   const handleSubmission = async () => {
-    if (!submissionForm.title.trim()) return;
-    const res = await api.submitToGazette(submissionForm);
-    if (res.ok) {
-      showNotification({ type: 'success', title: 'Wysłano!', message: 'Twój materiał trafił do redakcji Żelaznego Pióra.' });
-      setSubmissionOpen(false);
-      setSubmissionForm({ type: 'article', title: '', content: '' });
+    if (!submissionForm.title.trim()) {
+      showNotification('Brak tytułu', 'Wpisz tytuł materiału przed wysłaniem.', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await api.submitToGazette({
+        ...submissionForm,
+        title: submissionForm.title.trim(),
+        content: submissionForm.content.trim()
+      });
+
+      if (res.ok) {
+        showNotification('Wysłano!', 'Twój materiał trafił do redakcji Żelaznego Pióra.', 'success');
+        setSubmissionOpen(false);
+        setSubmissionForm({ type: 'article', title: '', content: '' });
+      } else {
+        showNotification('Nie udało się wysłać', res.error || 'Spróbuj ponownie za chwilę.', 'error');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -206,9 +223,9 @@ export const GazetteView = () => {
               onChange={e => setSubmissionForm(p => ({ ...p, content: e.target.value }))}
             />
 
-            <button className="gazette-form-submit" onClick={handleSubmission}>
+            <button className="gazette-form-submit" onClick={handleSubmission} disabled={submitting}>
               <Send size={16} />
-              Wyślij do redakcji
+              {submitting ? 'Wysyłanie...' : 'Wyślij do redakcji'}
             </button>
           </div>
         </div>

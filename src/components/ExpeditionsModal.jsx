@@ -1,409 +1,280 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, ChevronRight, Clock3, Compass, Info, RotateCcw, ShieldCheck, X } from 'lucide-react';
+import { api } from '../api';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import {
-  Compass,
-  MapPin,
-  Shield,
-  Flame,
-  Sparkles,
-  X,
-  ChevronRight,
-  Award,
-  AlertTriangle,
-  RotateCcw,
-  Package,
-  CheckCircle
-} from 'lucide-react';
+import { EXPEDITION_DESTINATIONS, EXPEDITION_RULES } from '../data/expeditionsData';
+
+const panelStyle = {
+  background: 'rgba(12, 16, 24, 0.82)',
+  border: '1px solid rgba(197, 159, 78, 0.3)',
+  borderRadius: '8px'
+};
+
+const EMPTY_STATUS = {
+  dailyLimit: EXPEDITION_RULES.dailyLimit,
+  used: 0,
+  remaining: EXPEDITION_RULES.dailyLimit,
+  attempts: []
+};
 
 export const ExpeditionsModal = ({ isOpen, onClose }) => {
-  const { currentUser, awardHousePoints, addNotification, addCurrency, addInventoryItem } = useSchool();
-  const { playWandSwoosh, playRuneChime, playCoinSound, playSortingFanfare } = useSound();
-
+  const { currentUser, updateCurrentUser, fetchRankings, addNotification } = useSchool();
+  const { playWandSwoosh, playRuneChime, playSortingFanfare } = useSound();
+  const [status, setStatus] = useState(EMPTY_STATUS);
+  const [statusReady, setStatusReady] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [startingId, setStartingId] = useState(null);
+  const [error, setError] = useState('');
+  const [rulesOpen, setRulesOpen] = useState(true);
   const [selectedExpedition, setSelectedExpedition] = useState(null);
+  const [attemptId, setAttemptId] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [choiceIds, setChoiceIds] = useState([]);
   const [expeditionLog, setExpeditionLog] = useState([]);
-  const [expeditionFinished, setExpeditionFinished] = useState(false);
-  const [lootResult, setLootResult] = useState(null);
+  const [finishing, setFinishing] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setLoadingStatus(true);
+    setStatusReady(false);
+    setError('');
+    api.getExpeditionStatus().then((response) => {
+      if (!active) return;
+      if (response.ok) {
+        setStatus(response.data);
+        setStatusReady(true);
+      } else {
+        setError(response.error || 'Nie udało się odczytać limitu ekspedycji.');
+      }
+    }).finally(() => {
+      if (active) setLoadingStatus(false);
+    });
+    return () => { active = false; };
+  }, [isOpen]);
+
+  const lockedRoutes = useMemo(
+    () => new Set((status.attempts || []).map((attempt) => attempt.destinationId)),
+    [status.attempts]
+  );
 
   if (!isOpen) return null;
 
-  const destinations = [
-    {
-      id: 'drakkar_graveyard',
-      name: 'Cmentarzysko Drakkarów we Fjordzie',
-      difficulty: 'Nowicjusz (Łatwy)',
-      dangerColor: '#4ade80',
-      icon: '⛵',
-      desc: 'Wrakowisko starożytnych okrętów wojennych wikingów, uwięzionych w wiecznym lodzie fiordu pod murami Cytadeli.',
-      rewardEstimate: '15-25 Skirnirów, +15 pkt Zakonu, Srebrny Pył Runiczny',
-      stages: [
-        {
-          prompt: 'Przedzierasz się przez zasypany śniegiem pomost. Lodowy wiatr gasi Twoją latarnię, a lód pod stopami zaczyna pękać!',
-          choices: [
-            { text: 'Rzuć zaklęcie Lumos Borealis i rozświetl drogę', success: true, textSuccess: 'Światło zorzy ujawnia stabilną kładkę skalną!' },
-            { text: 'Skocz na wrak najbliższego drakkara', success: true, textSuccess: 'Lądujesz bezpiecznie na omszałych deskach pokładu.' }
-          ]
-        },
-        {
-          prompt: 'W ładowni okrętu dostrzegasz skrzynię owiniętą łańcuchami z mroźnego żelaza. Nad nią unosi się widmo sternika!',
-          choices: [
-            { text: 'Złóż pokłon i wypowiedz pozdrowienie staronordyckie', success: true, textSuccess: 'Widmo kiwa głową z szacunkiem i wskazuje klucz do skrzyni.' },
-            { text: 'Rzuć czar Protego Skalny Bastion i przejmij skrzynię', success: true, textSuccess: 'Tarcza odbija chłód zaświatów, pozwalając zerwać łańcuch!' }
-          ]
-        }
-      ],
-      loot: { coins: 25, points: 15, item: 'Srebrny Naszyjnik Jarlów Fiordu' }
-    },
-    {
-      id: 'shadow_forest',
-      name: 'Przeklęta Puszcza Cieni (Myrkviðr)',
-      difficulty: 'Adept (Średni)',
-      dangerColor: '#facc15',
-      icon: '🌲',
-      desc: 'Bezkresny bór czarnych sosen na północ od zamku, gdzie cienie żyją własnym życiem i polują stada Wilków Ulfr.',
-      rewardEstimate: '35-50 Skirnirów, +25 pkt Zakonu, Wilcze Jagody Cienia',
-      stages: [
-        {
-          prompt: 'Wkraczasz między gęste, czarne pnie. Z mgły wyłania się wataha Wilków Cienia o świecących na fioletowo ślepiach.',
-          choices: [
-            { text: 'Wypuść snop iskier zaklęciem Ignis', success: true, textSuccess: 'Szkarłatny płomień odstrasza wilki w głąb ciemnego lasu!' },
-            { text: 'Użyj eliksiru niewidzialności i omiń watachę', success: true, textSuccess: 'Przemykasz bezszelestnie tuż obok drapieżników.' }
-          ]
-        },
-        {
-          prompt: 'Na leśnej polanie odnajdujesz pradawny kamień ofiarny porośnięty rzadkim mchem i runami leczniczymi.',
-          choices: [
-            { text: 'Oczyść inskrypcje runiczne za pomocą różdżki', success: true, textSuccess: 'Kamień rozbłyska szmaragdowym światłem, uwalniając esencję lasu!' },
-            { text: 'Zbierz próbki mchu do pracowni alchemicznej', success: true, textSuccess: 'Ostrożnie pakujesz cenne składniki do sakwy.' }
-          ]
-        }
-      ],
-      loot: { coins: 45, points: 25, item: 'Amulet z Kła Wilka Cienia' }
-    },
-    {
-      id: 'jotun_caves',
-      name: 'Jaskinie Lodowych Olbrzymów (Jotunheimen)',
-      difficulty: 'Arcymistrz (Trudny)',
-      dangerColor: '#ef4444',
-      icon: '🏔️',
-      desc: 'Wysokogórskie szczeliny lodowca, gdzie spoczywają uśpieni strażnicy pradawnej magii mrozu.',
-      rewardEstimate: '75-100 Skirnirów, +40 pkt Zakonu, Krew Smoka z Fiordu',
-      stages: [
-        {
-          prompt: 'Wejście do pieczary tarasuje lodowy golem strażniczy. Temperatura spada do -40°C!',
-          choices: [
-            { text: 'Skoncentruj całą moc różdżki w runę Ognia Thurisaz', success: true, textSuccess: 'Potężny płomień topi rdzeń golema, otwierając wrota!' },
-            { text: 'Odszukaj słaby punkt w konstrukcji lodowej i uderz precyzyjnie', success: true, textSuccess: 'Jeden celny strzał kruszy kolosa na tysiące odłamków.' }
-          ]
-        },
-        {
-          prompt: 'W sercu lodowca odnajdujesz ołtarz z kryształem wiecznego lodu Jotunów pulsującym błękitną energią.',
-          choices: [
-            { text: 'Zabezpiecz kryształ pieczęcią Zakonu', success: true, textSuccess: 'Rytuał pieczętowania kończy się absolutnym triumfem!' }
-          ]
-        }
-      ],
-      loot: { coins: 85, points: 40, item: 'Kryształ Wiecznego Lodu Jotunów' }
-    }
-  ];
-
-  const handleStartExpedition = (exp) => {
-    playWandSwoosh();
-    setSelectedExpedition(exp);
+  const resetAdventure = () => {
+    setSelectedExpedition(null);
+    setAttemptId(null);
     setCurrentStep(0);
-    setExpeditionLog([`Wyruszasz na ekspedycję ku: ${exp.name}...`]);
-    setExpeditionFinished(false);
-    setLootResult(null);
+    setChoiceIds([]);
+    setExpeditionLog([]);
+    setResult(null);
+    setError('');
   };
 
-  const handleMakeChoice = (choice) => {
+  const startExpedition = async (expedition) => {
+    setStartingId(expedition.id);
+    setError('');
+    playWandSwoosh();
+    const response = await api.startExpedition(expedition.id);
+    setStartingId(null);
+    if (!response.ok) {
+      setError(response.error || 'Kwatermistrz nie otworzył szlaku.');
+      if (response.data?.attempts) setStatus(response.data);
+      return;
+    }
+
+    setStatus(response.data);
+    setSelectedExpedition(expedition);
+    setAttemptId(response.data.attemptId);
+    setCurrentStep(0);
+    setChoiceIds([]);
+    setExpeditionLog([`Wyruszasz ku: ${expedition.name}. Dzienny slot wyprawy został wykorzystany.`]);
+    setRulesOpen(false);
+  };
+
+  const finishExpedition = async (finalChoiceIds) => {
+    setFinishing(true);
+    setError('');
+    const response = await api.completeExpedition(attemptId, finalChoiceIds);
+    setFinishing(false);
+    if (!response.ok) {
+      setError(response.error || 'Nie udało się rozliczyć ekspedycji.');
+      return;
+    }
+
+    setResult(response.data.result);
+    setStatus(response.data.status);
+    if (response.data.user && updateCurrentUser) {
+      const user = response.data.user;
+      await updateCurrentUser({
+        points: user.points,
+        xp: user.xp,
+        level: user.level,
+        nextLevelXp: user.nextLevelXp,
+        currency: user.currency,
+        inventory: user.inventory
+      });
+    }
+    if (fetchRankings) fetchRankings();
+    playSortingFanfare();
+    const reward = response.data.result;
+    const pointsLabel = currentUser?.role === 'student' ? 'pkt Zakonu' : 'pkt osobistych';
+    addNotification(reward.success
+      ? `🏔️ Ekspedycja ukończona: ${reward.score}/6. +${reward.coins} Skirnirów i +${reward.points} ${pointsLabel}.`
+      : `❄️ Ekspedycja zakończona wynikiem ${reward.score}/6. Wracasz bez łupu.`);
+  };
+
+  const makeChoice = async (choice) => {
+    if (finishing || choiceIds.length >= selectedExpedition.stages.length) return;
     playWandSwoosh();
     playRuneChime();
-
-    const newLog = [...expeditionLog, `▶ Wybór: ${choice.text}`, `✔ ${choice.textSuccess}`];
-    setExpeditionLog(newLog);
-
-    if (currentStep + 1 < selectedExpedition.stages.length) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Expedition completed!
-      setExpeditionFinished(true);
-      setLootResult(selectedExpedition.loot);
-      playSortingFanfare();
-      awardHousePoints(currentUser?.house || currentUser?.house_id || 'ravnheim', selectedExpedition.loot.points, `Ukończenie Ekspedycji: ${selectedExpedition.name}`);
-      if (addCurrency) addCurrency(selectedExpedition.loot.coins, `Łup z ekspedycji: ${selectedExpedition.name}`);
-      if (addInventoryItem) {
-        addInventoryItem({
-          name: selectedExpedition.loot.item,
-          icon: '🎁',
-          rarity: 'Legendarny Artefakt',
-          price: selectedExpedition.loot.coins * 2,
-          desc: `Zdobyto w trakcie wyprawy ku: ${selectedExpedition.name}`
-        });
-      }
-      addNotification(`🌲 Ukończono ekspedycję ${selectedExpedition.name}! Otrzymano +${selectedExpedition.loot.coins} Sk., +${selectedExpedition.loot.points} pkt oraz ${selectedExpedition.loot.item}!`);
-    }
+    const nextChoices = [...choiceIds, choice.id];
+    setChoiceIds(nextChoices);
+    setExpeditionLog((previous) => [
+      ...previous,
+      `▸ ${choice.text}`,
+      `✓ ${choice.successText} (+${choice.points} pkt wyprawy)`
+    ]);
+    if (currentStep + 1 < selectedExpedition.stages.length) setCurrentStep((step) => step + 1);
+    else await finishExpedition(nextChoices);
   };
 
-  const handleReset = () => {
-    setSelectedExpedition(null);
-    setCurrentStep(0);
-    setExpeditionLog([]);
-    setExpeditionFinished(false);
-    setLootResult(null);
-  };
+  const noSlots = status.remaining <= 0;
+  const allChoicesMade = selectedExpedition && choiceIds.length >= selectedExpedition.stages.length;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(3, 5, 8, 0.92)',
-        backdropFilter: 'blur(12px)',
-        zIndex: 10000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem'
-      }}
-    >
-      <div
-        style={{
-          background: 'linear-gradient(180deg, #181d29 0%, #0a0d14 100%)',
-          border: '2px solid var(--gold-ancient)',
-          boxShadow: '0 12px 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(197, 159, 78, 0.3)',
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: '820px',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          animation: 'fadeIn 0.3s ease-out'
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '1.2rem 1.5rem',
-            borderBottom: '1px solid rgba(197, 159, 78, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(0, 0, 0, 0.5)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Compass size={22} style={{ color: 'var(--gold-ancient)' }} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(3,5,8,.93)', backdropFilter: 'blur(12px)' }}>
+      <div style={{ width: '100%', maxWidth: '960px', maxHeight: '92vh', overflowY: 'auto', borderRadius: '12px', border: '2px solid var(--gold-ancient)', background: 'linear-gradient(180deg,#181d29 0%,#090c12 100%)', boxShadow: '0 12px 60px rgba(0,0,0,.95),0 0 30px rgba(197,159,78,.25)' }}>
+        <header style={{ padding: '1.15rem 1.4rem', borderBottom: '1px solid rgba(197,159,78,.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'rgba(0,0,0,.45)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem' }}>
+            <Compass size={24} color="var(--gold-ancient)" />
             <div>
-              <h3 style={{ margin: 0, color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.2rem' }}>
-                Ekspedycje Północy • Wyprawy do Dzikich Ostępów
-              </h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)' }}>
-                PRZYGODY PARAGRAFOWE & ZDOBYWANIE STAROŻYTNYCH ŁUPÓW
-              </span>
+              <h3 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-heading)', fontSize: '1.2rem' }}>Ekspedycje Północy</h3>
+              <span style={{ color: 'var(--gold-ancient)', fontSize: '.72rem' }}>WYPRAWY DO DZIKICH OSTĘPÓW • ZASADY I PUNKTACJA</span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
-          >
-            <X size={20} />
-          </button>
-        </div>
+          <button type="button" onClick={onClose} aria-label="Zamknij" style={{ border: 0, background: 'transparent', color: '#9ca3af', cursor: 'pointer', padding: '.3rem' }}><X size={21} /></button>
+        </header>
 
-        {/* Content */}
-        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <main style={{ padding: '1.35rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {!selectedExpedition ? (
-            /* Destination Selection Grid */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.9rem' }}>
-                Wybierz cel niebezpiecznej wyprawy poza mury Cytadeli. Pamiętaj, że każdy wybór na szlaku decyduje o Twoim losie i zdobytych łupach:
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-                {destinations.map((dest) => (
-                  <div
-                    key={dest.id}
-                    style={{
-                      background: 'rgba(15, 20, 30, 0.75)',
-                      border: '1px solid rgba(197, 159, 78, 0.3)',
-                      borderRadius: '8px',
-                      padding: '1.2rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: '0.8rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                        <span style={{ fontSize: '1.8rem' }}>{dest.icon}</span>
-                        <span style={{ fontSize: '0.72rem', color: dest.dangerColor, fontWeight: 700, border: `1px solid ${dest.dangerColor}`, padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                          {dest.difficulty}
-                        </span>
-                      </div>
-                      <h4 style={{ margin: '0.2rem 0', color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.05rem' }}>
-                        {dest.name}
-                      </h4>
-                      <p style={{ color: '#9ca3af', fontSize: '0.82rem', lineHeight: 1.4, margin: '0.3rem 0 0.8rem 0' }}>
-                        {dest.desc}
-                      </p>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.6rem' }}>
-                        🎁 Łupy: {dest.rewardEstimate}
-                      </div>
-                      <button
-                        onClick={() => handleStartExpedition(dest)}
-                        style={{
-                          width: '100%',
-                          background: 'linear-gradient(135deg, var(--gold-ancient) 0%, #9a7629 100%)',
-                          color: '#000000',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '0.6rem',
-                          fontWeight: 700,
-                          fontSize: '0.85rem',
-                          fontFamily: 'var(--font-heading)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.4rem'
-                        }}
-                      >
-                        Wyrusz na Szlak <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Active Interactive Expedition Play */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Destination Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.8rem 1.2rem', borderRadius: '6px', borderLeft: '3px solid var(--gold-ancient)' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', textTransform: 'uppercase' }}>Aktywna Wyprawa</span>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
-                    {selectedExpedition.icon} {selectedExpedition.name}
+            <>
+              <section style={{ ...panelStyle, padding: '1rem 1.1rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '.8rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                  <Clock3 size={20} color="var(--gold-ancient)" />
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 700 }}>Dzisiejsze wyprawy: {loadingStatus ? '…' : `${status.used}/${status.dailyLimit}`}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '.78rem' }}>Pozostało {status.remaining} • reset o {EXPEDITION_RULES.resetTime}</div>
                   </div>
                 </div>
-                <button
-                  onClick={handleReset}
-                  style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#9ca3af', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}
-                >
-                  Zawróć do Cytadeli
+                <button type="button" onClick={() => setRulesOpen((open) => !open)} style={{ border: '1px solid rgba(197,159,78,.45)', borderRadius: '5px', background: 'rgba(197,159,78,.09)', color: '#f7dca0', padding: '.55rem .8rem', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                  <Info size={15} /> {rulesOpen ? 'Ukryj zasady' : 'Zasady i punktacja'}
                 </button>
-              </div>
+              </section>
 
-              {/* Story Prompt Box */}
-              {!expeditionFinished ? (
-                <div style={{ background: 'rgba(20, 26, 38, 0.9)', border: '1px solid var(--gold-ancient)', borderRadius: '8px', padding: '1.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Etap {currentStep + 1} z {selectedExpedition.stages.length}
-                  </span>
-                  <p style={{ color: '#ffffff', fontSize: '1.05rem', lineHeight: 1.6, margin: '0.6rem 0 1.2rem 0', fontFamily: 'var(--font-lore)' }}>
-                    {selectedExpedition.stages[currentStep].prompt}
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                    {selectedExpedition.stages[currentStep].choices.map((choice, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleMakeChoice(choice)}
-                        style={{
-                          background: 'rgba(12, 16, 24, 0.85)',
-                          border: '1px solid rgba(197, 159, 78, 0.4)',
-                          borderRadius: '6px',
-                          padding: '0.8rem 1rem',
-                          color: '#ffe599',
-                          textAlign: 'left',
-                          fontSize: '0.9rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(197, 159, 78, 0.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(12, 16, 24, 0.85)';
-                        }}
-                      >
-                        <span>⚔️ {choice.text}</span>
-                        <ChevronRight size={16} />
-                      </button>
+              {rulesOpen && (
+                <section style={{ ...panelStyle, padding: '1rem 1.1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: '#fff', fontFamily: 'var(--font-heading)', marginBottom: '.75rem' }}><ShieldCheck size={18} color="#8cefe6" /> Regulamin szlaku</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(205px,1fr))', gap: '.7rem', marginBottom: '1rem' }}>
+                    {[
+                      ['3 wyprawy na dobę', 'Każda z trzech tras może być podjęta najwyżej raz.'],
+                      ['Start zużywa limit', 'Zawrócenie, zamknięcie okna lub utrata połączenia nie oddaje slotu.'],
+                      ['2 decyzje • 2–6 pkt', 'Każda decyzja jest warta od 1 do 3 punktów wyprawy.'],
+                      ['Nagrody za wynik', 'Artefakt otrzymasz tylko za bezbłędny rezultat 6/6.']
+                    ].map(([title, text]) => (
+                      <div key={title} style={{ background: 'rgba(255,255,255,.035)', borderRadius: '6px', padding: '.75rem' }}>
+                        <div style={{ color: '#f7dca0', fontWeight: 700, fontSize: '.82rem' }}>{title}</div>
+                        <div style={{ color: '#9ca3af', fontSize: '.75rem', lineHeight: 1.45, marginTop: '.25rem' }}>{text}</div>
+                      </div>
                     ))}
                   </div>
-                </div>
-              ) : (
-                /* Victory & Loot Banner */
-                <div
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    border: '2px solid #22c55e',
-                    borderRadius: '8px',
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    animation: 'slideUp 0.3s ease-out'
-                  }}
-                >
-                  <span style={{ fontSize: '2.5rem' }}>🏆</span>
-                  <h3 style={{ margin: '0.4rem 0', color: '#4ade80', fontFamily: 'var(--font-heading)', fontSize: '1.3rem' }}>
-                    EKSPEDYCJA ZAKOŃCZONA SUKCESEM!
-                  </h3>
-                  <p style={{ color: '#d1d5db', fontSize: '0.9rem', maxWidth: '500px', margin: '0 auto 1.2rem auto' }}>
-                    Twoja odwaga i biegłość w sztukach magicznych pozwoliły pokonać niebezpieczeństwa północnych szlaków.
-                  </p>
-
-                  <div style={{ display: 'inline-flex', gap: '1.5rem', background: 'rgba(0,0,0,0.5)', padding: '0.8rem 1.5rem', borderRadius: '6px', marginBottom: '1.2rem' }}>
-                    <div style={{ color: '#f7dca0', fontWeight: 700 }}>💰 +{lootResult?.coins} Skirnirów</div>
-                    <div style={{ color: 'var(--gold-ancient)', fontWeight: 700 }}>✨ +{lootResult?.points} pkt Zakonu</div>
-                    <div style={{ color: '#93c5fd', fontWeight: 700 }}>🎁 {lootResult?.item}</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px', color: '#d1d5db', fontSize: '.76rem' }}>
+                      <thead><tr style={{ color: '#f7dca0', textAlign: 'left', borderBottom: '1px solid rgba(197,159,78,.3)' }}><th style={{ padding: '.55rem' }}>Szlak</th><th>Próg</th><th>Skirniry</th><th>Punkty Zakonu</th><th>Artefakt</th></tr></thead>
+                      <tbody>{EXPEDITION_DESTINATIONS.map((expedition) => (
+                        <tr key={expedition.id} style={{ borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+                          <td style={{ padding: '.6rem' }}>{expedition.icon} {expedition.difficulty}</td>
+                          <td>{expedition.successThreshold}/6</td>
+                          <td>{expedition.rewardTiers.filter((tier) => tier.coins).map((tier) => tier.coins).join(' / ')} ᛋ</td>
+                          <td>{expedition.rewardTiers.filter((tier) => tier.points).map((tier) => tier.points).join(' / ')}</td>
+                          <td>wyłącznie 6/6</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
                   </div>
-
-                  <div>
-                    <button
-                      onClick={handleReset}
-                      style={{
-                        background: 'var(--gold-ancient)',
-                        color: '#000000',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '0.6rem 1.4rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-heading)'
-                      }}
-                    >
-                      Wróć do Wyboru Ekspedycji
-                    </button>
-                  </div>
-                </div>
+                  <div style={{ color: '#8cefe6', fontSize: '.74rem', marginTop: '.7rem' }}>Dzienny pułap: maks. {EXPEDITION_RULES.maxDailyPoints} pkt Zakonu i {EXPEDITION_RULES.maxDailySkirnirs} Skirnirów.</div>
+                </section>
               )}
 
-              {/* Expedition Narrative Log */}
-              <div style={{ background: 'rgba(0,0,0,0.5)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Kronika Przebiegu Wyprawy:
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.4rem' }}>
-                  {expeditionLog.map((log, idx) => (
-                    <div key={idx} style={{ fontSize: '0.82rem', color: log.startsWith('✔') ? '#4ade80' : log.startsWith('▶') ? '#ffe599' : '#9ca3af' }}>
-                      {log}
-                    </div>
-                  ))}
-                </div>
+              {error && <div role="alert" style={{ ...panelStyle, borderColor: 'rgba(239,68,68,.55)', color: '#fca5a5', padding: '.75rem 1rem', display: 'flex', gap: '.5rem', alignItems: 'center' }}><AlertTriangle size={17} /> {error}</div>}
+              <p style={{ margin: '.1rem 0', color: '#9ca3af', fontSize: '.88rem' }}>Wybierz cel. Kwatermistrz zapisze wyjście w chwili otwarcia szlaku.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(245px,1fr))', gap: '1rem' }}>
+                {EXPEDITION_DESTINATIONS.map((expedition) => {
+                  const locked = lockedRoutes.has(expedition.id);
+                  const disabled = locked || noSlots || !statusReady || startingId !== null;
+                  return (
+                    <article key={expedition.id} style={{ ...panelStyle, padding: '1.1rem', opacity: locked ? .62 : 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '.9rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.5rem' }}><span style={{ fontSize: '1.8rem' }}>{expedition.icon}</span><span style={{ color: expedition.dangerColor, border: `1px solid ${expedition.dangerColor}`, borderRadius: '4px', padding: '.16rem .42rem', fontSize: '.7rem', fontWeight: 700 }}>{expedition.difficulty} ({expedition.difficultyLabel})</span></div>
+                        <h4 style={{ margin: '.55rem 0 .35rem', color: '#fff', fontFamily: 'var(--font-heading)', fontSize: '1rem' }}>{expedition.name}</h4>
+                        <p style={{ margin: 0, color: '#9ca3af', fontSize: '.79rem', lineHeight: 1.45 }}>{expedition.desc}</p>
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--gold-ancient)', fontSize: '.72rem', marginBottom: '.6rem' }}>🎁 {expedition.rewardSummary}</div>
+                        <button type="button" disabled={disabled} onClick={() => startExpedition(expedition)} style={{ width: '100%', border: 0, borderRadius: '5px', padding: '.62rem', fontFamily: 'var(--font-heading)', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#6b7280' : '#090b10', background: disabled ? 'rgba(255,255,255,.07)' : 'linear-gradient(135deg,var(--gold-ancient),#9a7629)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.35rem' }}>
+                          {locked ? 'Szlak wykorzystany' : noSlots ? 'Limit wyczerpany' : startingId === expedition.id ? 'Otwieranie szlaku…' : <>Wyrusz na szlak <ChevronRight size={14} /></>}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              <section style={{ ...panelStyle, borderLeft: '3px solid var(--gold-ancient)', padding: '.8rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.8rem' }}>
+                <div><div style={{ color: 'var(--gold-ancient)', fontSize: '.68rem' }}>AKTYWNA WYPRAWA • PRÓG {selectedExpedition.successThreshold}/6</div><div style={{ color: '#fff', fontFamily: 'var(--font-heading)' }}>{selectedExpedition.icon} {selectedExpedition.name}</div></div>
+                {!result && <button type="button" onClick={resetAdventure} style={{ border: '1px solid rgba(255,255,255,.18)', borderRadius: '4px', background: 'transparent', color: '#9ca3af', padding: '.4rem .6rem', cursor: 'pointer', fontSize: '.72rem' }}>Zawróć • slot przepada</button>}
+              </section>
+
+              {error && <div role="alert" style={{ ...panelStyle, borderColor: 'rgba(239,68,68,.55)', color: '#fca5a5', padding: '.75rem 1rem', display: 'flex', gap: '.5rem', alignItems: 'center' }}><AlertTriangle size={17} /> {error}</div>}
+              {!result ? (
+                <section style={{ ...panelStyle, borderColor: 'rgba(197,159,78,.65)', padding: '1.25rem' }}>
+                  <div style={{ color: 'var(--gold-ancient)', fontWeight: 700, fontSize: '.72rem' }}>ETAP {currentStep + 1} Z {selectedExpedition.stages.length}</div>
+                  <p style={{ color: '#fff', fontFamily: 'var(--font-lore)', fontSize: '1rem', lineHeight: 1.58, margin: '.55rem 0 1rem' }}>{selectedExpedition.stages[currentStep].prompt}</p>
+                  {!allChoicesMade && <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem' }}>
+                    {selectedExpedition.stages[currentStep].choices.map((choice) => (
+                      <button key={choice.id} type="button" disabled={finishing} onClick={() => makeChoice(choice)} style={{ border: '1px solid rgba(197,159,78,.38)', borderRadius: '6px', background: 'rgba(7,10,16,.72)', color: '#ffe599', padding: '.78rem .9rem', cursor: finishing ? 'wait' : 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.8rem' }}>
+                        <span><span style={{ color: '#6b7280', fontSize: '.68rem', display: 'block', marginBottom: '.18rem' }}>{choice.risk.toUpperCase()}</span>⚔️ {choice.text}</span><ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>}
+                  {finishing && <div style={{ color: '#8cefe6', fontSize: '.78rem' }}>Kwatermistrz rozlicza wynik wyprawy…</div>}
+                  {allChoicesMade && !finishing && error && <button type="button" onClick={() => finishExpedition(choiceIds)} style={{ border: '1px solid var(--gold-ancient)', borderRadius: '5px', background: 'rgba(197,159,78,.12)', color: '#f7dca0', padding: '.55rem .8rem', cursor: 'pointer' }}>Ponów rozliczenie</button>}
+                </section>
+              ) : (
+                <section style={{ ...panelStyle, padding: '1.35rem', textAlign: 'center', border: `2px solid ${result.success ? '#22c55e' : '#ef4444'}`, background: result.success ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.09)' }}>
+                  <span style={{ fontSize: '2.4rem' }}>{result.success ? '🏆' : '❄️'}</span>
+                  <h3 style={{ color: result.success ? '#4ade80' : '#fca5a5', fontFamily: 'var(--font-heading)', margin: '.4rem 0' }}>{result.success ? 'EKSPEDYCJA ZAKOŃCZONA' : 'ODWRÓT DO CYTADELI'}</h3>
+                  <div style={{ color: '#d1d5db', marginBottom: '1rem' }}>Wynik: <strong style={{ color: '#fff' }}>{result.score}/{result.maxScore}</strong> punktów wyprawy.</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '.7rem', marginBottom: '1rem' }}>
+                    <span style={{ ...panelStyle, padding: '.55rem .75rem', color: '#f7dca0' }}>💰 +{result.coins} Skirnirów</span>
+                    <span style={{ ...panelStyle, padding: '.55rem .75rem', color: '#8cefe6' }}>✨ +{result.points} pkt Zakonu</span>
+                    {result.item && <span style={{ ...panelStyle, padding: '.55rem .75rem', color: '#c4b5fd' }}>🎁 {result.item}</span>}
+                  </div>
+                  {!result.success && <p style={{ color: '#9ca3af', fontSize: '.8rem' }}>Nie osiągnięto progu {selectedExpedition.successThreshold}/6. Ta trasa pozostaje zamknięta do następnej doby.</p>}
+                  <button type="button" onClick={resetAdventure} style={{ border: 0, borderRadius: '5px', padding: '.6rem 1rem', background: 'var(--gold-ancient)', color: '#080a0f', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', gap: '.4rem', alignItems: 'center' }}><RotateCcw size={15} /> Wróć do mapy wypraw</button>
+                </section>
+              )}
+
+              <section style={{ ...panelStyle, padding: '.9rem 1rem' }}>
+                <div style={{ color: 'var(--gold-ancient)', fontSize: '.7rem', fontWeight: 700, marginBottom: '.45rem' }}>KRONIKA WYPRAWY</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>{expeditionLog.map((entry, index) => <div key={`${index}-${entry}`} style={{ color: entry.startsWith('✓') ? '#4ade80' : entry.startsWith('▸') ? '#ffe599' : '#9ca3af', fontSize: '.78rem' }}>{entry}</div>)}</div>
+              </section>
+            </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

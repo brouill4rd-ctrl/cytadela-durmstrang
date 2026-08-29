@@ -58,6 +58,7 @@ import { HomeworkCreatorView } from './views/HomeworkCreatorView';
 import { HomeworkGradingView } from './views/HomeworkGradingView';
 import { MemoryMainView } from './views/MemoryMainView';
 import { PrologueView } from './views/PrologueView';
+import { TeacherPrologueView } from './views/TeacherPrologueView';
 import { AbsenceChamberView } from './views/AbsenceChamberView';
 import { EnrollmentChamberView } from './views/EnrollmentChamberView';
 import { api } from './api';
@@ -118,7 +119,8 @@ export const App = () => {
 
   useEffect(() => {
     let active = true;
-    if (!currentUser || currentUser.role !== 'student') {
+    const PROLOGUE_ROLES = ['student', 'teacher', 'professor'];
+    if (!currentUser || !PROLOGUE_ROLES.includes(currentUser.role)) {
       setPrologueRequired(false);
       return () => { active = false; };
     }
@@ -262,7 +264,11 @@ export const App = () => {
 
   return (
     <div className={`durmstrang-app world-${worldState.weather.toLowerCase()} citadel-${worldState.citadelState.toLowerCase()} presentation-${effectiveMode.toLowerCase()}`}>
-      {prologueRequired && <PrologueView onComplete={() => setPrologueRequired(false)} />}
+      {prologueRequired && (
+        ['teacher', 'professor'].includes(currentUser?.role)
+          ? <TeacherPrologueView onComplete={() => setPrologueRequired(false)} />
+          : <PrologueView onComplete={() => setPrologueRequired(false)} />
+      )}
       {/* Particle Snow Canvas */}
       <SnowCanvas />
 

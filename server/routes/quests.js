@@ -3,8 +3,192 @@ import db, { dbCompletedQuestToFrontend, dbUserToFrontend, calculateHouseRanking
 import { requireAuth } from '../middleware/auth.js';
 import { awardPoints } from '../services/pointsService.js';
 import { credit as creditSkirnir } from '../services/skirnirService.js';
+import { randomUUID } from 'crypto';
+import {
+  EXPEDITIONS,
+  EXPEDITION_DAILY_LIMIT,
+  evaluateExpedition,
+  warsawDateKey
+} from '../expeditions.js';
 
 const router = Router();
+
+function getExpeditionStatus(userId, dateKey = warsawDateKey()) {
+  const attempts = db.prepare(`
+    SELECT id, destination_id, status, score, reward_points, reward_skirnirs,
+           reward_item, started_at, completed_at
+    FROM expedition_attempts
+    WHERE user_id = ? AND date_key = ?
+    ORDER BY started_at ASC
+  `).all(userId, dateKey);
+
+  return {
+    dateKey,
+    dailyLimit: EXPEDITION_DAILY_LIMIT,
+    used: attempts.length,
+    remaining: Math.max(0, EXPEDITION_DAILY_LIMIT - attempts.length),
+    attempts: attempts.map((attempt) => ({
+      id: attempt.id,
+      destinationId: attempt.destination_id,
+      status: attempt.status,
+      score: attempt.score,
+      rewardPoints: attempt.reward_points,
+      rewardSkirnirs: attempt.reward_skirnirs,
+      rewardItem: attempt.reward_item || null,
+      startedAt: attempt.started_at,
+      completedAt: attempt.completed_at
+    }))
+  };
+}
+
+// GET /api/quests/expeditions/status — dzienny limit i historia wypraw
+router.get('/expeditions/status', requireAuth, (req, res) => {
+  try {
+    res.json(getExpeditionStatus(req.user.id));
+  } catch (err) {
+    res.status(500).json({ error: 'Nie udało się odczytać rejestru ekspedycji: ' + err.message });
+  }
+});
+
+// POST /api/quests/expeditions/start — rezerwuje dzienny slot przed pokazaniem decyzji
+router.post('/expeditions/start', requireAuth, (req, res) => {
+  try {
+    const { destinationId } = req.body;
+    const expedition = EXPEDITIONS[destinationId];
+    if (!expedition) return res.status(400).json({ error: 'Nieznany cel ekspedycji.' });
+    if (req.user.role === 'student' && !req.user.house) {
+      return res.status(403).json({ error: 'Aby wyruszyć, musisz należeć do jednego z Zakonów.' });
+    }
+
+    const dateKey = warsawDateKey();
+    const result = db.transaction(() => {
+      const status = getExpeditionStatus(req.user.id, dateKey);
+      if (status.attempts.some((attempt) => attempt.destinationId === destinationId)) {
+        return { error: 'Ten szlak został już dziś wykorzystany.', statusCode: 409 };
+      }
+      if (status.used >= EXPEDITION_DAILY_LIMIT) {
+        return { error: 'Dzisiejszy limit trzech ekspedycji został wyczerpany.', statusCode: 429 };
+      }
+
+      const attemptId = `exp-${dateKey}-${req.user.id}-${randomUUID().slice(0, 8)}`;
+      db.prepare(`
+        INSERT INTO expedition_attempts (id, user_id, destination_id, date_key, status)
+        VALUES (?, ?, ?, ?, 'in_progress')
+      `).run(attemptId, req.user.id, destinationId, dateKey);
+      return { attemptId };
+    })();
+
+    if (result.error) return res.status(result.statusCode).json({ error: result.error, ...getExpeditionStatus(req.user.id, dateKey) });
+    res.status(201).json({
+      ok: true,
+      attemptId: result.attemptId,
+      message: `Otwarto szlak: ${expedition.name}.`,
+      ...getExpeditionStatus(req.user.id, dateKey)
+    });
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE constraint')) {
+      return res.status(409).json({ error: 'Ten szlak został już dziś wykorzystany.' });
+    }
+    res.status(500).json({ error: 'Nie udało się rozpocząć ekspedycji: ' + err.message });
+  }
+});
+
+// POST /api/quests/expeditions/complete — serwer ocenia decyzje i atomowo rozlicza nagrody
+router.post('/expeditions/complete', requireAuth, (req, res) => {
+  try {
+    const { attemptId, choices } = req.body;
+    if (!attemptId) return res.status(400).json({ error: 'Brak identyfikatora rozpoczętej ekspedycji.' });
+
+    const attempt = db.prepare('SELECT * FROM expedition_attempts WHERE id = ? AND user_id = ?').get(attemptId, req.user.id);
+    if (!attempt) return res.status(404).json({ error: 'Nie odnaleziono tej ekspedycji w rejestrze.' });
+    if (attempt.status !== 'in_progress') {
+      return res.status(409).json({ error: 'Ta ekspedycja została już rozliczona.' });
+    }
+
+    const evaluation = evaluateExpedition(attempt.destination_id, choices);
+    const expedition = EXPEDITIONS[attempt.destination_id];
+
+    const result = db.transaction(() => {
+      const status = evaluation.success ? 'success' : 'failed';
+      db.prepare(`
+        UPDATE expedition_attempts
+        SET status = ?, score = ?, reward_points = ?, reward_skirnirs = ?,
+            reward_item = ?, completed_at = datetime('now')
+        WHERE id = ? AND status = 'in_progress'
+      `).run(
+        status,
+        evaluation.score,
+        evaluation.points,
+        evaluation.coins,
+        evaluation.item || '',
+        attemptId
+      );
+
+      const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+      if (!userRow) throw new Error('Użytkownik nie istnieje.');
+
+      if (evaluation.item) {
+        let inventory = [];
+        try { inventory = JSON.parse(userRow.inventory || '[]'); } catch (_) {}
+        if (!inventory.some((item) => item.name === evaluation.item)) {
+          inventory.unshift({
+            id: `item-${attemptId}`,
+            name: evaluation.item,
+            icon: '🎁',
+            rarity: 'Legendarny Artefakt',
+            price: evaluation.coins * 2,
+            description: `Zdobyto podczas ekspedycji: ${expedition.name}.`
+          });
+          db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inventory), req.user.id);
+        }
+      }
+
+      if (evaluation.points > 0) {
+        awardPoints({
+          studentId: req.user.id,
+          studentName: req.user.fullName || 'Adept',
+          house: req.user.house,
+          points: evaluation.points,
+          source: `Ekspedycja Północy: ${expedition.name}`,
+          sourceType: 'EXPEDITION',
+          sourceId: attemptId,
+          actorId: 'system',
+          actorName: 'Kwatermistrz Ekspedycji',
+          comment: `Wynik wyprawy: ${evaluation.score}/6`,
+          idempotencyKey: `pt-${attemptId}`
+        });
+      }
+
+      if (evaluation.coins > 0) {
+        creditSkirnir({
+          userId: req.user.id,
+          userName: req.user.fullName || 'Adept',
+          amount: evaluation.coins,
+          category: 'ekspedycja',
+          title: `Łup z ekspedycji: ${expedition.name}`,
+          note: `Wynik wyprawy: ${evaluation.score}/6`,
+          sourceType: 'EXPEDITION',
+          sourceId: attemptId,
+          idempotencyKey: `skr-${attemptId}`
+        });
+      }
+
+      return db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    })();
+
+    res.json({
+      ok: true,
+      expedition: { id: expedition.id, name: expedition.name },
+      result: evaluation,
+      user: dbUserToFrontend(result),
+      rankings: calculateHouseRankings('overall'),
+      status: getExpeditionStatus(req.user.id)
+    });
+  } catch (err) {
+    const isValidation = /Nieznany cel|dokładnie dwóch|nieprawidłowe decyzje|progu nagrody/.test(err.message);
+    res.status(isValidation ? 400 : 500).json({ error: 'Nie udało się rozliczyć ekspedycji: ' + err.message });
+  }
+});
 
 // GET /api/quests/completed — Get completed quests for current or given user
 router.get('/completed', (req, res) => {

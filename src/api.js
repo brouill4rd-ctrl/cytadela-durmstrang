@@ -52,6 +52,17 @@ export const api = {
   createWorldScar: (data) => apiFetch('/world/scars', { method: 'POST', body: JSON.stringify(data) }),
   createWorldEvent: (data) => apiFetch('/world/events', { method: 'POST', body: JSON.stringify(data) }),
   closeWorldEventWithScar: (id, data) => apiFetch(`/world/events/${id}/close-with-scar`, { method: 'POST', body: JSON.stringify(data) }),
+  // Bestiariusz Północy
+  getBestiaryCatalog: () => apiFetch('/bestiary/catalog'),
+  getBestiaryStatus: () => apiFetch('/bestiary/status'),
+  createBestiarySession: (runId, mode) => apiFetch('/bestiary/sessions', { method: 'POST', body: JSON.stringify({ runId, mode }) }),
+  getBestiarySession: (sessionId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}`),
+  advanceBestiaryEncounter: (sessionId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}/advance`, { method: 'POST' }),
+  submitBestiaryIdentify: (sessionId, actionId, choiceId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}/identify`, { method: 'POST', body: JSON.stringify({ actionId, choiceId }) }),
+  submitBestiaryCountermeasure: (sessionId, actionId, choiceId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}/countermeasure`, { method: 'POST', body: JSON.stringify({ actionId, choiceId }) }),
+  completeBestiarySession: (sessionId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'POST' }),
+  abandonBestiarySession: (sessionId) => apiFetch(`/bestiary/sessions/${encodeURIComponent(sessionId)}/abandon`, { method: 'POST' }),
+
   // Auth
   login: (username, password) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   register: (userData) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
@@ -97,6 +108,48 @@ export const api = {
   seedNews: (items) => apiFetch('/news/seed', { method: 'POST', body: JSON.stringify(items) }),
   reactToNews: (id, reactionType) => apiFetch(`/news/${id}/react`, { method: 'PATCH', body: JSON.stringify({ reactionType }) }),
   updateUserSignature: (userId, signaturePng) => apiFetch(`/users/${userId}`, { method: 'PUT', body: JSON.stringify({ signaturePng }) }),
+
+  // Wyrocznia Przeznaczenia
+  getOracleStatus: () => apiFetch('/oracle/status'),
+  castOracleRitual: () => apiFetch('/oracle/cast', { method: 'POST' }),
+
+  // Runiczna Strzelnica
+  submitShootingRun: (data) => apiFetch('/shooting-range/finish', { method: 'POST', body: JSON.stringify(data) }),
+  getShootingDailyStatus: () => apiFetch('/shooting-range/daily-status'),
+  startHnefatafl: (data) => apiFetch('/hnefatafl/start', { method: 'POST', body: JSON.stringify(data) }),
+  completeHnefatafl: (data) => apiFetch('/hnefatafl/complete', { method: 'POST', body: JSON.stringify(data) }),
+  getHnefataflDailyStatus: () => apiFetch('/hnefatafl/daily-status'),
+
+  // Runiczny Krąg Pojedynków
+  getRunicDuelStatus: () => apiFetch('/runic-duels/status'),
+  startRunicDuel: (data) => apiFetch('/runic-duels/start', { method: 'POST', body: JSON.stringify(data) }),
+  getRunicDuel: (runId) => apiFetch(`/runic-duels/${encodeURIComponent(runId)}`),
+  submitRunicDuelAction: (runId, data) => apiFetch(`/runic-duels/${encodeURIComponent(runId)}/actions`, { method: 'POST', body: JSON.stringify(data) }),
+  abandonRunicDuel: (runId) => apiFetch(`/runic-duels/${encodeURIComponent(runId)}/abandon`, { method: 'POST' }),
+
+  // Labirynt Tajemnic
+  getDungeonStatus: () => apiFetch('/dungeon-escape/status'),
+  startDungeon: () => apiFetch('/dungeon-escape/start', { method: 'POST' }),
+  submitDungeonAnswer: (attemptId, answer) => apiFetch('/dungeon-escape/submit', { method: 'POST', body: JSON.stringify({ attemptId, answer }) }),
+  getDungeonHint: (attemptId) => apiFetch('/dungeon-escape/hint', { method: 'POST', body: JSON.stringify({ attemptId }) }),
+  abandonDungeon: (attemptId) => apiFetch('/dungeon-escape/abandon', { method: 'POST', body: JSON.stringify({ attemptId }) }),
+
+  // Połów w Zamarzniętym Fjordzie
+  getFishingStatus: () => apiFetch('/fishing/status'),
+  startFishingSession: (runId, mode) => apiFetch('/fishing/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ runId, mode })
+  }),
+  startFishingCast: (sessionId, cast) => apiFetch(`/fishing/sessions/${encodeURIComponent(sessionId)}/casts`, {
+    method: 'POST',
+    body: JSON.stringify(cast)
+  }),
+  completeFishingCast: (sessionId, castId, result) => apiFetch(`/fishing/sessions/${encodeURIComponent(sessionId)}/casts/${encodeURIComponent(castId)}/complete`, {
+    method: 'POST',
+    body: JSON.stringify(result)
+  }),
+  completeFishingSession: (sessionId) => apiFetch(`/fishing/sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'POST' }),
+  abandonFishingSession: (sessionId) => apiFetch(`/fishing/sessions/${encodeURIComponent(sessionId)}/abandon`, { method: 'POST' }),
 
   // ==================== DZIENNIKI LEKCYJNE & RANKINGI ====================
   getLessons: (filters = {}) => {
@@ -275,6 +328,15 @@ export const api = {
     return apiFetch(`/quests/completed${query}`);
   },
   completeQuest: (data) => apiFetch('/quests/complete', { method: 'POST', body: JSON.stringify(data) }),
+  getExpeditionStatus: () => apiFetch('/quests/expeditions/status'),
+  startExpedition: (destinationId) => apiFetch('/quests/expeditions/start', {
+    method: 'POST',
+    body: JSON.stringify({ destinationId })
+  }),
+  completeExpedition: (attemptId, choices) => apiFetch('/quests/expeditions/complete', {
+    method: 'POST',
+    body: JSON.stringify({ attemptId, choices })
+  }),
 
   getDiscoveredSecrets: (userId) => {
     const query = userId ? `?userId=${userId}` : '';

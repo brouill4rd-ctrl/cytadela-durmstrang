@@ -38,16 +38,12 @@ export const ProfessorJournalEditor = () => {
     classYear: 'Klasa II',
     topic: '',
     description: '',
-    professorId: currentUser?.id || 'usr-astrid-vinter',
-    professorName: currentUser?.fullName || 'Prof. Astrid Vinter',
-    professorAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+    professorId: currentUser?.id || '',
+    professorName: currentUser?.fullName || '',
+    professorAvatar: currentUser?.avatar || '',
     date: new Date().toISOString().split('T')[0],
     status: 'draft',
-    participants: [
-      { id: 'p-1', studentId: 'usr-valdemar', studentName: 'Valdemar Krag-Hansen', house: 'ravnheim', isPresent: true, pointsAwarded: 15, comment: 'Wybitna aktywność na zajęciach' },
-      { id: 'p-2', studentId: 'usr-erik', studentName: 'Erik Nilsen', house: 'bjornhall', isPresent: true, pointsAwarded: 10, comment: 'Aktywny udział w dyskusji' },
-      { id: 'p-3', studentId: 'usr-astrid-stud', studentName: 'Astrid Vinter', house: 'reinhall', isPresent: true, pointsAwarded: 10, comment: 'Prawidłowe odpowiedzi' }
-    ]
+    participants: []
   });
 
   useEffect(() => {

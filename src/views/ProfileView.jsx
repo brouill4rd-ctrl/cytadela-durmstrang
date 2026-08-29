@@ -48,6 +48,23 @@ import {
   ScrollText
 } from 'lucide-react';
 
+const PROFILE_BANNER_IMAGES = {
+  reinhall: '/banery_zakony/reinhall-baner.png',
+  bjornhall: '/banery_zakony/bjornhall-baner.png',
+  ravnheim: '/banery_zakony/baner-ravnheim.png',
+  otergard: '/banery_zakony/otergard-baner.png'
+};
+
+const STAFF_PROFILE_ROLES = new Set([
+  'admin',
+  'headmaster',
+  'director',
+  'deputy_headmaster',
+  'professor',
+  'teacher',
+  'staff'
+]);
+
 export const ProfileView = () => {
   const {
     currentUser,
@@ -146,328 +163,148 @@ export const ProfileView = () => {
   };
 
   const currentAura = aurasConfig[activeAura] || aurasConfig.frost;
+  const activeRoleKey = String(activeUser.role || '').toLowerCase();
+  const isStaffProfile = STAFF_PROFILE_ROLES.has(activeRoleKey);
+  const rawHouseKey = String(activeUser.house || activeUser.houseId || activeUser.house_id || '').toLowerCase();
+  const profileHouseKey = Object.keys(PROFILE_BANNER_IMAGES).find(key => rawHouseKey.includes(key));
+  const profileBannerImage = isStaffProfile
+    ? '/banery_zakony/baner-kadra.png'
+    : PROFILE_BANNER_IMAGES[profileHouseKey] || '/durmstrang_welcome_banner.jpg';
+
+  const openActivity = (setter, chime = false) => {
+    chime ? playRuneChime() : playWandSwoosh();
+    setter(true);
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-      {/* Dossier Header */}
-      <div
-        className="gothic-card runic-corners"
-        style={{
-          padding: '2.5rem',
-          background: `radial-gradient(circle at 80% 20%, ${house ? house.colors.bgDark : 'rgba(25, 32, 45, 0.9)'} 0%, rgba(10, 13, 18, 0.98) 75%)`,
-          border: `2px solid ${currentAura.border}`,
-          boxShadow: `0 20px 50px rgba(0,0,0,0.95), ${currentAura.glow}`,
-          transition: 'all 0.4s ease'
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
-          {/* Avatar & Core Identity with Cosmic Aura */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.8rem', flexWrap: 'wrap' }}>
-            <div
-              style={{ position: 'relative', cursor: 'pointer' }}
-              onClick={() => { playWandSwoosh(); setProfileEditorOpen(true); }}
-              title="Kliknij, aby zmienić awatar, płeć i dane profilu"
-            >
-              <img
-                src={activeUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                alt={activeUser.fullName}
-                style={{
-                  width: '105px',
-                  height: '105px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: `3px solid ${currentAura.border}`,
-                  boxShadow: `0 0 25px rgba(0,0,0,0.8), ${currentAura.glow}`,
-                  transition: 'all 0.3s ease'
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0,
-                  transition: 'opacity 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                onMouseLeave={e => e.currentTarget.style.opacity = 0}
-              >
-                <Edit3 size={24} color="#ffffff" />
-              </div>
-
-              {house && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '-4px',
-                    right: '-4px',
-                    width: '34px',
-                    height: '34px',
-                    borderRadius: '50%',
-                    background: house.colors.primary,
-                    border: `1px solid ${house.colors.secondary}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.1rem'
-                  }}
-                >
-                  {house.crestIcon}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.8rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontFamily: 'var(--font-heading)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                  {house ? house.name : ['admin', 'headmaster'].includes(activeUser.role) ? 'Rada Dyrekcji' : ['professor', 'teacher'].includes(activeUser.role) ? (activeUser.departmentName || 'Katedra Magii') : 'Adept Nowicjusz'}
-                  {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? ' • Kadra Durmstrang' : ` • ${activeUser.classYear || 'Klasa I'}`}
-                </span>
-                <span style={{ background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', fontSize: '0.72rem', padding: '0.15rem 0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)' }}>
-                  {genderLabel}
-                </span>
-              </div>
-
-              <h1 style={{ fontSize: '2.2rem', color: '#ffffff', lineHeight: 1.1, marginTop: '0.2rem' }}>
-                {activeUser.fullName}
-              </h1>
-              <div style={{ fontSize: '0.9rem', color: '#a0aec0', marginTop: '0.3rem' }}>
-                {activeUser.title || (activeUser.role === 'admin' ? (activeUser.gender === 'czarodziejka' ? 'Arcymistrzyni Twierdzy (TMD)' : 'Arcymistrz Twierdzy (TMD)') : 'Adept')} • {activeUser.origin || activeUser.office || 'Twierdza Magii Durmstrang (TMD)'}
-              </div>
-              <div style={{ fontSize: '0.78rem', color: currentAura.border, fontWeight: 700, marginTop: '0.3rem' }}>
-                ✨ {currentAura.name}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Metrics (Level, Points, Coins) */}
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <div style={{ padding: '0.8rem 1.4rem', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase' }}>{activeUser.role === 'student' ? 'Poziom' : 'Rola'}</div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>
-                {activeUser.role === 'student' ? `Krąg ${activeUser.level || 1}` : activeUser.role === 'professor' ? 'Profesor' : 'Arcymistrz'}
-              </div>
-            </div>
-
-            <div style={{ padding: '0.8rem 1.4rem', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase' }}>Punkty</div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', fontWeight: 800, color: 'var(--gold-glow)' }}>
-                {activeUser.points || 0}
-              </div>
-            </div>
-
-            <div style={{ padding: '0.8rem 1.4rem', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase' }}>Skirniry</div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', fontWeight: 800, color: '#f7dca0' }}>
-                {activeUser.currency || 0}
-              </div>
-            </div>
-          </div>
+    <div
+      className="profile-citadel"
+      style={{
+        '--profile-aura': currentAura.border,
+        '--profile-aura-glow': currentAura.glow,
+        '--profile-house': house?.colors?.primary || '#7a1f2b',
+        '--profile-house-accent': house?.colors?.secondary || '#d7b86d'
+      }}
+    >
+      <section className="profile-hero" aria-labelledby="profile-name">
+        <div
+          className="profile-hero__banner"
+          style={{ backgroundImage: `url("${profileBannerImage}")` }}
+          aria-hidden="true"
+        />
+        <div className="profile-hero__runes" aria-hidden="true">ᛏ · ᚱ · ᚹ · ᛞ · ᛉ · ᚲ · ᛇ · ᛟ</div>
+        <div className="profile-hero__crest" aria-hidden="true">
+          <span>{house?.crestIcon || 'ᛞ'}</span>
         </div>
 
-        {/* Quick Launch Suite of Activities + EDIT PROFILE BUTTON */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+        <div className="profile-identity">
           <button
-            onClick={() => {
-              playWandSwoosh();
-              setProfileEditorOpen(true);
-            }}
-            className="btn-durmstrang"
-            style={{
-              padding: '0.5rem 1.1rem',
-              fontSize: '0.82rem',
-              background: 'linear-gradient(135deg, #c59f4e 0%, #8b6b23 100%)',
-              color: '#06090e',
-              fontWeight: 700,
-              boxShadow: '0 4px 15px rgba(197, 159, 78, 0.35)'
-            }}
+            type="button"
+            className="profile-portrait"
+            onClick={() => openActivity(setProfileEditorOpen)}
+            title="Zmień awatar i dane profilu"
           >
-            <Edit3 size={14} /> Edytuj Profil & Awatar
-          </button>
-
-          {/* DISCORD VERIFICATION QUICK BUTTON */}
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setDiscordModalOpen(true);
-            }}
-            style={{
-              padding: '0.5rem 1.1rem',
-              fontSize: '0.82rem',
-              background: activeUser.discordId ? 'rgba(16, 185, 129, 0.2)' : 'linear-gradient(135deg, rgba(88, 101, 242, 0.35) 0%, rgba(59, 71, 196, 0.4) 100%)',
-              border: activeUser.discordId ? '1px solid #10b981' : '1px solid #5865F2',
-              color: activeUser.discordId ? '#6ee7b7' : '#e0e7ff',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              fontWeight: 700,
-              boxShadow: activeUser.discordId ? '0 0 15px rgba(16, 185, 129, 0.3)' : '0 0 15px rgba(88, 101, 242, 0.3)'
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-            </svg>
-            {activeUser.discordId ? '✨ Discord Połączony' : '⚡ Połącz Discord (Kodem)'}
-          </button>
-
-          <button
-            onClick={() => {
-              playRuneChime();
-              setPassportOpen(true);
-            }}
-            className="btn-durmstrang"
-            style={{ padding: '0.5rem 0.9rem', fontSize: '0.8rem' }}
-          >
-            <Download size={13} /> Paszport (PNG)
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setGrimoireOpen(true);
-            }}
-            style={{ background: 'rgba(197, 159, 78, 0.15)', border: '1px solid var(--gold-ancient)', color: '#ffe599', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}
-          >
-            <BookOpen size={13} color="var(--gold-ancient)" /> Grimuar Zaklęć
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setRuneCalligraphyOpen(true);
-            }}
-            style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid #f59e0b', color: '#fde68a', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}
-          >
-            <span style={{ color: '#f59e0b', fontSize: '0.95rem' }}>ᚠ</span> Kaligrafia Run
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setOracleOpen(true);
-            }}
-            style={{ background: 'rgba(197, 159, 78, 0.15)', border: '1px solid var(--gold-ancient)', color: '#ffe599', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Eye size={13} /> Wyrocznia
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setExpeditionsOpen(true);
-            }}
-            style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#4ade80', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Compass size={13} /> Ekspedycje
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setTargetOpen(true);
-            }}
-            style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38bdf8', color: '#38bdf8', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Crosshair size={13} /> Strzelnica
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setEscapeOpen(true);
-            }}
-            style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', color: '#fcd34d', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Key size={13} /> Labirynt Zagadek
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setHnefataflOpen(true);
-            }}
-            style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', color: '#c084fc', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Crown size={13} /> Hnefatafl
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setFishingOpen(true);
-            }}
-            style={{ background: 'rgba(2, 132, 199, 0.15)', border: '1px solid #0284c7', color: '#38bdf8', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Anchor size={13} /> Połów
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setTournamentOpen(true);
-            }}
-            style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Swords size={13} /> Turniej Mistrza
-          </button>
-
-          <button
-            onClick={() => {
-              playWandSwoosh();
-              setBlackMarketOpen(true);
-            }}
-            style={{ background: 'rgba(168, 85, 247, 0.2)', border: '1px solid #c084fc', color: '#e9d5ff', padding: '0.5rem 0.9rem', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-          >
-            <Skull size={13} /> Czarny Rynek
-          </button>
-        </div>
-
-        {/* XP Progress Bar */}
-        <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#9ca3af', marginBottom: '0.4rem' }}>
-            <span>Doświadczenie Magiczne (XP)</span>
-            <span><strong>{activeUser.xp || 0}</strong> / {activeUser.nextLevelXp || 1000} XP ({xpPercentage}%)</span>
-          </div>
-          <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div
-              style={{
-                width: `${xpPercentage}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #c59f4e 0%, #e6c875 100%)',
-                boxShadow: '0 0 10px rgba(197, 159, 78, 0.5)'
-              }}
+            <img
+              src={activeUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+              alt={activeUser.fullName}
             />
+            <span className="profile-portrait__edit"><Edit3 size={18} /> Edytuj</span>
+            <span className="profile-portrait__seal">{house?.crestIcon || 'ᛞ'}</span>
+          </button>
+
+          <div className="profile-identity__copy">
+            <div className="profile-kicker">
+              <span>Profil czarodzieja</span>
+              <i />
+              <span>{house ? `Zakon ${house.name}` : 'Cytadela Durmstrangu'}</span>
+            </div>
+            <div className="profile-personalia-line">
+              <h1 id="profile-name">{activeUser.fullName}</h1>
+              <span className="profile-personalia-line__divider" aria-hidden="true" />
+              <p className="profile-title">
+                {activeUser.title || (activeUser.role === 'admin' ? (activeUser.gender === 'czarodziejka' ? 'Arcymistrzyni Twierdzy' : 'Arcymistrz Twierdzy') : 'Adept Północy')}
+              </p>
+              <span className="profile-personalia-line__divider" aria-hidden="true" />
+              <div className="profile-origin">
+                <span>{genderLabel}</span>
+                <span aria-hidden="true">◆</span>
+                <span>{activeUser.origin || activeUser.office || 'Twierdza Magii Durmstrang'}</span>
+              </div>
+              <span className="profile-personalia-line__divider" aria-hidden="true" />
+              <div className="profile-aura"><Sparkles size={14} /> {currentAura.name}</div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <aside className="profile-rank" aria-label="Ranga i zasoby postaci">
+          <div className="profile-rank__eyebrow">Status w Cytadeli</div>
+          <div className="profile-rank__name">
+            {activeUser.role === 'student' ? `Krąg ${activeUser.level || 1}` : activeUser.role === 'professor' ? 'Profesor' : 'Arcymistrz'}
+          </div>
+          <div className="profile-rank__rule" />
+          <div className="profile-rank__stats">
+            <div><strong>{activeUser.points || 0}</strong><span>Punkty Zakonu</span></div>
+            <div><strong>{activeUser.currency || 0}</strong><span>Skirniry</span></div>
+          </div>
+          <div className="profile-rank__class">
+            <Shield size={15} />
+            {['admin', 'professor', 'teacher', 'headmaster'].includes(activeUser.role) ? 'Kadra Durmstrangu' : (activeUser.classYear || 'Klasa I')}
+          </div>
+        </aside>
+
+        <div className="profile-command-bar">
+          <button className="profile-command profile-command--primary" onClick={() => openActivity(setProfileEditorOpen)}>
+            <Edit3 size={16} /><span><small>Karta postaci</small>Edytuj profil</span>
+          </button>
+          <button className={`profile-command ${activeUser.discordId ? 'is-connected' : ''}`} onClick={() => openActivity(setDiscordModalOpen)}>
+            <Zap size={16} /><span><small>Łączność</small>{activeUser.discordId ? 'Discord połączony' : 'Połącz Discord'}</span>
+          </button>
+          <button className="profile-command" onClick={() => openActivity(setPassportOpen, true)}>
+            <Download size={16} /><span><small>Dokument</small>Paszport adepta</span>
+          </button>
+          <button className="profile-command" onClick={() => openActivity(setGrimoireOpen)}>
+            <BookOpen size={16} /><span><small>Arkana</small>Grimuar zaklęć</span>
+          </button>
+        </div>
+
+        <div className="profile-xp">
+          <div className="profile-xp__label">
+            <span>Postęp do następnego kręgu</span>
+            <strong>{activeUser.xp || 0} <small>/ {activeUser.nextLevelXp || 1000} XP</small></strong>
+          </div>
+          <div className="profile-xp__track" aria-label={`Postęp doświadczenia: ${xpPercentage}%`}>
+            <span style={{ width: `${xpPercentage}%` }} />
+          </div>
+          <div className="profile-xp__percent">{xpPercentage}%</div>
+        </div>
+      </section>
+
+      <section className="profile-activities" aria-labelledby="profile-activities-title">
+        <div className="profile-section-heading">
+          <div><span>Durmstrang</span><h2 id="profile-activities-title">Strefa aktywności</h2></div>
+          <p>Wybierz trening, rozgrywkę lub wyprawę.</p>
+        </div>
+        <div className="profile-activity-grid">
+          <button onClick={() => openActivity(setRuneCalligraphyOpen)}><span>ᚠ</span><strong>Kaligrafia run</strong><small>Warsztat znaków</small></button>
+          <button onClick={() => openActivity(setOracleOpen)}><Eye /><strong>Wyrocznia</strong><small>Odczytaj omen</small></button>
+          <button onClick={() => openActivity(setExpeditionsOpen)}><Compass /><strong>Ekspedycje</strong><small>Wyrusz w mrok</small></button>
+          <button onClick={() => openActivity(setTargetOpen)}><Crosshair /><strong>Strzelnica</strong><small>Próba celności</small></button>
+          <button onClick={() => openActivity(setEscapeOpen)}><Key /><strong>Labirynt</strong><small>Złam pieczęcie</small></button>
+          <button onClick={() => openActivity(setHnefataflOpen)}><Crown /><strong>Hnefatafl</strong><small>Taktyka jarla</small></button>
+          <button onClick={() => openActivity(setFishingOpen)}><Anchor /><strong>Połów</strong><small>Zamarznięty fiord</small></button>
+          <button onClick={() => openActivity(setTournamentOpen)}><Swords /><strong>Turniej</strong><small>Stań do walki</small></button>
+          <button onClick={() => openActivity(setBlackMarketOpen)}><Skull /><strong>Czarny rynek</strong><small>Tylko dla wtajemniczonych</small></button>
+        </div>
+      </section>
 
       {/* Tabs Navigation (Dossier, Lessons, Inventory, Aury & Tytuły) */}
-      <div style={{ display: 'flex', gap: '0.8rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
+      <nav className="profile-tabs" aria-label="Sekcje profilu">
         <button
           onClick={() => {
             playWandSwoosh();
             setActiveTab('dossier');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'dossier' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-            border: activeTab === 'dossier' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-            borderRadius: '4px',
-            color: activeTab === 'dossier' ? '#ffffff' : '#9ca3af',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'dossier' ? 'is-active' : ''}`}
         >
           <FileText size={16} /> Metryka & Osobliwości
         </button>
@@ -477,20 +314,7 @@ export const ProfileView = () => {
             playWandSwoosh();
             setActiveTab('auras');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'auras' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-            border: activeTab === 'auras' ? '1px solid #f59e0b' : '1px solid transparent',
-            borderRadius: '4px',
-            color: activeTab === 'auras' ? '#fcd34d' : '#9ca3af',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'auras' ? 'is-active' : ''}`}
         >
           <Sparkles size={16} color="#f59e0b" /> Aury & Tytuły Runiczne
         </button>
@@ -500,20 +324,7 @@ export const ProfileView = () => {
             playWandSwoosh();
             setActiveTab('lessons');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'lessons' ? 'rgba(46, 196, 182, 0.18)' : 'rgba(46, 196, 182, 0.06)',
-            border: activeTab === 'lessons' ? '1px solid #2ec4b6' : '1px solid rgba(46, 196, 182, 0.2)',
-            borderRadius: '4px',
-            color: activeTab === 'lessons' ? '#2ec4b6' : '#9ca3af',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'lessons' ? 'is-active' : ''}`}
         >
           <BookOpen size={16} color="#2ec4b6" /> Dziennik Lekcji ({userLessonTransactions.length})
         </button>
@@ -523,20 +334,7 @@ export const ProfileView = () => {
             playWandSwoosh();
             setActiveTab('exams');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'exams' ? 'rgba(197, 159, 78, 0.22)' : 'transparent',
-            border: activeTab === 'exams' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-            borderRadius: '4px',
-            color: activeTab === 'exams' ? '#ffffff' : '#f7dca0',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'exams' ? 'is-active' : ''}`}
         >
           <Award size={16} color="var(--gold-ancient)" /> Egzaminy ({studentExams.length})
         </button>
@@ -546,20 +344,7 @@ export const ProfileView = () => {
             playWandSwoosh();
             setActiveTab('inventory');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'inventory' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-            border: activeTab === 'inventory' ? '1px solid var(--gold-ancient)' : '1px solid transparent',
-            borderRadius: '4px',
-            color: activeTab === 'inventory' ? '#ffffff' : '#9ca3af',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'inventory' ? 'is-active' : ''}`}
         >
           <Package size={16} /> Ekwipunek
         </button>
@@ -569,20 +354,7 @@ export const ProfileView = () => {
             playWandSwoosh();
             setActiveTab('discord');
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'discord' ? 'rgba(88, 101, 242, 0.22)' : 'rgba(88, 101, 242, 0.08)',
-            border: activeTab === 'discord' ? '1px solid #5865F2' : '1px solid rgba(88, 101, 242, 0.25)',
-            borderRadius: '4px',
-            color: activeTab === 'discord' ? '#c7d2fe' : '#94a3b8',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'discord' ? 'is-active' : ''}`}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
@@ -602,24 +374,11 @@ export const ProfileView = () => {
             }
             setLoadingMemory(false);
           }}
-          style={{
-            padding: '0.65rem 1.4rem',
-            background: activeTab === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
-            border: activeTab === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
-            borderRadius: '4px',
-            color: activeTab === 'memory' ? '#ffffff' : '#f7dca0',
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`profile-tab-btn ${activeTab === 'memory' ? 'is-active' : ''}`}
         >
           <span>🏛️</span> Izba Pamięci / Moja Historia
         </button>
-      </div>
+      </nav>
 
       {/* 1. DOSSIER TAB CONTENT */}
       {activeTab === 'dossier' && (
@@ -1049,13 +808,22 @@ export const ProfileView = () => {
                   border: item.rarity === 'legendary' ? '1px solid #d97706' : item.rarity === 'epic' ? '1px solid #9333ea' : '1px solid rgba(255, 255, 255, 0.1)'
                 }}
               >
-                <div style={{ fontSize: '2.4rem' }}>{item.icon || '📦'}</div>
+                <div style={{ fontSize: '2.4rem', position: 'relative' }}>
+                  {item.icon || '📦'}
+                  {(item.quantity || 1) > 1 && (
+                    <span style={{ position: 'absolute', right: '-12px', bottom: '-7px', minWidth: '23px', padding: '2px 5px', borderRadius: '999px', background: '#0284c7', color: '#fff', fontSize: '0.65rem', fontWeight: 800, textAlign: 'center' }}>
+                      ×{item.quantity}
+                    </span>
+                  )}
+                </div>
                 <div>
                   <span style={{ fontSize: '0.7rem', color: item.rarity === 'legendary' ? '#f59e0b' : item.rarity === 'epic' ? '#c084fc' : '#9ca3af', textTransform: 'uppercase', fontWeight: 700 }}>
                     {item.rarity || 'Artefakt'}
                   </span>
                   <h4 style={{ color: '#ffffff', fontSize: '1rem', margin: '0.2rem 0' }}>{item.name}</h4>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--gold-ancient)' }}>Wartość: {item.price || 50} Skirnirów</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--gold-ancient)' }}>
+                    {item.price === 0 ? 'Przedmiot kolekcjonerski' : `Wartość: ${item.price || 50} Skirnirów`}
+                  </div>
                 </div>
               </div>
             ))}

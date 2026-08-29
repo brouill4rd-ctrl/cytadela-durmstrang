@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 
 let _db;
+let _usersHaveRoleColumn = false;
 
 export function initPointsService(db) {
   _db = db;
@@ -8,6 +9,8 @@ export function initPointsService(db) {
   // Migration: add school_year and actor_id columns if missing
   const cols = db.pragma('table_info(point_transactions)');
   const colNames = cols.map(c => c.name);
+  const userColumns = db.pragma('table_info(users)');
+  _usersHaveRoleColumn = userColumns.some(column => column.name === 'role');
 
   if (!colNames.includes('school_year')) {
     db.exec("ALTER TABLE point_transactions ADD COLUMN school_year TEXT DEFAULT ''");
@@ -34,6 +37,39 @@ export function initPointsService(db) {
   db.exec("CREATE INDEX IF NOT EXISTS idx_pt_school_year ON point_transactions(school_year, is_revoked)");
   // Index for house aggregation
   db.exec("CREATE INDEX IF NOT EXISTS idx_pt_house_active ON point_transactions(house, is_revoked)");
+
+  // Kadra może zdobywać punkty osobiste, ale nigdy nie zasila Zakonu.
+  // Czyścimy także historyczne wpisy utworzone przez starsze wersje gier.
+  if (_usersHaveRoleColumn) {
+    db.prepare(`
+      UPDATE point_transactions
+      SET house = ''
+      WHERE house IS NOT NULL
+        AND TRIM(house) != ''
+        AND student_id IN (
+          SELECT id FROM users
+          WHERE role IN ('professor', 'teacher', 'admin', 'headmaster')
+        )
+    `).run();
+  }
+}
+
+function resolveRecipientHouse(studentId, requestedHouse) {
+  if (!studentId || !_usersHaveRoleColumn) {
+    return requestedHouse ? String(requestedHouse).toLowerCase() : null;
+  }
+
+  const recipient = _db.prepare('SELECT role, house FROM users WHERE id = ?').get(studentId);
+  if (!recipient) {
+    return requestedHouse ? String(requestedHouse).toLowerCase() : null;
+  }
+
+  // Starsza, produkcyjna tabela ma ograniczenie NOT NULL na kolumnie house.
+  // Pusty identyfikator oznacza wpis wyłącznie osobisty i nie pasuje do żadnego Zakonu.
+  if (recipient.role !== 'student') return '';
+  return recipient.house
+    ? String(recipient.house).toLowerCase()
+    : (requestedHouse ? String(requestedHouse).toLowerCase() : null);
 }
 
 function getSchoolYear() {
@@ -63,8 +99,13 @@ export function awardPoints({
   idempotencyKey = ''
 }) {
   const numericPoints = Number(points);
-  if (!house || !Number.isFinite(numericPoints) || numericPoints <= 0) {
-    throw new Error('Wymagany Zakon i dodatnia liczba punktów.');
+  const effectiveHouse = resolveRecipientHouse(studentId, house);
+  // Zakon jest opcjonalny dla punktów osobistych — wymagany użytkownik lub Zakon.
+  if (!house && !studentId) {
+    throw new Error('Wymagany Zakon lub ID użytkownika.');
+  }
+  if (!Number.isFinite(numericPoints) || numericPoints <= 0) {
+    throw new Error('Wymagana dodatnia liczba punktów.');
   }
 
   // Idempotency check
@@ -77,6 +118,8 @@ export function awardPoints({
   const schoolYear = getSchoolYear();
 
   return _db.transaction(() => {
+    // Każdy wynik trafia do historii użytkownika. Pole house pozostaje NULL dla kadry,
+    // dzięki czemu transakcja zasila ranking osobisty, ale nie ranking Zakonu.
     _db.prepare(`
       INSERT INTO point_transactions (
         id, student_id, student_name, house, points, source, source_type, source_id,
@@ -86,8 +129,8 @@ export function awardPoints({
     `).run(
       txId,
       studentId || null,
-      studentName || 'Adept',
-      house.toLowerCase(),
+      studentName || (studentId ? 'Użytkownik' : ''),
+      effectiveHouse,
       numericPoints,
       source || 'Ręczne przyznanie',
       sourceType,
@@ -102,7 +145,7 @@ export function awardPoints({
       idempotencyKey || ''
     );
 
-    // Update cached points on user (cache, not source of truth)
+    // Zawsze aktualizuj cache punktów użytkownika
     if (studentId) {
       _db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(numericPoints, numericPoints * 10, studentId);
     }

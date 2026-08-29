@@ -134,9 +134,9 @@ router.post('/start-lesson', (req, res) => {
       threadName = 'Wątek Lekcji',
       channelId = 'chan-lekcje-1',
       guildId = 'guild-durmstrang-1294',
-      professorName = 'Prof. Astrid Vinter',
-      professorId = 'usr-astrid-vinter',
-      professorAvatar = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+      professorName = '',
+      professorId = '',
+      professorAvatar = '',
       subjectId = 'eliksiry',
       subjectName = 'Eliksiry',
       classYear = 'Klasa II',
@@ -261,9 +261,9 @@ router.post('/post-message', (req, res) => {
           channelId: 'chan-lekcje',
           guildId: 'guild-durmstrang-1294',
           threadUrl: 'https://discord.com/channels/guild-durmstrang-1294/chan-lekcje/thread',
-          professorName: 'Prof. Astrid Vinter',
-          professorId: 'usr-astrid-vinter',
-          professorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+          professorName: '',
+          professorId: '',
+          professorAvatar: '',
           subjectId: 'eliksiry',
           subjectName: 'Eliksiry',
           classYear: 'Klasa II',
@@ -385,11 +385,7 @@ router.post('/end-lesson', (req, res) => {
 
     // If no participants were tracked dynamically, seed defaults
     if (participantsList.length === 0) {
-      participantsList.push(
-        { studentId: 'usr-valdemar', studentName: 'Valdemar Krag-Hansen', house: 'ravnheim', isPresent: true, pointsAwarded: 15, comment: 'Udział w dyskusji', role: 'student' },
-        { studentId: 'usr-erik', studentName: 'Erik Nilsen', house: 'bjornhall', isPresent: true, pointsAwarded: 10, comment: 'Aktywny udział', role: 'student' },
-        { studentId: 'usr-astrid-stud', studentName: 'Astrid Vinter', house: 'reinhall', isPresent: true, pointsAwarded: 10, comment: 'Prawidłowe odpowiedzi', role: 'student' }
-      );
+      // No default participants — real session data required
     }
 
     const insertLesson = db.prepare(`

@@ -113,6 +113,54 @@ export const CustomPageEditorModal = ({ isOpen, onClose, editingDoc = null }) =>
 
   if (!isOpen) return null;
 
+  const renderInline = (text) => {
+    if (!text) return text;
+    const parts = [];
+    const regex = /(__(.+?)__|\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|`(.+?)`)/g;
+    let last = 0, m;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) parts.push(text.slice(last, m.index));
+      if (m[2])      parts.push(<u key={m.index}>{m[2]}</u>);
+      else if (m[3]) parts.push(<strong key={m.index}>{m[3]}</strong>);
+      else if (m[4]) parts.push(<em key={m.index}>{m[4]}</em>);
+      else if (m[5]) parts.push(<s key={m.index}>{m[5]}</s>);
+      else if (m[6]) parts.push(<code key={m.index} style={{ background: 'rgba(255,255,255,0.1)', padding: '0 3px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.88em' }}>{m[6]}</code>);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return parts.length > 0 ? parts : text;
+  };
+
+  const insertIntoBlock = (idx, before, after = '') => {
+    const ta = document.getElementById(`block-ta-${idx}`);
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = formData.content[idx]?.text || '';
+    const selected = text.slice(start, end);
+    const newText = text.slice(0, start) + before + selected + after + text.slice(end);
+    updateContentBlock(idx, 'text', newText);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 10);
+  };
+
+  const miniToolbar = (idx) => {
+    const bs = { padding: '0.18rem 0.32rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '3px', color: '#d1d5db', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '26px', height: '24px', fontSize: '12px' };
+    const vsep = React.createElement('div', { style: { width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 0.2rem', alignSelf: 'center' } });
+    return React.createElement('div', { style: { display: 'flex', gap: '0.15rem', padding: '0.22rem 0.4rem', background: 'rgba(0,0,0,0.45)', borderRadius: '4px 4px 0 0', border: '1px solid rgba(255,255,255,0.07)', borderBottom: 'none', alignItems: 'center' } },
+      React.createElement('button', { type: 'button', onClick: () => insertIntoBlock(idx, '**', '**'), title: 'Pogrubienie', style: bs }, React.createElement('strong', { style: { fontFamily: 'serif' } }, 'B')),
+      React.createElement('button', { type: 'button', onClick: () => insertIntoBlock(idx, '*', '*'), title: 'Kursywa', style: bs }, React.createElement('em', { style: { fontFamily: 'serif' } }, 'I')),
+      React.createElement('button', { type: 'button', onClick: () => insertIntoBlock(idx, '__', '__'), title: 'Podkreślenie', style: bs }, React.createElement('u', null, 'U')),
+      React.createElement('button', { type: 'button', onClick: () => insertIntoBlock(idx, '~~', '~~'), title: 'Przekreślenie', style: bs }, React.createElement('s', null, 'S')),
+      vsep,
+      React.createElement('button', { type: 'button', onClick: () => insertIntoBlock(idx, String.fromCharCode(96), String.fromCharCode(96)), title: 'Kod', style: { ...bs, fontFamily: 'monospace', fontSize: '11px' } }, '</>'),
+      vsep,
+      React.createElement('span', { style: { fontSize: '0.62rem', color: '#6b7280', padding: '0 0.15rem', whiteSpace: 'nowrap' } }, '**B** *I* __U__ ~~S~~')
+    );
+  };
+
   const generateSlugFromTitle = (title) => {
     return title
       .toLowerCase()
@@ -625,13 +673,17 @@ export const CustomPageEditorModal = ({ isOpen, onClose, editingDoc = null }) =>
                       )}
 
                       {block.type === 'paragraph' && (
-                        <textarea
-                          rows={3}
-                          value={block.text || ''}
-                          onChange={(e) => updateContentBlock(idx, 'text', e.target.value)}
-                          placeholder="Wpisz treść akapitu..."
-                          style={{ width: '100%', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#d1d5db', resize: 'vertical' }}
-                        />
+                        <>
+                          {miniToolbar(idx)}
+                          <textarea
+                            id={`block-ta-${idx}`}
+                            rows={3}
+                            value={block.text || ''}
+                            onChange={(e) => updateContentBlock(idx, 'text', e.target.value)}
+                            placeholder="Wpisz treść akapitu... (**pogrubienie** *kursywa* __podkreślenie__)"
+                            style={{ width: '100%', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0 0 4px 4px', color: '#d1d5db', resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+                          />
+                        </>
                       )}
 
                       {block.type === 'callout' && (
@@ -682,13 +734,17 @@ export const CustomPageEditorModal = ({ isOpen, onClose, editingDoc = null }) =>
                       )}
 
                       {block.type === 'quote' && (
-                        <textarea
-                          rows={2}
-                          value={block.text || ''}
-                          onChange={(e) => updateContentBlock(idx, 'text', e.target.value)}
-                          placeholder="„Cytat lub sentencja...”"
-                          style={{ width: '100%', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '4px', color: 'var(--gold-glow)', fontStyle: 'italic', resize: 'vertical' }}
-                        />
+                        <>
+                          {miniToolbar(idx)}
+                          <textarea
+                            id={`block-ta-${idx}`}
+                            rows={2}
+                            value={block.text || ''}
+                            onChange={(e) => updateContentBlock(idx, 'text', e.target.value)}
+                            placeholder="Cytat lub sentencja lub motto..."
+                            style={{ width: '100%', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '0 0 4px 4px', color: 'var(--gold-glow)', fontStyle: 'italic', resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+                          />
+                        </>
                       )}
                     </div>
                   ))}
@@ -802,7 +858,7 @@ export const CustomPageEditorModal = ({ isOpen, onClose, editingDoc = null }) =>
                       return <h3 key={i} style={{ color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.25rem', margin: '0.8rem 0 0.2rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem' }}>{block.text}</h3>;
                     }
                     if (block.type === 'paragraph') {
-                      return <p key={i} style={{ color: '#d1d5db', fontSize: '0.94rem', lineHeight: 1.7, margin: 0 }}>{block.text}</p>;
+                      return <p key={i} style={{ color: '#d1d5db', fontSize: '0.94rem', lineHeight: 1.7, margin: 0 }}>{renderInline(block.text)}</p>;
                     }
                     if (block.type === 'callout') {
                       const colors = {
@@ -830,7 +886,7 @@ export const CustomPageEditorModal = ({ isOpen, onClose, editingDoc = null }) =>
                     if (block.type === 'quote') {
                       return (
                         <blockquote key={i} style={{ borderLeft: '3px solid var(--gold-ancient)', margin: 0, padding: '0.6rem 1.2rem', color: 'var(--gold-glow)', fontStyle: 'italic', background: 'rgba(0,0,0,0.3)' }}>
-                          {block.text}
+                          {renderInline(block.text)}
                         </blockquote>
                       );
                     }

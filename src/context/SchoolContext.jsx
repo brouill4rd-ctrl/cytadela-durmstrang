@@ -1165,8 +1165,20 @@ Dyrektor Cytadeli Durmstrang`
   const [selectedInspectorItem, setSelectedInspectorItem] = useState(null);
 
   // ==================== SKANDYNAWSKA LOTERIA ODYNA ====================
+  const DEFAULT_LOTTERY = {
+    id: 'lottery-round-1',
+    roundNumber: 1,
+    title: 'Wielkie Losowanie Przesilenia',
+    ticketPrice: 20,
+    jackpot: 2500,
+    bonusHousePoints: 100,
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    totalTicketsSold: 0,
+    runeCount: 6
+  };
+
   const [currentLottery, setCurrentLottery] = useState(() => {
-    return tryParse('durmstrang_current_lottery', SEED_LOTTERY_ROUNDS[0]);
+    return tryParse('durmstrang_current_lottery', SEED_LOTTERY_ROUNDS[0] || DEFAULT_LOTTERY);
   });
 
   const [userLotteryTickets, setUserLotteryTickets] = useState(() => {
@@ -1174,7 +1186,8 @@ Dyrektor Cytadeli Durmstrang`
   });
 
   const [lotteryHistory, setLotteryHistory] = useState(() => {
-    return tryParse('durmstrang_lottery_history', [SEED_LOTTERY_ROUNDS[1]]);
+    const parsed = tryParse('durmstrang_lottery_history', SEED_LOTTERY_ROUNDS.slice(1));
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
   });
 
   const [lotteryModalOpen, setLotteryModalOpen] = useState(false);
@@ -1220,6 +1233,14 @@ Dyrektor Cytadeli Durmstrang`
         .sort((a, b) => (b.points || 0) - (a.points || 0));
       if (studentRanking.length > 0) {
         setStudents(studentRanking);
+      }
+
+      // Build staff ranking from loaded users
+      const staffRankingData = loadedUsers
+        .filter(u => ['professor', 'teacher', 'admin', 'headmaster'].includes(u.role))
+        .sort((a, b) => (b.points || 0) - (a.points || 0));
+      if (staffRankingData.length > 0) {
+        setStaffRanking(staffRankingData);
       }
 
       // Load emails
@@ -1562,8 +1583,16 @@ Dyrektor Cytadeli Durmstrang`
   }, [events]);
 
   // Push UI Notification Banner
-  const showNotification = (title, message, type = 'info') => {
-    setNotification({ title, message, type, id: Date.now() });
+  const showNotification = (titleOrOptions, message, type = 'info') => {
+    const notificationData = titleOrOptions && typeof titleOrOptions === 'object'
+      ? {
+          title: titleOrOptions.title || '',
+          message: titleOrOptions.message || '',
+          type: titleOrOptions.type || 'info'
+        }
+      : { title: titleOrOptions, message, type };
+
+    setNotification({ ...notificationData, id: Date.now() });
     setTimeout(() => {
       setNotification(null);
     }, 4500);
@@ -1571,6 +1600,21 @@ Dyrektor Cytadeli Durmstrang`
 
   const addNotification = (message, type = 'info') => {
     showNotification('Twierdza Magii Durmstrang (TMD)', message, type);
+  };
+
+  // Apply an authoritative user snapshot returned by an atomic server action
+  // without sending a second PATCH that could duplicate or overwrite the action.
+  const applyServerUserSnapshot = (user) => {
+    if (!user?.id) return false;
+    setUsers(prev => {
+      const exists = prev.some(entry => entry.id === user.id);
+      return exists ? prev.map(entry => entry.id === user.id ? user : entry) : [user, ...prev];
+    });
+    if (user.id === currentUserId || user.id === currentUser?.id) {
+      if (user.role === 'student') setStudentProfile(user);
+      setBankAccount(prev => ({ ...prev, balance: user.currency ?? prev.balance }));
+    }
+    return true;
   };
 
   // Update current user fields (avatar, gender, name, surname, points, xp, currency, inventory, etc.)
@@ -1637,44 +1681,48 @@ Dyrektor Cytadeli Durmstrang`
       return false;
     }
 
-    const targetHouse = houseKey || currentUser?.house || 'ravnheim';
-    const targetStudentId = studentId || currentUser?.id || 'usr-valdemar';
-    const targetStudentName = currentUser?.fullName || currentUser?.username || 'Valdemar Krag-Hansen';
+    const isStaff = currentUser && currentUser.role !== 'student';
+    // Kadra zdobywa punkty wyłącznie w osobnym rankingu osobistym.
+    // Nawet jeśli stary profil lub dana gra przekaże Zakon, nie wolno go zasilać.
+    const targetHouse = isStaff ? null : (houseKey || currentUser?.house || null);
+    const targetStudentId = studentId || currentUser?.id || null;
+    const targetStudentName = currentUser?.fullName || currentUser?.username || 'Adept';
 
-    // 1. Update House Rankings standings
-    setHouseRankings(prev => {
-      const updatedStandings = (prev.standings || []).map(s => {
-        if (s.houseKey === targetHouse) {
-          const newLessonPts = (s.lessonPoints || 0) + numericPoints;
-          const newTotalPts = (s.basePoints || 0) + newLessonPts;
-          return { ...s, lessonPoints: newLessonPts, totalPoints: newTotalPts, txCount: (s.txCount || 0) + 1 };
-        }
-        return s;
+    // 1. Update House Rankings standings (tylko jeśli zakon istnieje)
+    if (targetHouse) {
+      setHouseRankings(prev => {
+        const updatedStandings = (prev.standings || []).map(s => {
+          if (s.houseKey === targetHouse) {
+            const newLessonPts = (s.lessonPoints || 0) + numericPoints;
+            const newTotalPts = (s.basePoints || 0) + newLessonPts;
+            return { ...s, lessonPoints: newLessonPts, totalPoints: newTotalPts, txCount: (s.txCount || 0) + 1 };
+          }
+          return s;
+        });
+        updatedStandings.sort((a, b) => b.totalPoints - a.totalPoints);
+        updatedStandings.forEach((s, idx) => { s.rank = idx + 1; });
+        return { ...prev, standings: updatedStandings };
       });
-      // Re-rank standings
-      updatedStandings.sort((a, b) => b.totalPoints - a.totalPoints);
-      updatedStandings.forEach((s, idx) => { s.rank = idx + 1; });
-      return { ...prev, standings: updatedStandings };
-    });
 
-    // 2. Update Houses state
-    setHouses(prev => {
-      const updated = { ...prev };
-      if (updated[targetHouse]) {
-        updated[targetHouse] = {
-          ...updated[targetHouse],
-          points: (updated[targetHouse].points || 0) + points
-        };
-      }
-      return updated;
-    });
+      // 2. Update Houses state
+      setHouses(prev => {
+        const updated = { ...prev };
+        if (updated[targetHouse]) {
+          updated[targetHouse] = {
+            ...updated[targetHouse],
+            points: (updated[targetHouse].points || 0) + numericPoints
+          };
+        }
+        return updated;
+      });
+    }
 
     // 3. Add transaction to point ledger
     const newTx = {
       id: `tx-act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       studentId: targetStudentId,
       studentName: targetStudentName,
-      house: targetHouse,
+      house: targetHouse || null,
       points: numericPoints,
       source: reason || 'Aktywność / Grywalizacja w Cytadeli',
       date: new Date().toISOString().slice(0, 10),
@@ -1705,21 +1753,31 @@ Dyrektor Cytadeli Durmstrang`
       });
     }
 
-    // 5. Update student ranking
-    setStudents(prev => {
-      const updated = prev.map(s =>
-        s.id === targetStudentId ? { ...s, points: normalizePointValue(s.points) + numericPoints } : s
-      );
-      updated.sort((a, b) => (b.points || 0) - (a.points || 0));
-      return updated;
-    });
+    // 5. Update personal ranking (adepci vs kadra osobno)
+    if (isStaff) {
+      setStaffRanking(prev => {
+        const updated = prev.map(s =>
+          s.id === targetStudentId ? { ...s, points: normalizePointValue(s.points) + numericPoints } : s
+        );
+        updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+        return updated;
+      });
+    } else {
+      setStudents(prev => {
+        const updated = prev.map(s =>
+          s.id === targetStudentId ? { ...s, points: normalizePointValue(s.points) + numericPoints } : s
+        );
+        updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+        return updated;
+      });
+    }
 
     // 6. Backend sync if available
-    if (backendAvailable) {
+    if (backendAvailable && targetStudentId) {
       api.awardPoints({
         studentId: targetStudentId,
         studentName: targetStudentName,
-        house: targetHouse,
+        house: targetHouse || undefined,
         points: numericPoints,
         reason: reason
       }).catch(() => {});
@@ -3697,8 +3755,8 @@ Dyrektor Cytadeli Durmstrang`
       showNotification('Wymagane Logowanie', 'Zaloguj się do Cytadeli, aby wziąć udział w Loterii Odyna.', 'warning');
       return false;
     }
-    if (!Array.isArray(chosenRunes) || chosenRunes.length !== 3) {
-      showNotification('Wybierz 3 Runy', 'Musisz wybrać dokładnie 3 runy z alfabetu Futharku.', 'warning');
+    if (!Array.isArray(chosenRunes) || chosenRunes.length !== 6) {
+      showNotification('Wybierz 6 Run', 'Musisz wybrać dokładnie 6 unikalnych run z alfabetu Futharku.', 'warning');
       return false;
     }
     const ticketPrice = currentLottery?.ticketPrice || 20;
@@ -3782,7 +3840,7 @@ Dyrektor Cytadeli Durmstrang`
     }
 
     // Local fallback
-    const winning = customWinningRunes || ['fehu', 'ansuz', 'algiz'];
+    const winning = customWinningRunes || ['fehu', 'ansuz', 'algiz', 'raidho', 'kenaz', 'gebo'];
     showNotification('Losowanie Zakończone!', `Wylosowano runy: ${winning.map(r => r.toUpperCase()).join(' • ')}!`, 'success');
     return { drawnRunes: winning };
   };
@@ -3809,6 +3867,7 @@ Dyrektor Cytadeli Durmstrang`
         logoutUser,
         switchUser,
         updateCurrentUser,
+        applyServerUserSnapshot,
         hasPermission,
         authModalOpen,
         setAuthModalOpen,

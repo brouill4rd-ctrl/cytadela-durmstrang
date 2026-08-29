@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import db, { dbUserToFrontend, dbEmailToFrontend } from '../db.js';
 import { EMAIL_TYPES, HOUSE_EMAIL_THEMES } from '../email/emailTemplates.js';
 import { deliverTransactionalEmail, queueTransactionalEmail } from '../email/transactionalEmailService.js';
+import { discordBot } from '../discordBot.js';
 
 const router = Router();
 
@@ -194,11 +195,33 @@ router.post('/register', async (req, res) => {
     throw error;
   }
 
-  const deliveryResult = await deliverTransactionalEmail({
-    database: db,
-    userId: newId,
-    emailType: EMAIL_TYPES.ACCOUNT_CREATED
-  });
+  const requestedSubjects = role === 'professor'
+    ? db.prepare('SELECT subject_name FROM professor_subject_applications WHERE professor_id = ? ORDER BY subject_name').all(newId).map(row => row.subject_name)
+    : [];
+
+  const [deliveryResult] = await Promise.all([
+    deliverTransactionalEmail({
+      database: db,
+      userId: newId,
+      emailType: EMAIL_TYPES.ACCOUNT_CREATED
+    }),
+    discordBot.announceRecruitmentApplication({
+      applicationId: appId,
+      submittedAt: now.toISOString(),
+      role,
+      fullName,
+      username: trimmedUsername,
+      email: userEmail,
+      age: data.age,
+      origin: userFields.origin,
+      house: userFields.house,
+      classYear: userFields.class_year,
+      departmentName: userFields.department_name,
+      requestedSubjects,
+      specialization: userFields.specialization,
+      office: userFields.office
+    })
+  ]);
 
   const createdUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(newId));
   const confirmEmailRow = db.prepare('SELECT * FROM emails WHERE delivery_id = ?').get(deliveryResult.delivery?.id);

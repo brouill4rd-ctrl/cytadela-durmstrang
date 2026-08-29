@@ -1985,7 +1985,6 @@ const SubstitutionModal = ({
     return profs.length > 0 ? profs : [
       { id: 'usr-morana', fullName: 'Prof. Morana Vane' },
       { id: 'usr-gunnar', fullName: 'Prof. Gunnar Vargson' },
-      { id: 'usr-astrid-vinter', fullName: 'Prof. Astrid Vinter' },
       { id: 'usr-valgerda', fullName: 'Arcymistrzyni Valgerda Storm' }
     ];
   }, [users]);

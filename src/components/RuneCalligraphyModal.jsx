@@ -349,7 +349,7 @@ export const RuneCalligraphyModal = ({ isOpen, onClose }) => {
     setSuccessAnimation(true);
     setTimeout(() => setSuccessAnimation(false), 2000);
 
-    const houseKey = currentUser?.house || currentUser?.house_id || 'ravnheim';
+    const houseKey = currentUser?.house || currentUser?.house_id || null;
     const accuracy = evalResult.accuracy || 75;
 
     // Base rewards
@@ -413,7 +413,7 @@ export const RuneCalligraphyModal = ({ isOpen, onClose }) => {
       } catch (_) {}
 
       newlyUnlocked.forEach(ach => {
-        const houseKey = currentUser?.house || currentUser?.house_id || 'ravnheim';
+        const houseKey = currentUser?.house || currentUser?.house_id || null;
         awardHousePoints(houseKey, ach.rewardPoints, `🏆 OSIĄGNIĘCIE: ${ach.title}`);
         addCurrency(ach.rewardCurrency, `Nagroda za osiągnięcie: ${ach.title}`);
 
@@ -481,7 +481,7 @@ export const RuneCalligraphyModal = ({ isOpen, onClose }) => {
     setTrialFinished(true);
     clearInterval(trialTimerRef.current);
 
-    const houseKey = currentUser?.house || currentUser?.house_id || 'ravnheim';
+    const houseKey = currentUser?.house || currentUser?.house_id || null;
     const bonusPoints = finalScore * 15;
     const bonusCurrency = finalScore * 20;
 
@@ -491,7 +491,7 @@ export const RuneCalligraphyModal = ({ isOpen, onClose }) => {
       addCurrency(bonusCurrency, 'Nagroda za Próbę Szybkości Kaligrafii');
       showNotification(
         'Próba Runiczna Ukończona! ⏱️',
-        `Wyryłeś ${finalScore} run w limicie czasu! Zdobywasz +${bonusPoints} pkt Domu i +${bonusCurrency} Skirnirów!`,
+        `Wyryłeś ${finalScore} run w limicie czasu! Zdobywasz +${bonusPoints} ${currentUser?.role === 'student' ? 'pkt Zakonu' : 'pkt osobistych'} i +${bonusCurrency} Skirnirów!`,
         'success'
       );
 
@@ -1334,7 +1334,7 @@ export const RuneCalligraphyModal = ({ isOpen, onClose }) => {
                     Twój wynik: <strong style={{ color: 'var(--gold-glow)' }}>{trialScore}</strong> poprawnie wyrytych run
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#4ade80' }}>
-                    Przyznano: +{trialScore * 15} Punktów dla Zakonu oraz +{trialScore * 20} Skirnirów!
+                    Przyznano: +{trialScore * 15} {currentUser?.role === 'student' ? 'Punktów dla Zakonu' : 'punktów osobistych'} oraz +{trialScore * 20} Skirnirów!
                   </div>
 
                   <button

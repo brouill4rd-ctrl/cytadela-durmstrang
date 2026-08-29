@@ -204,8 +204,11 @@ export const GrimoireBook = ({ isOpen, onClose }) => {
       playWandSwoosh();
       playRuneChime();
       setCastSpellResult(recognized);
-      awardHousePoints(currentUser?.house || currentUser?.house_id || 'ravnheim', 5, `Rzucenie czaru ${recognized.name} w Grimoire`);
-      if (addNotification) addNotification(`✨ Pomyślnie rzucono zaklęcie: ${recognized.name} (+5 pkt dla Zakonu)!`);
+      const isStaff = currentUser?.role && currentUser.role !== 'student';
+      awardHousePoints(currentUser?.house || currentUser?.house_id || null, 5, `Rzucenie czaru ${recognized.name} w Grimoire`);
+      if (addNotification) {
+        addNotification(`✨ Pomyślnie rzucono zaklęcie: ${recognized.name} (+5 pkt ${isStaff ? 'osobistych' : 'dla Zakonu'})!`);
+      }
     }
   };
 

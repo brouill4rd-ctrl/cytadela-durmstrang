@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { CategoryBanner } from './CategoryBanner';
@@ -7,7 +7,10 @@ import api from '../api';
 import {
   X, Scroll, Eye, Edit3, Pin, Calendar,
   Clock, Image as ImageIcon,
-  Type, Bold, Italic, List, Minus, Link, Quote, Hash, User, Palette
+  Type, Bold, Italic, Underline, Strikethrough, List, ListOrdered,
+  Minus, Link, Quote, Hash, User, Palette, Highlighter,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Code, AlertTriangle, Info, ChevronDown
 } from 'lucide-react';
 
 const TITLE_TEMPLATES = [
@@ -48,6 +51,7 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
     currentRole,
     currentUser,
     houses,
+    news,
     addNewsArticle,
     updateNewsArticle,
     showNotification,
@@ -76,8 +80,42 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
   const [content, setContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState(['Edykt']);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const tagInputRef = useRef(null);
+  const tagDropdownRef = useRef(null);
+
+  const allExistingTags = useMemo(() => {
+    const PRESET_TAGS = [
+      'Edykt', 'Ogłoszenie', 'Turniej', 'Hólmgang', 'Oceny', 'Katedra',
+      'Egzaminy', 'Astrologia', 'Alchemia', 'Runy', 'Dyrekcja', 'Prefekci',
+      'Liga', 'Wyniki', 'Rekrutacja', 'Ceremonia', 'Biblioteka', 'Ważne',
+      'Pilne', 'Przypomnienie', 'Regulamin', 'Nagrody', 'Kary', 'Wakacje',
+      'Praktyki', 'Pojedynek', 'Rywalizacja', 'Zebranie', 'Kolegium'
+    ];
+    const fromArticles = (news || []).flatMap(a => a.tags || []);
+    return [...new Set([...PRESET_TAGS, ...fromArticles])].sort();
+  }, [news]);
+
+  const tagSuggestions = useMemo(() => {
+    if (!tagInput.trim()) return allExistingTags.filter(t => !tags.includes(t)).slice(0, 12);
+    const q = tagInput.trim().toLowerCase();
+    return allExistingTags.filter(t => t.toLowerCase().includes(q) && !tags.includes(t)).slice(0, 10);
+  }, [tagInput, allExistingTags, tags]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target) && !tagInputRef.current?.contains(e.target)) {
+        setShowTagSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [showHeadingDropdown, setShowHeadingDropdown] = useState(false);
+  const [showRuneRow, setShowRuneRow] = useState(false);
   const [showCatCreator, setShowCatCreator] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatScript, setNewCatScript] = useState('');
@@ -208,20 +246,47 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
     setShowColorPicker(false);
   };
 
-  const TOOLBAR = [
-    { icon: <Bold size={13} />, title: 'Pogrubienie', action: () => insertAtCursor('**', '**') },
-    { icon: <Italic size={13} />, title: 'Kursywa', action: () => insertAtCursor('*', '*') },
-    { icon: <Hash size={13} />, title: 'Nagłówek H2', action: () => insertLine('## Nagłówek Sekcji') },
-    { icon: <span style={{ fontSize: '11px', fontWeight: 700 }}>H3</span>, title: 'Nagłówek H3', action: () => insertLine('### Podsekcja') },
-    { icon: <Quote size={13} />, title: 'Cytat / Wtrącenie', action: () => insertLine('> Cytat lub ważna uwaga') },
-    { icon: <List size={13} />, title: 'Lista punktowana', action: () => insertLine('* Punkt 1\n* Punkt 2\n* Punkt 3') },
-    { icon: <span style={{ fontSize: '11px', fontWeight: 700 }}>1.</span>, title: 'Lista numerowana', action: () => insertLine('1. Pierwszy\n2. Drugi\n3. Trzeci') },
-    { icon: <Minus size={13} />, title: 'Linia rozdzielająca', action: () => insertLine('\n---\n') },
-    { icon: <Link size={13} />, title: 'Odnośnik', action: () => insertAtCursor('[', '](https://)') },
-    { icon: <ImageIcon size={13} />, title: 'Obraz z URL', action: () => insertLine('![opis](https://url-do-obrazu.jpg)') },
-    { icon: <span style={{ fontSize: '11px', fontWeight: 700 }}>⚠</span>, title: 'Blok ostrzeżenia', action: () => insertLine(':::warning\nTreść ostrzeżenia\n:::') },
-    { icon: <span style={{ fontSize: '11px', fontWeight: 700 }}>ℹ</span>, title: 'Blok informacyjny', action: () => insertLine(':::info\nTreść informacji\n:::') }
+  const HIGHLIGHT_PRESETS = [
+    { label: 'Żółty', value: 'rgba(255,230,0,0.4)' },
+    { label: 'Zielony', value: 'rgba(0,200,100,0.3)' },
+    { label: 'Różowy', value: 'rgba(255,80,130,0.35)' },
+    { label: 'Niebieski', value: 'rgba(80,140,255,0.35)' },
+    { label: 'Fioletowy', value: 'rgba(180,80,255,0.35)' },
+    { label: 'Pomarańczowy', value: 'rgba(255,150,0,0.4)' },
   ];
+
+  const insertHighlight = (color) => {
+    insertAtCursor(`{mark:${color}}`, '{/mark}');
+    setShowHighlightPicker(false);
+  };
+
+  const insertAlignment = (type) => {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+    const lineEndRaw = content.indexOf('\n', start);
+    const lineEnd = lineEndRaw === -1 ? content.length : lineEndRaw;
+    let lineText = content.slice(lineStart, lineEnd);
+    ['{c}', '{r}', '{j}'].forEach(p => { if (lineText.startsWith(p)) lineText = lineText.slice(p.length); });
+    const newLine = type === 'l' ? lineText : `{${type}}${lineText}`;
+    setContent(content.slice(0, lineStart) + newLine + content.slice(lineEnd));
+    setTimeout(() => textarea.focus(), 0);
+  };
+
+  const handleEditorKeyDown = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'b') { e.preventDefault(); insertAtCursor('**', '**'); }
+      else if (e.key === 'i') { e.preventDefault(); insertAtCursor('*', '*'); }
+      else if (e.key === 'u') { e.preventDefault(); insertAtCursor('__', '__'); }
+    }
+  };
+
+  const closeAllToolbarDropdowns = () => {
+    setShowColorPicker(false);
+    setShowHighlightPicker(false);
+    setShowHeadingDropdown(false);
+  };
 
   const handleAddTag = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
@@ -230,8 +295,20 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
       if (trimmed && !tags.includes(trimmed)) {
         setTags(prev => [...prev, trimmed]);
         setTagInput('');
+        setShowTagSuggestions(false);
       }
+    } else if (e.key === 'Escape') {
+      setShowTagSuggestions(false);
     }
+  };
+
+  const handlePickSuggestion = (suggestion) => {
+    if (!tags.includes(suggestion)) {
+      setTags(prev => [...prev, suggestion]);
+    }
+    setTagInput('');
+    setShowTagSuggestions(false);
+    tagInputRef.current?.focus();
   };
 
   const handleRemoveTag = (tagToRemove) => setTags(prev => prev.filter(t => t !== tagToRemove));
@@ -303,12 +380,23 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
             <strong>ℹ Info:</strong> {blockLines.join(' ')}
           </div>
         );
+      } else if (line.startsWith('```')) {
+        const codeLines = [];
+        i++;
+        while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
+        elements.push(
+          <pre key={i} style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0.75rem 1rem', marginBottom: '1rem', overflowX: 'auto', fontFamily: 'monospace', fontSize: '0.88rem', color: '#a3e635', whiteSpace: 'pre-wrap' }}>
+            <code>{codeLines.join('\n')}</code>
+          </pre>
+        );
+      } else if (line.startsWith('# ') && !line.startsWith('## ')) {
+        elements.push(<h1 key={i} style={{ color: '#ffffff', fontFamily: 'var(--font-heading)', fontSize: '1.65rem', marginTop: '1.6rem', marginBottom: '0.6rem', borderBottom: '1px solid rgba(197,159,78,0.3)', paddingBottom: '0.4rem' }}>{renderInline(line.slice(2))}</h1>);
       } else if (line.startsWith('## ')) {
-        elements.push(<h2 key={i} style={{ color: 'var(--gold-glow)', fontSize: '1.35rem', marginTop: '1.4rem', marginBottom: '0.5rem' }}>{line.slice(3)}</h2>);
+        elements.push(<h2 key={i} style={{ color: 'var(--gold-glow)', fontSize: '1.35rem', marginTop: '1.4rem', marginBottom: '0.5rem' }}>{renderInline(line.slice(3))}</h2>);
       } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={i} style={{ color: 'var(--gold-ancient)', fontSize: '1.1rem', marginTop: '1.2rem', marginBottom: '0.4rem' }}>{line.slice(4)}</h3>);
+        elements.push(<h3 key={i} style={{ color: 'var(--gold-ancient)', fontSize: '1.1rem', marginTop: '1.2rem', marginBottom: '0.4rem' }}>{renderInline(line.slice(4))}</h3>);
       } else if (line.startsWith('> ')) {
-        elements.push(<blockquote key={i} style={{ borderLeft: '3px solid var(--gold-ancient)', padding: '0.5rem 1rem', margin: '0.8rem 0', fontStyle: 'italic', color: '#d1d9e6', background: 'rgba(197,159,78,0.05)' }}>{line.slice(2)}</blockquote>);
+        elements.push(<blockquote key={i} style={{ borderLeft: '3px solid var(--gold-ancient)', padding: '0.5rem 1rem', margin: '0.8rem 0', fontStyle: 'italic', color: '#d1d9e6', background: 'rgba(197,159,78,0.05)' }}>{renderInline(line.slice(2))}</blockquote>);
       } else if (line.trim() === '---') {
         elements.push(<hr key={i} style={{ border: 0, height: '1px', background: 'rgba(164,200,225,0.2)', margin: '1.2rem 0' }} />);
       } else if (line.startsWith('* ') || line.startsWith('- ')) {
@@ -333,7 +421,12 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
           elements.push(<img key={i} src={match[2]} alt={match[1]} style={{ maxWidth: '100%', borderRadius: '4px', marginBottom: '1rem', border: '1px solid rgba(164,200,225,0.2)' }} />);
         }
       } else if (line.trim() !== '') {
-        elements.push(<p key={i} style={{ marginBottom: '1rem', lineHeight: 1.8 }}>{renderInline(line)}</p>);
+        let alignStyle = {};
+        let lineContent = line;
+        if (line.startsWith('{c}')) { alignStyle = { textAlign: 'center' }; lineContent = line.slice(3); }
+        else if (line.startsWith('{r}')) { alignStyle = { textAlign: 'right' }; lineContent = line.slice(3); }
+        else if (line.startsWith('{j}')) { alignStyle = { textAlign: 'justify', hyphens: 'auto' }; lineContent = line.slice(3); }
+        elements.push(<p key={i} style={{ marginBottom: '1rem', lineHeight: 1.8, ...alignStyle }}>{renderInline(lineContent)}</p>);
       }
       i++;
     }
@@ -342,14 +435,18 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
 
   const renderInline = (text) => {
     const parts = [];
-    const regex = /(\{color:([^}]+)\}(.+?)\{\/color\}|\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
+    const regex = /(\{color:([^}]+)\}(.*?)\{\/color\}|\{mark:([^}]+)\}(.*?)\{\/mark\}|__(.+?)__|\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
     let last = 0, m;
     while ((m = regex.exec(text)) !== null) {
       if (m.index > last) parts.push(text.slice(last, m.index));
-      if (m[2]) parts.push(<span key={m.index} style={{ color: m[2] }}>{m[3]}</span>);
-      else if (m[4]) parts.push(<strong key={m.index}>{m[4]}</strong>);
-      else if (m[5]) parts.push(<em key={m.index}>{m[5]}</em>);
-      else if (m[6]) parts.push(<a key={m.index} href={m[7]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[6]}</a>);
+      if (m[2])       parts.push(<span key={m.index} style={{ color: m[2] }}>{m[3]}</span>);
+      else if (m[4])  parts.push(<mark key={m.index} style={{ background: m[4], padding: '0 2px', borderRadius: '2px', color: 'inherit' }}>{m[5]}</mark>);
+      else if (m[6])  parts.push(<u key={m.index}>{m[6]}</u>);
+      else if (m[7])  parts.push(<strong key={m.index}>{m[7]}</strong>);
+      else if (m[8])  parts.push(<em key={m.index}>{m[8]}</em>);
+      else if (m[9])  parts.push(<s key={m.index}>{m[9]}</s>);
+      else if (m[10]) parts.push(<code key={m.index} style={{ background: 'rgba(255,255,255,0.1)', padding: '0 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.88em' }}>{m[10]}</code>);
+      else if (m[11]) parts.push(<a key={m.index} href={m[12]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[11]}</a>);
       last = m.index + m[0].length;
     }
     if (last < text.length) parts.push(text.slice(last));
@@ -528,11 +625,13 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                     </label>
                     <select value={selectedAuthorId} onChange={(e) => handleAuthorSelect(e.target.value)} className="gothic-select">
                       <option value="">— Inna osoba / Wpisz ręcznie —</option>
-                      {authors.map(a => (
-                        <option key={a.id || a.fullName} value={a.id}>
-                          {a.fullName}{a.departmentName ? ` (${a.departmentName})` : ''}
-                        </option>
-                      ))}
+                      {authors
+                        .filter(a => ['admin', 'headmaster'].includes(currentRole) || a.role !== 'admin')
+                        .map(a => (
+                          <option key={a.id || a.fullName} value={a.id}>
+                            {a.fullName}{a.departmentName ? ` (${a.departmentName})` : ''}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div>
@@ -584,31 +683,144 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                   </label>
                 </div>
 
-                {/* Toolbar formatowania */}
-                <div style={{ background: 'rgba(10,14,22,0.9)', padding: '0.5rem 0.8rem', border: '1px solid rgba(164,200,225,0.2)', borderBottom: 'none', borderRadius: '4px 4px 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-                  {TOOLBAR.map((tool, idx) => (
-                    <button key={idx} type="button" onClick={tool.action} title={tool.title} className="btn-editor-tool">
-                      {tool.icon}
+                {/* Toolbar Google Docs-style */}
+                <div style={{ background: 'rgba(8,12,20,0.98)', border: '1px solid rgba(164,200,225,0.18)', borderBottom: 'none', borderRadius: '6px 6px 0 0', overflow: 'hidden' }}>
+                  {/* Główny wiersz toolbara */}
+                  <div style={{ padding: '0.3rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.1rem', flexWrap: 'wrap', rowGap: '0.3rem' }}>
+
+                    {/* Styl akapitu */}
+                    <div style={{ position: 'relative' }}>
+                      <button type="button" onClick={() => { setShowHeadingDropdown(v => !v); setShowColorPicker(false); setShowHighlightPicker(false); }} style={{ padding: '0.25rem 0.55rem', background: showHeadingDropdown ? 'rgba(197,159,78,0.15)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#d1d9e6', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', height: '28px', whiteSpace: 'nowrap' }}>
+                        Styl akapitu <ChevronDown size={11} />
+                      </button>
+                      {showHeadingDropdown && (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, zIndex: 40, background: '#0d1320', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', overflow: 'hidden', minWidth: '185px', boxShadow: '0 8px 24px rgba(0,0,0,0.9)' }}>
+                          {[
+                            { label: 'Normalny tekst', action: null, s: { fontSize: '0.88rem' } },
+                            { label: 'Nagłówek 1', action: () => insertLine('# Nagłówek Główny'), s: { fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-heading)' } },
+                            { label: 'Nagłówek 2', action: () => insertLine('## Nagłówek Sekcji'), s: { fontSize: '1rem', fontWeight: 700 } },
+                            { label: 'Nagłówek 3', action: () => insertLine('### Podsekcja'), s: { fontSize: '0.9rem', fontWeight: 600, color: 'var(--gold-ancient)' } },
+                          ].map((opt, hi) => (
+                            <button key={hi} type="button" onClick={() => { opt.action?.(); setShowHeadingDropdown(false); }} style={{ display: 'block', width: '100%', padding: '0.55rem 0.9rem', background: 'transparent', border: 'none', color: '#e2e8f0', cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s', ...opt.s }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Styl tekstu */}
+                    {[
+                      { icon: <Bold size={14} />, title: 'Pogrubienie (Ctrl+B)', action: () => insertAtCursor('**', '**') },
+                      { icon: <Italic size={14} />, title: 'Kursywa (Ctrl+I)', action: () => insertAtCursor('*', '*') },
+                      { icon: <Underline size={14} />, title: 'Podkreślenie (Ctrl+U)', action: () => insertAtCursor('__', '__') },
+                      { icon: <Strikethrough size={14} />, title: 'Przekreślenie', action: () => insertAtCursor('~~', '~~') },
+                    ].map((btn, bi) => (
+                      <button key={bi} type="button" onClick={btn.action} title={btn.title} className="btn-editor-tool">{btn.icon}</button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Kolor tekstu */}
+                    <div style={{ position: 'relative' }}>
+                      <button type="button" title="Kolor tekstu" onClick={() => { setShowColorPicker(v => !v); setShowHighlightPicker(false); setShowHeadingDropdown(false); }} className="btn-editor-tool" style={{ flexDirection: 'column', gap: '1px', height: '28px', color: showColorPicker ? 'var(--gold-ancient)' : undefined }}>
+                        <Type size={12} style={{ marginTop: '1px' }} />
+                        <div style={{ width: '14px', height: '3px', background: 'var(--gold-ancient)', borderRadius: '1px' }} />
+                      </button>
+                      {showColorPicker && (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, zIndex: 40, background: 'rgba(10,14,22,0.97)', border: '1px solid rgba(164,200,225,0.25)', borderRadius: '6px', padding: '0.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.8)', width: '182px' }}>
+                          <div style={{ fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Kolor tekstu</div>
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                            {COLOR_PRESETS.map(c => (
+                              <button key={c.value} type="button" title={c.label} onClick={() => insertColor(c.value)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '2px solid rgba(255,255,255,0.15)', background: c.value, cursor: 'pointer', transition: 'transform 0.15s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Podświetlenie */}
+                    <div style={{ position: 'relative' }}>
+                      <button type="button" title="Podświetlenie tekstu" onClick={() => { setShowHighlightPicker(v => !v); setShowColorPicker(false); setShowHeadingDropdown(false); }} className="btn-editor-tool" style={{ flexDirection: 'column', gap: '1px', height: '28px', color: showHighlightPicker ? '#fde047' : undefined }}>
+                        <Highlighter size={12} style={{ marginTop: '1px' }} />
+                        <div style={{ width: '14px', height: '3px', background: '#fde047', borderRadius: '1px' }} />
+                      </button>
+                      {showHighlightPicker && (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 3px)', left: 0, zIndex: 40, background: 'rgba(10,14,22,0.97)', border: '1px solid rgba(164,200,225,0.25)', borderRadius: '6px', padding: '0.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.8)', width: '182px' }}>
+                          <div style={{ fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Podświetlenie</div>
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                            {HIGHLIGHT_PRESETS.map(c => (
+                              <button key={c.value} type="button" title={c.label} onClick={() => insertHighlight(c.value)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '2px solid rgba(255,255,255,0.15)', background: c.value, cursor: 'pointer', transition: 'transform 0.15s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Wyrównanie */}
+                    {[
+                      { icon: <AlignLeft size={14} />, title: 'Do lewej', action: () => insertAlignment('l') },
+                      { icon: <AlignCenter size={14} />, title: 'Wyśrodkuj', action: () => insertAlignment('c') },
+                      { icon: <AlignRight size={14} />, title: 'Do prawej', action: () => insertAlignment('r') },
+                      { icon: <AlignJustify size={14} />, title: 'Wyjustowanie', action: () => insertAlignment('j') },
+                    ].map((btn, bi) => (
+                      <button key={bi} type="button" onClick={btn.action} title={btn.title} className="btn-editor-tool">{btn.icon}</button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Listy */}
+                    {[
+                      { icon: <List size={14} />, title: 'Lista punktowana', action: () => insertLine('* Punkt 1\n* Punkt 2\n* Punkt 3') },
+                      { icon: <ListOrdered size={14} />, title: 'Lista numerowana', action: () => insertLine('1. Pierwszy\n2. Drugi\n3. Trzeci') },
+                    ].map((btn, bi) => (
+                      <button key={bi} type="button" onClick={btn.action} title={btn.title} className="btn-editor-tool">{btn.icon}</button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Bloki specjalne */}
+                    {[
+                      { icon: <Quote size={14} />, title: 'Cytat', action: () => insertLine('> Cytat lub ważna uwaga') },
+                      { icon: <AlertTriangle size={13} />, title: 'Blok ostrzeżenia', action: () => insertLine(':::warning\nTreść ostrzeżenia\n:::') },
+                      { icon: <Info size={13} />, title: 'Blok informacyjny', action: () => insertLine(':::info\nTreść informacji\n:::') },
+                      { icon: <Code size={13} />, title: 'Blok kodu', action: () => insertLine('```\nKod tutaj\n```') },
+                    ].map((btn, bi) => (
+                      <button key={bi} type="button" onClick={btn.action} title={btn.title} className="btn-editor-tool">{btn.icon}</button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Wstawianie */}
+                    {[
+                      { icon: <Link size={14} />, title: 'Odnośnik', action: () => insertAtCursor('[', '](https://)') },
+                      { icon: <ImageIcon size={14} />, title: 'Obraz z URL', action: () => insertLine('![opis](https://url-do-obrazu.jpg)') },
+                      { icon: <Minus size={14} />, title: 'Linia rozdzielająca', action: () => insertLine('\n---\n') },
+                    ].map((btn, bi) => (
+                      <button key={bi} type="button" onClick={btn.action} title={btn.title} className="btn-editor-tool">{btn.icon}</button>
+                    ))}
+
+                    <div style={{ width: '1px', height: '22px', background: 'rgba(255,255,255,0.1)', margin: '0 0.3rem' }} />
+
+                    {/* Przełącznik run */}
+                    <button type="button" onClick={() => setShowRuneRow(v => !v)} title="Glify Runiczne Elder Futhark" style={{ padding: '0.25rem 0.5rem', background: showRuneRow ? 'rgba(197,159,78,0.2)' : 'rgba(255,255,255,0.04)', border: showRuneRow ? '1px solid rgba(197,159,78,0.4)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', color: showRuneRow ? 'var(--gold-glow)' : '#9ca3af', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', height: '28px' }}>
+                      ᚠ Runy
                     </button>
-                  ))}
-                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.25rem' }} />
-                  <div style={{ position: 'relative' }}>
-                    <button type="button" onClick={() => setShowColorPicker(v => !v)} title="Kolor tekstu" className="btn-editor-tool" style={{ color: showColorPicker ? 'var(--gold-ancient)' : undefined }}>
-                      <Palette size={13} />
-                    </button>
-                    {showColorPicker && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 20, background: 'rgba(10,14,22,0.97)', border: '1px solid rgba(164,200,225,0.25)', borderRadius: '6px', padding: '0.5rem', display: 'flex', gap: '0.35rem', flexWrap: 'wrap', width: '170px', marginTop: '0.3rem', boxShadow: '0 4px 16px rgba(0,0,0,0.7)' }}>
-                        {COLOR_PRESETS.map(c => (
-                          <button key={c.value} type="button" title={c.label} onClick={() => insertColor(c.value)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '2px solid rgba(255,255,255,0.15)', background: c.value, cursor: 'pointer', transition: 'transform 0.15s' }} onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.target.style.transform = 'scale(1)'} />
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.25rem' }} />
-                  <span style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', marginRight: '0.3rem' }}>Runy:</span>
-                  {RUNE_GLYPHS.map(rune => (
-                    <button key={rune} type="button" onClick={() => { playRuneChime(); insertAtCursor(rune); }} className="rune-glyph-btn" title={`Wstaw runę ${rune}`}>{rune}</button>
-                  ))}
+
+                  {/* Wiersz run (zwijany) */}
+                  {showRuneRow && (
+                    <div style={{ padding: '0.3rem 0.6rem', display: 'flex', flexWrap: 'wrap', gap: '0.15rem', background: 'rgba(197,159,78,0.04)', borderTop: '1px solid rgba(197,159,78,0.15)' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--gold-ancient)', alignSelf: 'center', marginRight: '0.25rem', whiteSpace: 'nowrap' }}>Elder Fuþark:</span>
+                      {RUNE_GLYPHS.map(rune => (
+                        <button key={rune} type="button" onClick={() => { playRuneChime(); insertAtCursor(rune); }} className="rune-glyph-btn" title={`Wstaw runę ${rune}`}>{rune}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <textarea
@@ -616,14 +828,15 @@ export const NewsEditorModal = ({ isOpen, onClose, articleToEdit = null }) => {
                   rows={10}
                   placeholder={`Napisz szczegółowy traktat...
 
-Obsługiwane formatowanie:
-**pogrubienie** | *kursywa* | ## Nagłówek | ### Podnagłówek
-> Cytat | * Lista | 1. Numerowanie | --- Linia
-[odnośnik](https://...) | ![obraz](https://...)
-:::warning Treść ostrzeżenia ::: | :::info Treść informacji :::
-{color:#c59f4e}kolorowy tekst{/color}`}
+Formatowanie (skróty: Ctrl+B, Ctrl+I, Ctrl+U):
+**pogrubienie** | *kursywa* | __podkreślenie__ | ~~przekreślenie~~
+# H1 | ## H2 | ### H3 | > Cytat | * Lista | 1. Numerowanie
+{c}wyśrodkowany | {r}do prawej | {j}wyjustowany
+{color:#c59f4e}kolor tekstu{/color} | {mark:rgba(255,220,0,0.4)}podświetlenie{/mark}
+\`kod inline\` | \`\`\` blok kodu \`\`\` | --- linia | [link](url) | ![obraz](url)`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={handleEditorKeyDown}
                   className="gothic-textarea"
                   style={{ borderRadius: '0 0 4px 4px', fontFamily: 'monospace', fontSize: '0.88rem' }}
                 />
@@ -632,9 +845,46 @@ Obsługiwane formatowanie:
               {/* 9. Tagi */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem' }}>Etykiety & Tagi</label>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <input type="text" placeholder="Wpisz tag i naciśnij Enter..." value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleAddTag} className="gothic-input" style={{ flex: 1, padding: '0.45rem 0.8rem' }} />
-                  <button type="button" onClick={handleAddTag} className="btn-durmstrang-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}>+ Dodaj Tag</button>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      ref={tagInputRef}
+                      type="text"
+                      placeholder="Wpisz tag i naciśnij Enter..."
+                      value={tagInput}
+                      onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
+                      onKeyDown={handleAddTag}
+                      onFocus={() => setShowTagSuggestions(true)}
+                      className="gothic-input"
+                      style={{ flex: 1, padding: '0.45rem 0.8rem' }}
+                      autoComplete="off"
+                    />
+                    <button type="button" onClick={handleAddTag} className="btn-durmstrang-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}>+ Dodaj Tag</button>
+                  </div>
+                  {showTagSuggestions && tagSuggestions.length > 0 && (
+                    <div
+                      ref={tagDropdownRef}
+                      style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'rgba(10,14,22,0.98)', border: '1px solid rgba(164,200,225,0.3)', borderRadius: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.8)', overflow: 'hidden', marginTop: '2px' }}
+                    >
+                      <div style={{ padding: '0.35rem 0.6rem', fontSize: '0.65rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {tagInput.trim() ? 'Pasujące tagi' : 'Popularne tagi'}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', padding: '0.55rem 0.65rem' }}>
+                        {tagSuggestions.map(suggestion => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handlePickSuggestion(suggestion); }}
+                            style={{ background: 'rgba(164,200,225,0.08)', border: '1px solid rgba(164,200,225,0.2)', color: 'var(--ice-frost)', padding: '0.2rem 0.55rem', borderRadius: '10px', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.15s' }}
+                            onMouseEnter={(e) => { e.target.style.background = 'rgba(164,200,225,0.2)'; e.target.style.borderColor = 'var(--ice-frost)'; e.target.style.color = '#fff'; }}
+                            onMouseLeave={(e) => { e.target.style.background = 'rgba(164,200,225,0.08)'; e.target.style.borderColor = 'rgba(164,200,225,0.2)'; e.target.style.color = 'var(--ice-frost)'; }}
+                          >
+                            #{suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                   {tags.map(t => (

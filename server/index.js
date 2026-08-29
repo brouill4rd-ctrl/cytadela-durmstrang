@@ -39,15 +39,28 @@ import emailPreviewRoutes from './routes/emailPreview.js';
 import housesRoutes from './routes/houses.js';
 import locationsRoutes from './routes/locations.js';
 import ceremonyRoutes from './routes/ceremony.js';
+import oracleRoutes from './routes/oracle.js';
+import shootingRangeRoutes from './routes/shootingRange.js';
+import dungeonEscapeRoutes from './routes/dungeonEscape.js';
+import hnefataflRoutes from './routes/hnefatafl.js';
+import runicDuelsRoutes from './routes/runicDuels.js';
+import fishingRoutes from './routes/fishing.js';
+import bestiaryRoutes from './routes/bestiary.js';
 import { discordBot } from './discordBot.js';
 import { initPointsService, recalculateAllUserPoints, backfillSchoolYear } from './services/pointsService.js';
 import { initSkirnirService, recalculateAllBalances } from './services/skirnirService.js';
+import { initDungeonEscapeService } from './services/dungeonEscapeService.js';
+import { initRunicDuelService } from './services/runicDuelService.js';
+import { initBestiaryService } from './services/bestiaryService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Initialize central ledger services (runs migrations)
 initPointsService(db);
 initSkirnirService(db);
+initDungeonEscapeService(db);
+initRunicDuelService(db);
+initBestiaryService(db);
 
 // Sync caches with ledger (source of truth)
 backfillSchoolYear();
@@ -120,6 +133,13 @@ app.use('/api/email-preview', emailPreviewRoutes);
 app.use('/api/houses', housesRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/ceremony', ceremonyRoutes);
+app.use('/api/oracle', oracleRoutes);
+app.use('/api/shooting-range', shootingRangeRoutes);
+app.use('/api/dungeon-escape', dungeonEscapeRoutes);
+app.use('/api/hnefatafl', hnefataflRoutes);
+app.use('/api/runic-duels', runicDuelsRoutes);
+app.use('/api/fishing', fishingRoutes);
+app.use('/api/bestiary', bestiaryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

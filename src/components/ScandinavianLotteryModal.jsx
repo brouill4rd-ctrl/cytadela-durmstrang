@@ -66,7 +66,7 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
     if (selectedRunes.includes(runeId)) {
       setSelectedRunes(selectedRunes.filter(r => r !== runeId));
     } else {
-      if (selectedRunes.length < 3) {
+      if (selectedRunes.length < 6) {
         setSelectedRunes([...selectedRunes, runeId]);
       }
     }
@@ -75,11 +75,11 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
   const handleQuickPick = () => {
     playWandSwoosh();
     const shuffled = [...(elderFutharkRunes || [])].sort(() => 0.5 - Math.random());
-    setSelectedRunes(shuffled.slice(0, 3).map(r => r.id));
+    setSelectedRunes(shuffled.slice(0, 6).map(r => r.id));
   };
 
   const handleBuyTicket = async () => {
-    if (selectedRunes.length !== 3) return;
+    if (selectedRunes.length !== 6) return;
     playCoinSound();
     const success = await buyLotteryTicket(selectedRunes);
     if (success) {
@@ -131,7 +131,7 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
               {currentLottery?.title || 'Wielkie Losowanie Przesilenia'}
             </h1>
             <p style={{ color: '#cbd5e1', maxWidth: '650px', fontSize: '0.96rem', lineHeight: 1.6 }}>
-              Wybierz 3 święte runy ze Starszego Futharku. Bot Cytadeli przeprowadza oficjalne losowanie z nadejściem wyznaczonego terminu. Trafienie wszystkich 3 run rozbija Główny Skarbiec Odyna!
+              Wybierz 6 unikalnych run ze Starszego Futharku. Bot Cytadeli przeprowadza oficjalne losowanie z nadejściem wyznaczonego terminu. Trafienie wszystkich 6 run rozbija Główny Skarbiec Odyna!
             </p>
           </div>
 
@@ -264,10 +264,10 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
           >
             <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                Twój Wybór na Losie (Wybierz 3 Runy):
+                Twój Wybór na Losie (Wybierz 6 Run):
               </div>
-              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.6rem' }}>
-                {[0, 1, 2].map(index => {
+              <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.6rem', flexWrap: 'wrap' }}>
+                {[0, 1, 2, 3, 4, 5].map(index => {
                   const runeId = selectedRunes[index];
                   const runeObj = runeId ? (elderFutharkRunes || []).find(r => r.id === runeId) : null;
 
@@ -275,8 +275,8 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
                     <div
                       key={index}
                       style={{
-                        width: '56px',
-                        height: '64px',
+                        width: '50px',
+                        height: '58px',
                         borderRadius: '8px',
                         background: runeObj ? 'linear-gradient(135deg, rgba(197, 159, 78, 0.25) 0%, rgba(10, 14, 20, 0.95) 100%)' : 'rgba(255,255,255,0.04)',
                         border: runeObj ? '2px solid var(--gold-ancient)' : '2px dashed rgba(255,255,255,0.15)',
@@ -289,8 +289,8 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
                     >
                       {runeObj ? (
                         <>
-                          <span style={{ fontSize: '1.8rem', color: '#ffe8aa', fontFamily: 'serif', lineHeight: 1 }}>{runeObj.rune}</span>
-                          <span style={{ fontSize: '0.65rem', color: '#cbd5e1', marginTop: '2px', fontWeight: 600 }}>{runeObj.name}</span>
+                          <span style={{ fontSize: '1.6rem', color: '#ffe8aa', fontFamily: 'serif', lineHeight: 1 }}>{runeObj.rune}</span>
+                          <span style={{ fontSize: '0.6rem', color: '#cbd5e1', marginTop: '2px', fontWeight: 600 }}>{runeObj.name}</span>
                         </>
                       ) : (
                         <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '1.2rem' }}>?</span>
@@ -313,13 +313,13 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
 
               <button
                 onClick={handleBuyTicket}
-                disabled={selectedRunes.length !== 3 || !canAfford}
+                disabled={selectedRunes.length !== 6 || !canAfford}
                 className="btn-durmstrang"
                 style={{
                   padding: '0.65rem 1.6rem',
                   fontSize: '0.9rem',
-                  opacity: selectedRunes.length === 3 && canAfford ? 1 : 0.5,
-                  cursor: selectedRunes.length === 3 && canAfford ? 'pointer' : 'not-allowed'
+                  opacity: selectedRunes.length === 6 && canAfford ? 1 : 0.5,
+                  cursor: selectedRunes.length === 6 && canAfford ? 'pointer' : 'not-allowed'
                 }}
               >
                 <Coins size={16} /> Kup Los za {ticketPrice} Skirnirów
@@ -330,7 +330,7 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
           {/* 24 Runes Selection Grid */}
           <div>
             <h3 style={{ fontSize: '1.1rem', color: '#ffffff', marginBottom: '0.8rem', fontFamily: 'var(--font-heading)' }}>
-              Wybierz 3 runy z prastarego Futharku Starszego:
+              Wybierz 6 unikalnych run z prastarego Futharku Starszego ({selectedRunes.length}/6):
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: '0.75rem' }}>
@@ -380,7 +380,7 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎟️</div>
               <h3 style={{ color: '#ffffff', marginBottom: '0.4rem' }}>Brak wykupionych losów</h3>
               <p style={{ fontSize: '0.9rem', maxWidth: '450px', margin: '0 auto' }}>
-                Nie posiadasz jeszcze losów na bieżące losowanie. Przejdź do zakładki "Skreśl Los" i wybierz 3 runy!
+                Nie posiadasz jeszcze losów na bieżące losowanie. Przejdź do zakładki "Skreśl Los" i wybierz 6 run!
               </p>
             </div>
           ) : (
@@ -412,13 +412,13 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Runes Display */}
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', padding: '0.8rem 0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', padding: '0.8rem 0', flexWrap: 'wrap' }}>
                       {runesObjs.map((r, i) => (
                         <div
                           key={i}
                           style={{
-                            width: '52px',
-                            height: '60px',
+                            width: '44px',
+                            height: '52px',
                             borderRadius: '8px',
                             background: 'rgba(197, 159, 78, 0.15)',
                             border: '1px solid var(--gold-ancient)',
@@ -428,8 +428,8 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
                             justifyContent: 'center'
                           }}
                         >
-                          <span style={{ fontSize: '1.8rem', color: 'var(--gold-glow)', fontFamily: 'serif' }}>{r.rune}</span>
-                          <span style={{ fontSize: '0.62rem', color: '#cbd5e1' }}>{r.name}</span>
+                          <span style={{ fontSize: '1.5rem', color: 'var(--gold-glow)', fontFamily: 'serif' }}>{r.rune}</span>
+                          <span style={{ fontSize: '0.58rem', color: '#cbd5e1' }}>{r.name}</span>
                         </div>
                       ))}
                     </div>
@@ -539,7 +539,7 @@ export const ScandinavianLotteryModal = ({ isOpen, onClose }) => {
             Ceremonia Runicznego Losowania Bota
           </h2>
           <p style={{ color: '#d8b4fe', maxWidth: '600px', margin: '0 auto 1.8rem', fontSize: '0.92rem' }}>
-            Uruchom algorytm losujący 3 runy Futharku dla bieżącej rundy (#{currentLottery?.roundNumber}). Bot automatycznie zweryfikuje wszystkie bilety adeptów, zasili ich konta bankowe wygranymi i przyzna punkty dla domów.
+            Uruchom algorytm losujący 6 run Futharku dla bieżącej rundy (#{currentLottery?.roundNumber}). Bot automatycznie zweryfikuje wszystkie bilety adeptów, zasili ich konta bankowe wygranymi i przyzna punkty dla domów.
           </p>
 
           <button

@@ -385,10 +385,7 @@ export const MarkethallView = () => {
             </div>
           </div>
 
-          {/* Hidden Store Secret Rune */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <SecretRune secretId="rune-algiz-store" />
-          </div>
+          <SecretRune secretId="rune-algiz-store" />
 
           {/* Store Catalog Grid with Visual Placeholders */}
           {filteredItems.length === 0 ? (

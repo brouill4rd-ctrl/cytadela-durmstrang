@@ -120,7 +120,8 @@ export const AlchemicalCauldron = () => {
     playWandSwoosh();
     setBrewResult(result);
 
-    awardHousePoints(currentUser?.house || currentUser?.house_id || 'ravnheim', result.points, `Uwarzenie mikstury: ${result.name}`);
+    const isStaff = currentUser?.role && currentUser.role !== 'student';
+    awardHousePoints(currentUser?.house || currentUser?.house_id || null, result.points, `Uwarzenie mikstury: ${result.name}`);
     if (addInventoryItem && result.item) {
       addInventoryItem({
         name: result.name,
@@ -130,7 +131,7 @@ export const AlchemicalCauldron = () => {
         desc: result.desc
       });
     }
-    addNotification(`🧪 Pomyślnie uwarzono: ${result.name} (+${result.points} pkt dla Zakonu)!`);
+    addNotification(`🧪 Pomyślnie uwarzono: ${result.name} (+${result.points} pkt ${isStaff ? 'osobistych' : 'dla Zakonu'})!`);
   };
 
   // Cauldron liquid gradient calculation

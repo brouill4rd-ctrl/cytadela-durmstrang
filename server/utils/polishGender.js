@@ -38,3 +38,18 @@ export function getLetterSalutation(gender, surname = '') {
   if (grammaticalGender === 'neutral') return `Szanowna Osobo${suffix}`;
   return `Szanowny Panie${suffix}`;
 }
+
+export function getAppointmentClause(gender) {
+  const g = resolvePolishGender(gender);
+  if (g === 'feminine') return 'została mianowana';
+  if (g === 'neutral') return 'zostało mianowane';
+  return 'został mianowany';
+}
+
+export function getTeacherSalutation(gender, surname = '') {
+  const g = resolvePolishGender(gender);
+  const suffix = String(surname || '').trim() ? ` ${String(surname).trim()}` : '';
+  if (g === 'feminine') return `Szanowna Profesor${suffix}`;
+  if (g === 'neutral') return `Szanowna Osobo${suffix}`;
+  return `Szanowny Profesorze${suffix}`;
+}

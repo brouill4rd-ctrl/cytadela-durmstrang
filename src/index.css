@@ -65,6 +65,737 @@
   --radius-lg: 12px;
 }
 
+/* ========================================================================== */
+/* PROFILE — CITADEL DOSSIER                                                   */
+/* ========================================================================== */
+
+.profile-citadel {
+  --profile-ink: #070a0e;
+  --profile-stone: #0c1117;
+  --profile-steel: #26313b;
+  --profile-gold: #c7a65a;
+  --profile-gold-pale: #f1d994;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  isolation: isolate;
+}
+
+.profile-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--profile-aura) 48%, #25303a);
+  background:
+    linear-gradient(110deg, rgba(7, 10, 14, 0.97) 0%, rgba(10, 15, 21, 0.95) 58%, rgba(12, 19, 25, 0.97) 100%),
+    radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--profile-aura) 20%, transparent), transparent 40%);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.035), var(--profile-aura-glow);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+}
+
+.profile-hero::before,
+.profile-hero::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.profile-hero::before {
+  inset: 8px;
+  border: 1px solid rgba(199, 166, 90, 0.13);
+  clip-path: inherit;
+}
+
+.profile-hero::after {
+  top: -55%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  border: 1px solid rgba(148, 192, 210, 0.06);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 42px rgba(148, 192, 210, 0.018), 0 0 0 90px rgba(148, 192, 210, 0.012);
+}
+
+.profile-hero__runes {
+  position: absolute;
+  z-index: 1;
+  top: 21px;
+  left: 28px;
+  color: rgba(199, 166, 90, 0.42);
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  letter-spacing: 0.42em;
+  writing-mode: vertical-rl;
+}
+
+.profile-hero__crest {
+  position: absolute;
+  z-index: 0;
+  right: 315px;
+  bottom: 8px;
+  display: grid;
+  width: 150px;
+  height: 150px;
+  place-items: center;
+  border: 1px solid rgba(199, 166, 90, 0.07);
+  color: rgba(199, 166, 90, 0.035);
+  font-family: var(--font-heading);
+  font-size: 6rem;
+  transform: rotate(45deg);
+}
+
+.profile-hero__crest span {
+  transform: rotate(-45deg);
+}
+
+.profile-identity {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: clamp(1.3rem, 3vw, 2.4rem);
+  padding: 4.2rem 2.6rem 2rem 4.2rem;
+}
+
+.profile-portrait {
+  position: relative;
+  flex: 0 0 auto;
+  width: 142px;
+  height: 166px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--profile-gold);
+  border-radius: 0;
+  background: #05080b;
+  cursor: pointer;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.42), 0 0 30px color-mix(in srgb, var(--profile-aura) 20%, transparent);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+
+.profile-portrait::before {
+  position: absolute;
+  z-index: 2;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  content: '';
+  pointer-events: none;
+}
+
+.profile-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.76) contrast(1.08);
+  transition: filter 180ms ease, transform 300ms ease;
+}
+
+.profile-portrait:hover img,
+.profile-portrait:focus-visible img {
+  filter: saturate(0.95) contrast(1.12);
+  transform: scale(1.035);
+}
+
+.profile-portrait__edit {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  color: #f7f2e8;
+  background: rgba(4, 7, 10, 0.9);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  opacity: 0;
+  text-transform: uppercase;
+  transition: opacity 180ms ease;
+}
+
+.profile-portrait:hover .profile-portrait__edit,
+.profile-portrait:focus-visible .profile-portrait__edit {
+  opacity: 1;
+}
+
+.profile-portrait__seal {
+  position: absolute;
+  z-index: 4;
+  right: -10px;
+  bottom: -10px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--profile-gold-pale);
+  border-radius: 50%;
+  color: #fff5d0;
+  background: var(--profile-house);
+  box-shadow: 0 4px 12px #000;
+}
+
+.profile-identity__copy {
+  min-width: 0;
+}
+
+.profile-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.75rem;
+  color: var(--profile-house-accent);
+  font-family: var(--font-heading);
+  font-size: clamp(0.63rem, 1.1vw, 0.76rem);
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.profile-kicker i {
+  width: 24px;
+  height: 1px;
+  background: var(--profile-gold);
+}
+
+.profile-identity h1 {
+  max-width: 720px;
+  margin: 0;
+  color: #fffdf7;
+  font-family: var(--font-heading);
+  font-size: clamp(2.15rem, 4.2vw, 3.85rem);
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  line-height: 0.98;
+  text-wrap: balance;
+  text-shadow: 0 3px 24px rgba(0, 0, 0, 0.9);
+}
+
+.profile-title {
+  margin: 0.9rem 0 0;
+  color: var(--profile-gold-pale);
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  letter-spacing: 0.055em;
+}
+
+.profile-origin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.6rem;
+  color: #99a6b3;
+  font-size: 0.82rem;
+}
+
+.profile-origin span:nth-child(2) {
+  color: var(--profile-gold);
+  font-size: 0.55rem;
+}
+
+.profile-aura {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  margin-top: 1.05rem;
+  padding: 0.36rem 0.62rem;
+  border-left: 2px solid var(--profile-aura);
+  color: color-mix(in srgb, var(--profile-aura) 80%, white);
+  background: color-mix(in srgb, var(--profile-aura) 8%, transparent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.profile-rank {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 2rem 2rem;
+  border-left: 1px solid rgba(199, 166, 90, 0.2);
+  background: linear-gradient(180deg, rgba(199, 166, 90, 0.065), rgba(0, 0, 0, 0.18));
+}
+
+.profile-rank__eyebrow {
+  color: #778694;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.profile-rank__name {
+  margin-top: 0.35rem;
+  color: #fffdf4;
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+}
+
+.profile-rank__rule {
+  width: 42px;
+  height: 2px;
+  margin: 1rem 0;
+  background: var(--profile-gold);
+}
+
+.profile-rank__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.profile-rank__stats div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-rank__stats strong {
+  color: var(--profile-gold-pale);
+  font-family: var(--font-heading);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.profile-rank__stats span {
+  margin-top: 0.35rem;
+  color: #74818d;
+  font-size: 0.61rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.profile-rank__class {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #bdc6ce;
+  font-size: 0.72rem;
+}
+
+.profile-command-bar {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid rgba(199, 166, 90, 0.2);
+  border-bottom: 1px solid rgba(199, 166, 90, 0.16);
+  background: rgba(2, 5, 8, 0.46);
+}
+
+.profile-command {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-right: 1px solid rgba(199, 166, 90, 0.14);
+  border-radius: 0;
+  color: #d8dee3;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.profile-command:last-child {
+  border-right: 0;
+}
+
+.profile-command:hover,
+.profile-command:focus-visible {
+  color: #fff;
+  background: rgba(199, 166, 90, 0.09);
+}
+
+.profile-command--primary {
+  color: #130f08;
+  background: linear-gradient(135deg, #d8ba6b, #967229);
+}
+
+.profile-command--primary:hover,
+.profile-command--primary:focus-visible {
+  color: #070707;
+  background: linear-gradient(135deg, #efd783, #ad8736);
+}
+
+.profile-command.is-connected {
+  color: #7fe0ba;
+}
+
+.profile-command span {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.profile-command small {
+  margin-bottom: 0.2rem;
+  color: currentColor;
+  font-family: var(--font-body);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  opacity: 0.58;
+  text-transform: uppercase;
+}
+
+.profile-xp {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 220px 1fr 50px;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.15rem 2rem 1.4rem;
+}
+
+.profile-xp__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.profile-xp__label span {
+  color: #778590;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.profile-xp__label strong {
+  color: #eef2f3;
+  font-size: 0.78rem;
+}
+
+.profile-xp__label small {
+  color: #7f8a94;
+  font-weight: 500;
+}
+
+.profile-xp__track {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  background: #020406;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.profile-xp__track span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #866522, #f0d47c 75%, #fff5c4);
+  box-shadow: 0 0 12px rgba(225, 195, 105, 0.65);
+}
+
+.profile-xp__percent {
+  color: var(--profile-gold-pale);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.profile-activities {
+  padding: 1.15rem 1.25rem 1.25rem;
+  border: 1px solid rgba(199, 166, 90, 0.15);
+  background: linear-gradient(180deg, rgba(12, 17, 23, 0.84), rgba(6, 9, 13, 0.88));
+}
+
+.profile-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-section-heading span {
+  color: var(--profile-gold);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.profile-section-heading h2 {
+  margin: 0.15rem 0 0;
+  color: #f8f6f1;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+}
+
+.profile-section-heading p {
+  margin: 0 0 0.1rem;
+  color: #6f7c87;
+  font-size: 0.72rem;
+}
+
+.profile-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(92px, 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  border-left: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.profile-activity-grid button {
+  display: flex;
+  min-width: 0;
+  min-height: 112px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  padding: 0.8rem;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.055);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 0;
+  color: #b8c2ca;
+  background: rgba(0, 0, 0, 0.09);
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.profile-activity-grid button:hover,
+.profile-activity-grid button:focus-visible {
+  z-index: 1;
+  color: #f1d994;
+  background: linear-gradient(145deg, rgba(199, 166, 90, 0.16), rgba(92, 127, 139, 0.08));
+  box-shadow: inset 0 -2px var(--profile-gold);
+  transform: translateY(-2px);
+}
+
+.profile-activity-grid button > svg,
+.profile-activity-grid button > span {
+  width: 20px;
+  height: 20px;
+  margin-bottom: auto;
+  color: var(--profile-gold);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  stroke-width: 1.35;
+}
+
+.profile-activity-grid strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: #edf0f1;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-activity-grid small {
+  overflow: hidden;
+  max-width: 100%;
+  color: #697681;
+  font-size: 0.56rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-citadel .profile-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  border: 1px solid rgba(199, 166, 90, 0.16);
+  background: #080c11;
+  scrollbar-width: thin;
+}
+
+.profile-citadel .profile-tab-btn {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.48rem;
+  min-height: 55px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-right: 1px solid rgba(199, 166, 90, 0.12);
+  border-radius: 0;
+  color: #77838d;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.profile-citadel .profile-tab-btn:hover,
+.profile-citadel .profile-tab-btn:focus-visible {
+  color: #e2e7e9;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.profile-citadel .profile-tab-btn.is-active {
+  color: var(--profile-gold-pale);
+  background: linear-gradient(180deg, rgba(199, 166, 90, 0.13), transparent);
+  box-shadow: inset 0 -2px var(--profile-gold);
+}
+
+.profile-citadel .profile-tab-btn svg {
+  color: currentColor !important;
+}
+
+.profile-citadel > .grid-2,
+.profile-citadel > div > .grid-2 {
+  gap: 1rem;
+}
+
+.profile-citadel .gothic-card {
+  border-color: rgba(199, 166, 90, 0.18);
+  border-radius: 0;
+  background: linear-gradient(145deg, rgba(12, 17, 23, 0.94), rgba(7, 10, 14, 0.96));
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.profile-citadel .gothic-card h3 {
+  letter-spacing: 0.025em;
+}
+
+@media (max-width: 1180px) {
+  .profile-hero {
+    grid-template-columns: minmax(0, 1fr) 220px;
+  }
+
+  .profile-identity {
+    padding-left: 3.4rem;
+  }
+
+  .profile-activity-grid {
+    grid-template-columns: repeat(5, minmax(110px, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .profile-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-identity {
+    padding: 4.2rem 1.5rem 1.7rem 3rem;
+  }
+
+  .profile-rank {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 1.2rem 1.5rem;
+    border-top: 1px solid rgba(199, 166, 90, 0.18);
+    border-left: 0;
+  }
+
+  .profile-rank__rule,
+  .profile-rank__class {
+    display: none;
+  }
+
+  .profile-rank__stats {
+    align-self: center;
+  }
+
+  .profile-command-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-command:nth-child(2) {
+    border-right: 0;
+  }
+
+  .profile-command:nth-child(-n + 2) {
+    border-bottom: 1px solid rgba(199, 166, 90, 0.14);
+  }
+
+  .profile-xp {
+    grid-template-columns: 1fr auto;
+  }
+
+  .profile-xp__track {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .profile-activity-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-citadel {
+    gap: 1rem;
+  }
+
+  .profile-identity {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4rem 1.15rem 1.5rem 2.4rem;
+  }
+
+  .profile-portrait {
+    width: 112px;
+    height: 132px;
+  }
+
+  .profile-identity h1 {
+    font-size: 2.05rem;
+  }
+
+  .profile-rank {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .profile-command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-command,
+  .profile-command:nth-child(2) {
+    justify-content: flex-start;
+    min-height: 58px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(199, 166, 90, 0.14);
+  }
+
+  .profile-xp {
+    padding: 1rem 1.15rem 1.25rem;
+  }
+
+  .profile-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-activity-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-activity-grid button {
+    min-height: 104px;
+  }
+}
+
 /* ==========================================================================
    DURMSTRANG NORDIC WAND CURSOR SYSTEM (DELICATE, CRISP, TASTEFUL)
    ========================================================================== */
@@ -1311,7 +2042,7 @@ a:hover {
   --ink-dark: #2a2218;
   --ink-faded: #4a4035;
   --gazette-serif: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
-  --gazette-heading: 'Germania One', 'Cinzel', serif;
+  --gazette-heading: 'Pirata One', 'Germania One', 'Cinzel', serif;
   --gazette-body: 'Plus Jakarta Sans', 'Georgia', serif;
   --gazette-gold: #c59f4e;
   --gazette-ornament: #8b7355;
@@ -5984,6 +6715,1137 @@ table {
 
 .order-segment::after {
   content: none;
+}
+
+/* ========================================================================== */
+/* PROFILE — MODERN DURMSTRANG                                                 */
+/* ========================================================================== */
+
+.profile-citadel {
+  --profile-surface: rgba(13, 18, 25, 0.92);
+  --profile-surface-soft: rgba(17, 24, 33, 0.74);
+  --profile-line: rgba(170, 199, 215, 0.13);
+  --profile-text: #f4f7f9;
+  --profile-muted: #8d9aa6;
+  --profile-ice: #7dd3fc;
+  --profile-gold-modern: #d8bd72;
+  gap: 1.25rem;
+}
+
+.profile-citadel .profile-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  overflow: hidden;
+  border: 1px solid var(--profile-line);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--profile-aura) 14%, transparent), transparent 33%),
+    radial-gradient(circle at 92% 12%, rgba(216, 189, 114, 0.08), transparent 30%),
+    linear-gradient(145deg, rgba(15, 21, 29, 0.98), rgba(7, 11, 16, 0.99));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.045);
+  clip-path: none;
+}
+
+.profile-citadel .profile-hero::before {
+  inset: 0;
+  border: 0;
+  background: linear-gradient(90deg, var(--profile-aura), var(--profile-gold-modern), transparent 72%);
+  clip-path: none;
+  height: 2px;
+  opacity: 0.8;
+}
+
+.profile-citadel .profile-hero::after {
+  top: -150px;
+  right: -100px;
+  width: 380px;
+  height: 380px;
+  border: 1px solid rgba(125, 211, 252, 0.055);
+  border-radius: 50%;
+  box-shadow: 0 0 0 55px rgba(125, 211, 252, 0.018), 0 0 0 110px rgba(216, 189, 114, 0.012);
+  transform: none;
+}
+
+.profile-citadel .profile-hero__runes {
+  display: none;
+}
+
+.profile-citadel .profile-hero__crest {
+  right: 22px;
+  bottom: 84px;
+  width: 112px;
+  height: 112px;
+  border: 0;
+  border-radius: 50%;
+  color: rgba(216, 189, 114, 0.04);
+  font-size: 5rem;
+  transform: none;
+}
+
+.profile-citadel .profile-hero__crest span {
+  transform: none;
+}
+
+.profile-citadel .profile-identity {
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.profile-citadel .profile-portrait {
+  width: 126px;
+  height: 126px;
+  overflow: visible;
+  border: 2px solid color-mix(in srgb, var(--profile-aura) 70%, white);
+  border-radius: 28px;
+  background: #090d12;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42), 0 0 28px color-mix(in srgb, var(--profile-aura) 17%, transparent);
+  clip-path: none;
+}
+
+.profile-citadel .profile-portrait::before {
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+}
+
+.profile-citadel .profile-portrait img {
+  overflow: hidden;
+  border-radius: 26px;
+  filter: saturate(0.9) contrast(1.04);
+}
+
+.profile-citadel .profile-portrait__edit {
+  right: 7px;
+  bottom: 7px;
+  left: 7px;
+  border-radius: 14px;
+  background: rgba(7, 11, 16, 0.86);
+  backdrop-filter: blur(10px);
+}
+
+.profile-citadel .profile-portrait__seal {
+  right: -10px;
+  bottom: -10px;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #0c1118;
+  background: var(--profile-house);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.5);
+}
+
+.profile-citadel .profile-kicker {
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+  color: var(--profile-ice);
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.profile-citadel .profile-kicker i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--profile-gold-modern);
+}
+
+.profile-citadel .profile-identity h1 {
+  max-width: 650px;
+  color: var(--profile-text);
+  font-family: var(--font-body);
+  font-size: clamp(2rem, 3.4vw, 3.15rem);
+  font-weight: 780;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  text-shadow: none;
+}
+
+.profile-citadel .profile-title {
+  margin-top: 0.65rem;
+  color: #cbd5dc;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.profile-citadel .profile-origin {
+  margin-top: 0.45rem;
+  color: var(--profile-muted);
+  font-size: 0.78rem;
+}
+
+.profile-citadel .profile-aura {
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  padding: 0;
+  border: 0;
+  color: color-mix(in srgb, var(--profile-aura) 76%, white);
+  background: transparent;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+}
+
+.profile-citadel .profile-rank {
+  align-self: stretch;
+  margin: 12px 12px 12px 0;
+  padding: 1.4rem;
+  border: 1px solid rgba(216, 189, 114, 0.13);
+  border-radius: 16px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+  backdrop-filter: blur(14px);
+}
+
+.profile-citadel .profile-rank__eyebrow {
+  color: var(--profile-muted);
+  font-size: 0.6rem;
+  letter-spacing: 0.13em;
+}
+
+.profile-citadel .profile-rank__name {
+  margin-top: 0.3rem;
+  color: var(--profile-text);
+  font-family: var(--font-body);
+  font-size: 1.65rem;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+}
+
+.profile-citadel .profile-rank__rule {
+  width: 100%;
+  height: 1px;
+  margin: 1rem 0;
+  background: linear-gradient(90deg, rgba(216, 189, 114, 0.5), transparent);
+}
+
+.profile-citadel .profile-rank__stats strong {
+  color: var(--profile-gold-modern);
+  font-family: var(--font-body);
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.profile-citadel .profile-rank__stats span {
+  color: var(--profile-muted);
+  letter-spacing: 0.04em;
+}
+
+.profile-citadel .profile-rank__class {
+  color: #aeb8c0;
+}
+
+.profile-citadel .profile-command-bar {
+  gap: 0.6rem;
+  padding: 0 1rem 1rem;
+  border: 0;
+  background: transparent;
+}
+
+.profile-citadel .profile-command {
+  min-height: 62px;
+  justify-content: flex-start;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--profile-line);
+  border-radius: 12px;
+  color: #d4dbe0;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.profile-citadel .profile-command:hover,
+.profile-citadel .profile-command:focus-visible {
+  color: #fff;
+  border-color: rgba(125, 211, 252, 0.34);
+  background: rgba(125, 211, 252, 0.07);
+  transform: translateY(-1px);
+}
+
+.profile-citadel .profile-command--primary {
+  color: #061018;
+  border-color: transparent;
+  background: linear-gradient(135deg, #9ee3ff, #6fb6d9);
+  box-shadow: 0 8px 24px rgba(78, 166, 207, 0.18);
+}
+
+.profile-citadel .profile-command--primary:hover,
+.profile-citadel .profile-command--primary:focus-visible {
+  color: #061018;
+  background: linear-gradient(135deg, #b6ebff, #7dc5e7);
+}
+
+.profile-citadel .profile-command span {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.profile-citadel .profile-command small {
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
+}
+
+.profile-citadel .profile-xp {
+  grid-template-columns: 235px 1fr 46px;
+  gap: 1rem;
+  padding: 0.3rem 1.25rem 1.35rem;
+}
+
+.profile-citadel .profile-xp__label span {
+  color: var(--profile-muted);
+  font-size: 0.57rem;
+  letter-spacing: 0.09em;
+}
+
+.profile-citadel .profile-xp__track {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+.profile-citadel .profile-xp__track span {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--profile-aura), #bcecff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--profile-aura) 40%, transparent);
+}
+
+.profile-citadel .profile-xp__percent {
+  color: var(--profile-ice);
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+
+.profile-citadel .profile-activities {
+  padding: 1.25rem;
+  border: 1px solid var(--profile-line);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(15, 21, 29, 0.9), rgba(9, 13, 18, 0.94));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.profile-citadel .profile-section-heading span {
+  color: var(--profile-gold-modern);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+}
+
+.profile-citadel .profile-section-heading h2 {
+  color: var(--profile-text);
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.profile-citadel .profile-section-heading p {
+  color: var(--profile-muted);
+}
+
+.profile-citadel .profile-activity-grid {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 0.65rem;
+  border: 0;
+}
+
+.profile-citadel .profile-activity-grid button {
+  min-height: 98px;
+  padding: 0.85rem;
+  border: 1px solid rgba(170, 199, 215, 0.1);
+  border-radius: 12px;
+  color: #bac4cb;
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.profile-citadel .profile-activity-grid button:hover,
+.profile-citadel .profile-activity-grid button:focus-visible {
+  color: var(--profile-ice);
+  border-color: rgba(125, 211, 252, 0.26);
+  background: rgba(125, 211, 252, 0.06);
+  box-shadow: none;
+  transform: translateY(-2px);
+}
+
+.profile-citadel .profile-activity-grid button > svg,
+.profile-citadel .profile-activity-grid button > span {
+  color: var(--profile-ice);
+  stroke-width: 1.65;
+}
+
+.profile-citadel .profile-activity-grid strong {
+  color: #eef3f5;
+  font-family: var(--font-body);
+  font-size: 0.73rem;
+  font-weight: 720;
+}
+
+.profile-citadel .profile-activity-grid small {
+  color: #77858f;
+  font-size: 0.57rem;
+}
+
+.profile-citadel .profile-tabs {
+  gap: 0.35rem;
+  padding: 0.38rem;
+  border: 1px solid var(--profile-line);
+  border-radius: 14px;
+  background: rgba(10, 14, 20, 0.88);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.profile-citadel .profile-tab-btn {
+  min-height: 46px;
+  padding: 0.65rem 0.9rem;
+  border: 0;
+  border-radius: 10px;
+  color: #83909a;
+  font-family: var(--font-body);
+  font-size: 0.69rem;
+  font-weight: 680;
+}
+
+.profile-citadel .profile-tab-btn:hover,
+.profile-citadel .profile-tab-btn:focus-visible {
+  color: #dce4e8;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profile-citadel .profile-tab-btn.is-active {
+  color: #061018;
+  background: linear-gradient(135deg, #9ee3ff, #73bddf);
+  box-shadow: 0 7px 20px rgba(76, 167, 210, 0.16);
+}
+
+.profile-citadel .gothic-card {
+  border-color: var(--profile-line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(15, 21, 29, 0.9), rgba(9, 13, 18, 0.94));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.profile-citadel .gothic-card h3 {
+  font-family: var(--font-body);
+  font-weight: 730;
+  letter-spacing: -0.015em;
+}
+
+@media (max-width: 1180px) {
+  .profile-citadel .profile-activity-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .profile-citadel .profile-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-citadel .profile-identity {
+    padding: 1.5rem;
+  }
+
+  .profile-citadel .profile-rank {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0 1rem 1rem;
+  }
+
+  .profile-citadel .profile-command-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-citadel .profile-command,
+  .profile-citadel .profile-command:nth-child(-n + 2) {
+    border: 1px solid var(--profile-line);
+  }
+
+  .profile-citadel .profile-command--primary {
+    border-color: transparent;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-citadel .profile-identity {
+    align-items: center;
+    padding: 1.4rem 1.15rem;
+    text-align: center;
+  }
+
+  .profile-citadel .profile-portrait {
+    width: 104px;
+    height: 104px;
+  }
+
+  .profile-citadel .profile-kicker,
+  .profile-citadel .profile-origin {
+    justify-content: center;
+  }
+
+  .profile-citadel .profile-aura {
+    justify-content: center;
+  }
+
+  .profile-citadel .profile-rank {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-citadel .profile-command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-citadel .profile-xp {
+    grid-template-columns: 1fr auto;
+  }
+
+  .profile-citadel .profile-activity-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Profile typography and chrome follow the Cytadel's global visual language. */
+.profile-citadel {
+  --profile-surface: var(--bg-glass-card);
+  --profile-line: var(--ice-border);
+  --profile-text: #f8fafc;
+  --profile-muted: #94a3b8;
+  --profile-ice: var(--ice-frost);
+  --profile-gold-modern: var(--gold-ancient);
+}
+
+.profile-citadel .profile-hero {
+  border-color: rgba(142, 202, 230, 0.22);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--profile-aura) 12%, transparent), transparent 34%),
+    radial-gradient(circle at 92% 12%, rgba(197, 159, 78, 0.1), transparent 30%),
+    linear-gradient(145deg, rgba(12, 17, 26, 0.97), rgba(5, 8, 13, 0.99));
+  box-shadow: var(--shadow-card), inset 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.profile-citadel .profile-hero::before {
+  background: linear-gradient(90deg, transparent 2%, var(--ice-frost), var(--gold-ancient), transparent 88%);
+}
+
+.profile-citadel .profile-portrait {
+  border-color: var(--gold-ancient);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65), 0 0 22px var(--ice-glow);
+}
+
+.profile-citadel .profile-portrait::before,
+.profile-citadel .profile-portrait img {
+  border-radius: calc(var(--radius-sm) - 2px);
+}
+
+.profile-citadel .profile-kicker {
+  color: var(--gold-ancient);
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 400;
+  letter-spacing: 0.13em;
+}
+
+.profile-citadel .profile-identity h1 {
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: clamp(2.65rem, 4.7vw, 4.3rem);
+  font-weight: 400;
+  letter-spacing: 0.025em;
+  line-height: 0.96;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95), 0 0 12px rgba(142, 202, 230, 0.08);
+}
+
+.profile-citadel .profile-title {
+  color: var(--ice-crystal);
+  font-family: var(--font-heading);
+  font-size: 1.18rem;
+  font-weight: 400;
+  letter-spacing: 0.055em;
+}
+
+.profile-citadel .profile-aura {
+  color: color-mix(in srgb, var(--profile-aura) 72%, white);
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.07em;
+}
+
+.profile-citadel .profile-rank {
+  border-color: rgba(197, 159, 78, 0.24);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(145deg, rgba(28, 38, 56, 0.5), rgba(7, 10, 16, 0.8));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.profile-citadel .profile-rank__eyebrow,
+.profile-citadel .profile-rank__name,
+.profile-citadel .profile-rank__stats strong {
+  font-family: var(--font-heading);
+  font-weight: 400;
+}
+
+.profile-citadel .profile-rank__eyebrow {
+  color: var(--gold-ancient);
+  font-size: 0.82rem;
+}
+
+.profile-citadel .profile-rank__name {
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+}
+
+.profile-citadel .profile-rank__stats strong {
+  color: var(--gold-glow);
+  font-size: 1.7rem;
+}
+
+.profile-citadel .profile-command {
+  border-color: rgba(142, 202, 230, 0.2);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(28, 38, 56, 0.7), rgba(10, 14, 22, 0.9));
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+}
+
+.profile-citadel .profile-command:hover,
+.profile-citadel .profile-command:focus-visible {
+  border-color: var(--ice-frost);
+  background: linear-gradient(135deg, #26344d, #141b29);
+  box-shadow: 0 7px 22px rgba(0, 0, 0, 0.65), 0 0 12px rgba(142, 202, 230, 0.16);
+}
+
+.profile-citadel .profile-command--primary {
+  color: #fff;
+  border-color: var(--gold-ancient);
+  background: linear-gradient(135deg, #8e6e2b, #4e3915);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 12px rgba(197, 159, 78, 0.2);
+}
+
+.profile-citadel .profile-command--primary:hover,
+.profile-citadel .profile-command--primary:focus-visible {
+  color: #fff;
+  border-color: var(--gold-glow);
+  background: linear-gradient(135deg, #a98536, #60481c);
+}
+
+.profile-citadel .profile-command span {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.035em;
+}
+
+.profile-citadel .profile-command small {
+  font-family: var(--font-ui);
+  font-size: 0.52rem;
+  font-weight: 700;
+}
+
+.profile-citadel .profile-xp__label strong,
+.profile-citadel .profile-xp__percent {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.profile-citadel .profile-xp__track span {
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold-ancient) 58%, var(--gold-glow));
+  box-shadow: 0 0 12px rgba(197, 159, 78, 0.4);
+}
+
+.profile-citadel .profile-activities,
+.profile-citadel .gothic-card {
+  border-color: rgba(142, 202, 230, 0.2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass-card);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-citadel .profile-section-heading h2,
+.profile-citadel .profile-activity-grid strong,
+.profile-citadel .profile-tab-btn,
+.profile-citadel .gothic-card h3 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+}
+
+.profile-citadel .profile-section-heading h2 {
+  font-size: 1.75rem;
+  letter-spacing: 0.04em;
+}
+
+.profile-citadel .profile-section-heading span {
+  color: var(--gold-ancient);
+}
+
+.profile-citadel .profile-activity-grid button {
+  border-color: rgba(142, 202, 230, 0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(12, 17, 26, 0.66);
+}
+
+.profile-citadel .profile-activity-grid button:hover,
+.profile-citadel .profile-activity-grid button:focus-visible {
+  color: var(--gold-glow);
+  border-color: var(--gold-ancient);
+  background: linear-gradient(145deg, rgba(197, 159, 78, 0.12), rgba(28, 38, 56, 0.68));
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.55);
+}
+
+.profile-citadel .profile-activity-grid button > svg,
+.profile-citadel .profile-activity-grid button > span {
+  color: var(--gold-ancient);
+}
+
+.profile-citadel .profile-activity-grid strong {
+  font-size: 0.95rem;
+  letter-spacing: 0.035em;
+}
+
+.profile-citadel .profile-tabs {
+  border-color: rgba(197, 159, 78, 0.22);
+  border-radius: var(--radius-sm);
+  background: rgba(7, 10, 16, 0.9);
+}
+
+.profile-citadel .profile-tab-btn {
+  border-radius: calc(var(--radius-sm) - 1px);
+  font-size: 0.9rem;
+  letter-spacing: 0.035em;
+}
+
+.profile-citadel .profile-tab-btn.is-active {
+  color: #fff;
+  border: 1px solid var(--gold-ancient);
+  background: linear-gradient(135deg, #1c2638, #0d121c);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 10px rgba(197, 159, 78, 0.14);
+}
+
+/* Portrait-first profile composition. */
+.profile-citadel .profile-identity {
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2.4rem 2rem 1.8rem;
+  text-align: center;
+}
+
+.profile-citadel .profile-portrait {
+  width: 156px;
+  height: 184px;
+  border: 2px solid var(--gold-ancient);
+  border-radius: 0;
+  background: #05080d;
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.72),
+    0 0 0 5px rgba(5, 8, 13, 0.95),
+    0 0 0 6px rgba(197, 159, 78, 0.28),
+    0 0 24px color-mix(in srgb, var(--profile-aura) 25%, transparent);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 18px), 50% 100%, 0 calc(100% - 18px), 0 14px);
+}
+
+.profile-citadel .profile-portrait::before {
+  inset: 7px;
+  border: 1px solid rgba(240, 217, 149, 0.5);
+  border-radius: 0;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 12px), 50% 100%, 0 calc(100% - 12px), 0 8px);
+}
+
+.profile-citadel .profile-portrait::after {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  left: 50%;
+  display: grid;
+  width: 30px;
+  height: 18px;
+  place-items: center;
+  color: var(--gold-glow);
+  background: linear-gradient(90deg, transparent, rgba(5, 8, 13, 0.94) 22%, rgba(5, 8, 13, 0.94) 78%, transparent);
+  content: '◆';
+  font-size: 0.58rem;
+  text-shadow: 0 0 9px rgba(197, 159, 78, 0.7);
+  transform: translateX(-50%);
+}
+
+.profile-citadel .profile-portrait img {
+  border-radius: 0;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 17px), 50% 100%, 0 calc(100% - 17px), 0 12px);
+}
+
+.profile-citadel .profile-portrait__seal {
+  right: -12px;
+  bottom: 7px;
+}
+
+.profile-citadel .profile-identity__copy {
+  width: min(100%, 900px);
+}
+
+.profile-citadel .profile-kicker {
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.profile-citadel .profile-personalia-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  white-space: nowrap;
+}
+
+.profile-citadel .profile-personalia-line h1 {
+  flex: 0 0 auto;
+  font-size: clamp(2.1rem, 3.3vw, 3.2rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.profile-citadel .profile-personalia-line__divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, transparent, rgba(197, 159, 78, 0.6), transparent);
+}
+
+.profile-citadel .profile-personalia-line .profile-title,
+.profile-citadel .profile-personalia-line .profile-origin,
+.profile-citadel .profile-personalia-line .profile-aura {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.profile-citadel .profile-personalia-line .profile-title {
+  overflow: hidden;
+  max-width: 190px;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+}
+
+.profile-citadel .profile-personalia-line .profile-origin {
+  overflow: hidden;
+  max-width: 260px;
+  flex-wrap: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-citadel .profile-personalia-line .profile-origin span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-citadel .profile-personalia-line .profile-aura {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1120px) {
+  .profile-citadel .profile-personalia-line {
+    flex-wrap: wrap;
+    row-gap: 0.55rem;
+    white-space: normal;
+  }
+
+  .profile-citadel .profile-personalia-line h1 {
+    width: 100%;
+  }
+
+  .profile-citadel .profile-personalia-line__divider:first-of-type {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .profile-citadel .profile-identity {
+    padding: 2rem 1.25rem 1.5rem;
+  }
+
+  .profile-citadel .profile-personalia-line {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-citadel .profile-portrait {
+    width: 132px;
+    height: 158px;
+  }
+
+  .profile-citadel .profile-personalia-line {
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .profile-citadel .profile-personalia-line__divider {
+    width: 42px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(197, 159, 78, 0.6), transparent);
+  }
+
+  .profile-citadel .profile-personalia-line .profile-title,
+  .profile-citadel .profile-personalia-line .profile-origin,
+  .profile-citadel .profile-personalia-line .profile-aura {
+    max-width: 100%;
+  }
+}
+
+/* Full-width centered identity with horizontal status rail. */
+.profile-citadel .profile-hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.profile-citadel .profile-identity {
+  width: 100%;
+  justify-self: center;
+}
+
+.profile-citadel .profile-hero__crest {
+  right: 4%;
+  bottom: 39%;
+}
+
+.profile-citadel .profile-rank {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.75fr) 1px minmax(230px, 1fr) minmax(210px, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0.2rem 1.5rem;
+  margin: 0 1rem 1rem;
+  padding: 1.05rem 1.35rem;
+  text-align: left;
+}
+
+.profile-citadel .profile-rank__eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+}
+
+.profile-citadel .profile-rank__name {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  margin: 0.1rem 0 0;
+  font-size: 1.7rem;
+}
+
+.profile-citadel .profile-rank__rule {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 1px;
+  height: 44px;
+  margin: 0;
+  background: linear-gradient(180deg, transparent, rgba(197, 159, 78, 0.62), transparent);
+}
+
+.profile-citadel .profile-rank__stats {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  gap: 2.4rem;
+  align-items: center;
+}
+
+.profile-citadel .profile-rank__stats div {
+  position: relative;
+}
+
+.profile-citadel .profile-rank__stats div + div::before {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: -1.2rem;
+  width: 1px;
+  background: rgba(142, 202, 230, 0.13);
+  content: '';
+}
+
+.profile-citadel .profile-rank__class {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-align: right;
+}
+
+@media (max-width: 820px) {
+  .profile-citadel .profile-rank {
+    grid-template-columns: 1fr 1px 1.25fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .profile-citadel .profile-rank__class {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: flex-start;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(142, 202, 230, 0.12);
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-citadel .profile-rank {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 0.8rem;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .profile-citadel .profile-rank__eyebrow,
+  .profile-citadel .profile-rank__name,
+  .profile-citadel .profile-rank__stats,
+  .profile-citadel .profile-rank__class {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .profile-citadel .profile-rank__rule {
+    display: block;
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(197, 159, 78, 0.62), transparent);
+  }
+
+  .profile-citadel .profile-rank__stats {
+    width: min(100%, 280px);
+    justify-self: center;
+  }
+
+  .profile-citadel .profile-rank__class {
+    justify-content: center;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+/* Give the identity copy room: name, details, then aura. */
+.profile-citadel .profile-personalia-line {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto auto;
+  justify-content: center;
+  column-gap: 1.1rem;
+  row-gap: 0.75rem;
+  white-space: normal;
+}
+
+.profile-citadel .profile-personalia-line h1 {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  width: auto;
+  margin-bottom: 0.15rem;
+}
+
+.profile-citadel .profile-personalia-line__divider {
+  display: none;
+}
+
+.profile-citadel .profile-personalia-line .profile-title {
+  grid-column: 1;
+  grid-row: 2;
+  max-width: none;
+  justify-self: end;
+  overflow: visible;
+  font-size: 1.08rem;
+  text-overflow: clip;
+}
+
+.profile-citadel .profile-personalia-line .profile-origin {
+  grid-column: 2;
+  grid-row: 2;
+  max-width: 520px;
+  justify-self: start;
+  margin: 0;
+  padding-left: 1.1rem;
+  border-left: 1px solid rgba(197, 159, 78, 0.42);
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.profile-citadel .profile-personalia-line .profile-origin span {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.profile-citadel .profile-personalia-line .profile-aura {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: center;
+  max-width: none;
+  margin-top: 0.4rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(142, 202, 230, 0.13);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 720px) {
+  .profile-citadel .profile-personalia-line {
+    grid-template-columns: 1fr;
+    row-gap: 0.55rem;
+  }
+
+  .profile-citadel .profile-personalia-line h1,
+  .profile-citadel .profile-personalia-line .profile-title,
+  .profile-citadel .profile-personalia-line .profile-origin,
+  .profile-citadel .profile-personalia-line .profile-aura {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: center;
+  }
+
+  .profile-citadel .profile-personalia-line .profile-origin {
+    max-width: 100%;
+    padding-top: 0.5rem;
+    padding-left: 0;
+    border-top: 1px solid rgba(197, 159, 78, 0.28);
+    border-left: 0;
+  }
+}
+
+/* Dynamic Order/staff tapestry behind the profile header. */
+.profile-citadel .profile-hero__banner {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  filter: saturate(0.72) contrast(1.08) brightness(0.72);
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.profile-citadel .profile-hero__banner::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(4, 7, 11, 0.55), rgba(4, 7, 11, 0.2) 48%, rgba(4, 7, 11, 0.55)),
+    linear-gradient(180deg, rgba(4, 7, 11, 0.34), rgba(4, 7, 11, 0.68) 52%, rgba(4, 7, 11, 0.97) 86%);
+  content: '';
+}
+
+.profile-citadel .profile-hero__crest {
+  display: none;
+}
+
+.profile-citadel .profile-hero::after {
+  opacity: 0.18;
+}
+
+@media (max-width: 720px) {
+  .profile-citadel .profile-hero__banner {
+    background-size: auto 520px;
+    opacity: 0.28;
+  }
 }
 
 /* ========================================================================== */

@@ -655,6 +655,25 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS expedition_attempts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    destination_id TEXT NOT NULL,
+    date_key TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    score INTEGER DEFAULT 0,
+    reward_points INTEGER DEFAULT 0,
+    reward_skirnirs INTEGER DEFAULT 0,
+    reward_item TEXT DEFAULT '',
+    started_at TEXT DEFAULT (datetime('now')),
+    completed_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (user_id, destination_id, date_key)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_expedition_attempts_daily
+    ON expedition_attempts(user_id, date_key);
+
   CREATE TABLE IF NOT EXISTS discovered_secrets (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -1835,20 +1854,6 @@ if (false && userCount === 0) {
     '[]', '[]', '2026-07-20'
   );
 
-  // Prof. Astrid Vinter (Eliksiry)
-  insertUser.run(
-    'usr-astrid-vinter', 'vinter', DEFAULT_HASH, 'vinter@durmstrang.edu',
-    'Astrid', 'Vinter', '',
-    'professor', 'approved', 'reinhall',
-    'Mistrzyni Alchemii i Eliksirów • Katedra Eliksirów',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-    'eliksiry', 'Katedra Eliksirów i Warzenia Północy', 'eliksiry',
-    'Krypta Kotłów Skandzy, Sala Podziemna II',
-    'Eliksiry Uzdrowicielskie, Trucizny Arktyczne i Destylacja Soli',
-    null, null, 1, 0, 500, 0, 0, null, null, null, null, null,
-    JSON.stringify(['eliksiry', 'trucizny']),
-    '[]', '[]', '2026-07-10'
-  );
 
   // Arcymistrzyni Valgerda Storm
   insertUser.run(
@@ -4884,28 +4889,6 @@ if (false && sessionCount === 0) {
 
 // ==================== HOMEWORK SEED DATA ====================
 
-// Some persistent databases still enforce the legacy submissions.student_id -> users.id
-// foreign key. Ensure every student referenced by the homework demo data exists even
-// when the main user seed was skipped because the database already contained users.
-const insertHomeworkStudent = db.prepare(`
-  INSERT OR IGNORE INTO users (
-    id, username, password, email, name, surname, full_name, role, status, house,
-    title, class_year, level, xp, next_level_xp, points, currency, created_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, 'student', 'approved', ?, ?, ?, 1, 0, 500, 0, 150, ?)
-`);
-const homeworkStudentPassword = bcrypt.hashSync('123', 10);
-
-insertHomeworkStudent.run(
-  'usr-astrid-stud', 'seed-homework-astrid', homeworkStudentPassword,
-  'astrid.student@nordic.no', 'Astrid', 'Vinter', 'Astrid Vinter', 'reinhall',
-  'Adeptka Reinhall', 'Rok II • Semestr Zimowy', '2026-08-01'
-);
-insertHomeworkStudent.run(
-  'usr-erik', 'seed-homework-erik', homeworkStudentPassword,
-  'erik@nordic.no', 'Erik', 'Nilsen', 'Erik Nilsen', 'bjornhall',
-  'Adept Björnhall', 'Rok II • Semestr Zimowy', '2026-08-01'
-);
-
 const homeworkCount = db.prepare('SELECT COUNT(*) as count FROM homework_assignments').get().count;
 
 if (false && homeworkCount === 0) {
@@ -6485,5 +6468,106 @@ export function dbParticipantToFrontendWithExcuse(row) {
     excuseRequestId: row.excuse_request_id || ''
   };
 }
+
+// ── Połów w Zamarzniętym Fjordzie ─────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fishing_sessions (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL,
+    date_key         TEXT NOT NULL,
+    mode             TEXT NOT NULL DEFAULT 'reward',
+    status           TEXT NOT NULL DEFAULT 'in_progress',
+    score            INTEGER NOT NULL DEFAULT 0,
+    casts_completed  INTEGER NOT NULL DEFAULT 0,
+    catches_count    INTEGER NOT NULL DEFAULT 0,
+    escapes_count    INTEGER NOT NULL DEFAULT 0,
+    perfect_hooks    INTEGER NOT NULL DEFAULT 0,
+    perfect_reels    INTEGER NOT NULL DEFAULT 0,
+    reward_points    INTEGER NOT NULL DEFAULT 0,
+    reward_skirnirs  INTEGER NOT NULL DEFAULT 0,
+    reward_loot_id   TEXT NOT NULL DEFAULT '',
+    reward_message   TEXT NOT NULL DEFAULT '',
+    started_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    last_active_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at     TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS fishing_casts (
+    id             TEXT PRIMARY KEY,
+    session_id     TEXT NOT NULL,
+    cast_index     INTEGER NOT NULL,
+    bait_id        TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'started',
+    hook_grade     TEXT NOT NULL DEFAULT '',
+    hook_points    INTEGER NOT NULL DEFAULT 0,
+    reel_results   TEXT NOT NULL DEFAULT '["miss","miss","miss"]',
+    reel_points    INTEGER NOT NULL DEFAULT 0,
+    cast_score     INTEGER NOT NULL DEFAULT 0,
+    loot_id        TEXT NOT NULL DEFAULT '',
+    loot_rarity    TEXT NOT NULL DEFAULT '',
+    started_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at   TEXT,
+    FOREIGN KEY (session_id) REFERENCES fishing_sessions(id) ON DELETE CASCADE,
+    UNIQUE (session_id, cast_index)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_fishing_sessions_user_date
+    ON fishing_sessions(user_id, date_key, mode);
+  CREATE INDEX IF NOT EXISTS idx_fishing_sessions_active
+    ON fishing_sessions(user_id, status);
+  CREATE INDEX IF NOT EXISTS idx_fishing_casts_session
+    ON fishing_casts(session_id, cast_index);
+`);
+
+// ── Hnefatafl Magów ────────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS hnefatafl_runs (
+    run_id          TEXT PRIMARY KEY,
+    user_id         TEXT NOT NULL,
+    mode            TEXT NOT NULL DEFAULT 'ai',
+    difficulty      TEXT NOT NULL DEFAULT 'uczen',
+    player_side     TEXT NOT NULL DEFAULT 'defenders',
+    ai_seed         INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL DEFAULT 'started',
+    winner          TEXT,
+    end_reason      TEXT,
+    move_count      INTEGER NOT NULL DEFAULT 0,
+    move_log        TEXT,
+    reward_points   INTEGER NOT NULL DEFAULT 0,
+    reward_skirnirs INTEGER NOT NULL DEFAULT 0,
+    reward_eligible INTEGER NOT NULL DEFAULT 0,
+    reward_reason   TEXT,
+    rewarded        INTEGER NOT NULL DEFAULT 0,
+    date_warsaw     TEXT NOT NULL,
+    started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at    TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_hfatafl_user_date
+    ON hnefatafl_runs(user_id, date_warsaw);
+`);
+
+// ── Runiczna Strzelnica ────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shooting_range_runs (
+    run_id      TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    score       INTEGER NOT NULL DEFAULT 0,
+    hits        INTEGER NOT NULL DEFAULT 0,
+    misses      INTEGER NOT NULL DEFAULT 0,
+    traps       INTEGER NOT NULL DEFAULT 0,
+    max_combo   INTEGER NOT NULL DEFAULT 1,
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    rewarded    INTEGER NOT NULL DEFAULT 0,
+    house_points INTEGER NOT NULL DEFAULT 0,
+    skirniry    INTEGER NOT NULL DEFAULT 0,
+    date_warsaw TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_srr_user_date
+    ON shooting_range_runs(user_id, date_warsaw);
+`);
 
 export default db;

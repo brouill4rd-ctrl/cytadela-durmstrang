@@ -3,25 +3,38 @@ import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getWorldState } from '../worldState.js';
 import { credit as creditSkirnir } from '../services/skirnirService.js';
-import { getAcceptanceClause, getLetterSalutation } from '../utils/polishGender.js';
+import { getAcceptanceClause, getLetterSalutation, getAppointmentClause, getTeacherSalutation } from '../utils/polishGender.js';
 
 const router = Router();
 const stages = ['LETTER_PENDING', 'LETTER_OPENED', 'PREPARATION', 'PORT', 'SHIP', 'FJORD', 'BORDER_CONTROL', 'GREAT_HALL', 'ARRIVED', 'COMPLETED'];
+const teacherStages = ['LETTER_PENDING', 'LETTER_OPENED', 'PORT', 'SHIP', 'FJORD', 'BORDER_CONTROL', 'GREAT_HALL', 'ARRIVED', 'COMPLETED'];
 const choiceMap = {
   PORT: { return: 'HELPFUL', call: 'OBSERVANT', ignore: 'RESERVED' },
   SHIP: { deck: 'BOLD', below: 'CURIOUS', passenger: 'OPEN' },
   FJORD: { watch: 'OBSERVANT', listen: 'CURIOUS', prepare: 'TRADITIONAL' }
+};
+const teacherChoiceMap = {
+  PORT: { retrieve: 'HELPFUL', delegate: 'OBSERVANT', observe: 'RESERVED' },
+  SHIP: { calm: 'METHODICAL', let_go: 'BOLD', report: 'TRADITIONAL' },
+  FJORD: { recall: 'NOSTALGIC', plan: 'METHODICAL', silent: 'OBSERVANT' }
 };
 const id = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const STARTUP_GRANT = 220;
 const MANDATORY_KIT_IDS = ['kit-rozdzka', 'kit-szaty', 'kit-podreczniki'];
 const KIT_ITEM_IDS = ['kit-rozdzka', 'kit-szaty', 'kit-podreczniki', 'kit-kociolek', 'kit-fiolki', 'kit-przybory'];
+const TEACHER_ROLES = ['teacher', 'professor'];
+
+function isTeacherRole(role) {
+  return TEACHER_ROLES.includes(role);
+}
 
 function ensureProgress(user) {
   let row = db.prepare('SELECT * FROM character_prologues WHERE user_id = ?').get(user.id);
   if (!row) {
-    db.prepare("INSERT INTO character_prologues (user_id, stage, completed) VALUES (?, 'COMPLETED', 1)").run(user.id);
+    const startStage = isTeacherRole(user.role) ? 'LETTER_PENDING' : 'COMPLETED';
+    const completed = isTeacherRole(user.role) ? 0 : 1;
+    db.prepare('INSERT INTO character_prologues (user_id, stage, completed) VALUES (?, ?, ?)').run(user.id, startStage, completed);
     row = db.prepare('SELECT * FROM character_prologues WHERE user_id = ?').get(user.id);
   }
   return row;
@@ -78,9 +91,38 @@ function publicState(user, row) {
   };
 }
 
+function publicStateTeacher(user, row) {
+  const adminUser = db.prepare("SELECT * FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1").get();
+  const signatoryName = adminUser?.full_name || 'Rada Arcymistrzów';
+  const signatoryTitle = adminUser?.title || 'Arcymistrz Cytadeli Durmstrang';
+  const signatoryPng = adminUser?.signature_png || null;
+
+  return {
+    stage: row.stage,
+    completed: Boolean(row.completed),
+    isTeacher: true,
+    character: {
+      firstName: user.name, lastName: user.surname, fullName: user.full_name,
+      title: user.title, department: user.department_name || user.department,
+      specialization: user.specialization, role: user.role, gender: user.gender
+    },
+    letter: {
+      salutation: getTeacherSalutation(user.gender, user.surname),
+      appointmentClause: getAppointmentClause(user.gender),
+      schoolYear: 'XIX Rok Szkolny',
+      roleLabel: user.role === 'professor' ? 'Profesora' : 'Mistrza Wykładowcy',
+      department: user.department_name || user.department || 'Katedra Magii',
+      signatoryName, signatoryTitle, signatoryPng
+    }
+  };
+}
+
 router.get('/me', requireAuth, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   const row = ensureProgress(user);
+  if (isTeacherRole(user.role)) {
+    return res.json(publicStateTeacher(user, row));
+  }
   // Backfill grant for users who reached PREPARATION via admin panel (bypassing advance)
   if (!row.completed && row.stage === 'PREPARATION') {
     const grantKey = `prologue-kit-grant-${user.id}`;
@@ -105,15 +147,18 @@ router.get('/me', requireAuth, (req, res) => {
 router.post('/advance', requireAuth, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   const current = ensureProgress(user);
-  if (current.completed) return res.json(publicState(user, current));
-  const currentIndex = stages.indexOf(current.stage);
+  const isTeacher = isTeacherRole(user.role);
+  const activeStages = isTeacher ? teacherStages : stages;
+  if (current.completed) return res.json(isTeacher ? publicStateTeacher(user, current) : publicState(user, current));
+  const currentIndex = activeStages.indexOf(current.stage);
   const requested = req.body.stage;
-  if (!stages.includes(requested) || stages.indexOf(requested) !== currentIndex + 1) {
+  if (!activeStages.includes(requested) || activeStages.indexOf(requested) !== currentIndex + 1) {
     return res.status(409).json({ error: 'Pieczęcie podróży muszą być otwierane we właściwej kolejności.', stage: current.stage });
   }
   const scene = current.stage;
   const choiceId = req.body.choiceId;
-  const storyTag = choiceMap[scene]?.[choiceId] || null;
+  const activeChoiceMap = isTeacher ? teacherChoiceMap : choiceMap;
+  const storyTag = activeChoiceMap[scene]?.[choiceId] || null;
   const now = new Date().toISOString();
   const world = getWorldState();
   const tx = db.transaction(() => {
@@ -148,7 +193,9 @@ router.post('/advance', requireAuth, (req, res) => {
     }
   });
   tx();
-  res.json(publicState(db.prepare('SELECT * FROM users WHERE id=?').get(user.id), ensureProgress(user)));
+  const freshUser = db.prepare('SELECT * FROM users WHERE id=?').get(user.id);
+  const freshRow = ensureProgress(freshUser);
+  res.json(isTeacher ? publicStateTeacher(freshUser, freshRow) : publicState(freshUser, freshRow));
 });
 
 router.get('/lineage/me', requireAuth, (req, res) => {

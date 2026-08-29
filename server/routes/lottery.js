@@ -12,8 +12,8 @@ import { credit as creditSkirnir, debit as debitSkirnir } from '../services/skir
 
 const router = Router();
 
-function getAllFutharkRuneNames() {
-  return db.prepare('SELECT name FROM futhark_runes ORDER BY sort_order ASC').all().map(r => r.name);
+function getAllFutharkRuneIds() {
+  return db.prepare('SELECT id FROM futhark_runes ORDER BY sort_order ASC').all().map(r => r.id);
 }
 
 router.get('/runes', (req, res) => {
@@ -44,7 +44,7 @@ router.get('/current', (req, res) => {
       newRoundId,
       roundNumber,
       `Wielkie Losowanie Przesilenia Północy (Runda #${roundNumber})`,
-      'Wybierz 3 runy z prastarego Futharku Starszego i zdobądź Skarbiec Odyna!',
+      'Wybierz 6 unikalnych run z prastarego Futharku Starszego i zdobądź Skarbiec Odyna!',
       nextWeek
     );
 
@@ -62,7 +62,7 @@ router.get('/current', (req, res) => {
   res.json({
     round,
     userTickets,
-    allRunes: getAllFutharkRuneNames()
+    allRunes: getAllFutharkRuneIds()
   });
 });
 
@@ -70,14 +70,14 @@ router.get('/current', (req, res) => {
 router.post('/buy-ticket', requireAuth, (req, res) => {
   const { userId, chosenRunes, roundId } = req.body;
 
-  if (!userId || !Array.isArray(chosenRunes) || chosenRunes.length !== 3) {
-    return res.status(400).json({ error: 'Musisz wybrać dokładnie 3 unikatowe runy ze Starszego Futharku.' });
+  if (!userId || !Array.isArray(chosenRunes) || chosenRunes.length !== 6) {
+    return res.status(400).json({ error: 'Musisz wybrać dokładnie 6 unikalnych run ze Starszego Futharku.' });
   }
 
   // Validate unique runes
   const uniqueRunes = new Set(chosenRunes);
-  const allRuneNames = getAllFutharkRuneNames();
-  if (uniqueRunes.size !== 3 || chosenRunes.some(r => !allRuneNames.includes(r))) {
+  const allRuneIds = getAllFutharkRuneIds();
+  if (uniqueRunes.size !== 6 || chosenRunes.some(r => !allRuneIds.includes(r))) {
     return res.status(400).json({ error: 'Nieprawidłowe lub powtórzone runy w losie.' });
   }
 
@@ -161,11 +161,11 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
     return res.status(404).json({ error: 'Runda loterii nie istnieje.' });
   }
 
-  // Draw 3 random unique runes if not provided
+  // Draw 6 random unique runes if not provided
   let winningRunes = customWinningRunes;
-  if (!Array.isArray(winningRunes) || winningRunes.length !== 3) {
-    const shuffled = [...getAllFutharkRuneNames()].sort(() => 0.5 - Math.random());
-    winningRunes = shuffled.slice(0, 3);
+  if (!Array.isArray(winningRunes) || winningRunes.length !== 6) {
+    const shuffled = [...getAllFutharkRuneIds()].sort(() => 0.5 - Math.random());
+    winningRunes = shuffled.slice(0, 6);
   }
 
   const winningSet = new Set(winningRunes);
@@ -185,18 +185,22 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
       let prizePoints = 0;
       let tierLabel = '';
 
-      if (matches === 3) {
-        prizeSkirnirs = Math.round(jackpot * 0.6); // 60% of jackpot
+      if (matches === 6) {
+        prizeSkirnirs = Math.round(jackpot * 0.6);
         prizePoints = roundRow.bonus_house_points || 100;
-        tierLabel = 'I Miejsce (3 Trafione Runy)';
-      } else if (matches === 2) {
-        prizeSkirnirs = Math.round(jackpot * 0.25 / Math.max(1, tickets.filter(tk => JSON.parse(tk.chosen_runes).filter(r => winningSet.has(r)).length === 2).length));
-        prizePoints = 40;
-        tierLabel = 'II Miejsce (2 Trafione Runy)';
-      } else if (matches === 1) {
-        prizeSkirnirs = Math.round(jackpot * 0.15 / Math.max(1, tickets.filter(tk => JSON.parse(tk.chosen_runes).filter(r => winningSet.has(r)).length === 1).length));
+        tierLabel = 'I Miejsce (6/6 Run)';
+      } else if (matches === 5) {
+        prizeSkirnirs = Math.round(jackpot * 0.25 / Math.max(1, tickets.filter(tk => JSON.parse(tk.chosen_runes).filter(r => winningSet.has(r)).length === 5).length));
+        prizePoints = 60;
+        tierLabel = 'II Miejsce (5/6 Run)';
+      } else if (matches === 4) {
+        prizeSkirnirs = Math.round(jackpot * 0.1 / Math.max(1, tickets.filter(tk => JSON.parse(tk.chosen_runes).filter(r => winningSet.has(r)).length === 4).length));
+        prizePoints = 30;
+        tierLabel = 'III Miejsce (4/6 Run)';
+      } else if (matches === 3) {
+        prizeSkirnirs = Math.round(jackpot * 0.05 / Math.max(1, tickets.filter(tk => JSON.parse(tk.chosen_runes).filter(r => winningSet.has(r)).length === 3).length));
         prizePoints = 15;
-        tierLabel = 'III Miejsce (1 Trafiona Runa)';
+        tierLabel = 'IV Miejsce (3/6 Run)';
       }
 
       // Update ticket record
@@ -273,7 +277,7 @@ router.post('/draw', requireAuth, requireRole('admin'), (req, res) => {
       nextRoundId,
       nextRoundNumber,
       `Wielkie Losowanie Przesilenia Północy (Runda #${nextRoundNumber})`,
-      'Wybierz 3 runy z prastarego Futharku Starszego i zdobądź Skarbiec Odyna!',
+      'Wybierz 6 unikalnych run z prastarego Futharku Starszego i zdobądź Skarbiec Odyna!',
       nextWeek
     );
   });

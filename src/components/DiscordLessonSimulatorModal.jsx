@@ -35,15 +35,15 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
   const [subjectId, setSubjectId] = useState('eliksiry');
   const [classYear, setClassYear] = useState('Klasa II');
   const [topic, setTopic] = useState('Eliksir Wiggenowy — Stabilizacja i Warzenie Północne');
-  const [professorName, setProfessorName] = useState(currentUser?.fullName || 'Prof. Astrid Vinter');
+  const [professorName, setProfessorName] = useState(currentUser?.fullName || '');
 
   // Live session messages
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [activeAuthor, setActiveAuthor] = useState({
-    name: 'Prof. Astrid Vinter',
-    house: 'reinhall',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80',
+    name: currentUser?.fullName || '',
+    house: currentUser?.house || '',
+    avatar: currentUser?.avatar || '',
     isBot: false
   });
   const [replyingTo, setReplyingTo] = useState(null);
@@ -386,9 +386,8 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#94a3b8' }}>
                 <span>Tożsamość w wątku:</span>
                 {[
-                  { name: professorName, house: 'reinhall', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80', isBot: false },
+                  { name: professorName, house: currentUser?.house || '', avatar: currentUser?.avatar || '', isBot: false },
                   { name: 'Valdemar Krag-Hansen', house: 'ravnheim', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', isBot: false },
-                  { name: 'Erik Nilsen', house: 'bjornhall', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', isBot: false },
                   { name: 'Freja Lund', house: 'ravnheim', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80', isBot: false }
                 ].map((idOption, i) => (
                   <button

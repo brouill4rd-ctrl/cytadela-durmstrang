@@ -855,7 +855,7 @@ router.post('/archive-year/preview', authenticateToken, requireAdmin, (req, res)
       };
     });
 
-    const bestStudent = detectedPeopleSnapshots[0]?.characterName || 'Astrid Vinter';
+    const bestStudent = detectedPeopleSnapshots[0]?.characterName || '';
 
     // 3. Scan active faculty
     const activeFaculty = db.prepare(`

@@ -199,12 +199,239 @@ export async function sendWelcomeToGuild(guild, member = null, specificChannel =
   return sent;
 }
 
+function normalizeDiscordChannelName(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function discordFieldValue(value, fallback = '—') {
+  const text = String(value || '').trim() || fallback;
+  return text.slice(0, 1024);
+}
+
+function getWarsawDateContext(date = new Date()) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Warsaw',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(date).filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+  );
+  const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
+  const utcDay = new Date(`${dateKey}T12:00:00Z`).getUTCDay();
+  return {
+    dateKey,
+    dayOfWeek: utcDay === 0 ? 7 : utcDay,
+    minutesSinceMidnight: Number(parts.hour) * 60 + Number(parts.minute)
+  };
+}
+
+function parseDailyPostTime(value = '07:00') {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value).trim());
+  if (!match) return 7 * 60;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return 7 * 60;
+  return hour * 60 + minute;
+}
+
+function resolveClassroomChannel(entry, guild) {
+  const classroom = String(entry.classroom || '').trim();
+  const explicitMention = /<#(\d+)>/.exec(classroom);
+  if (explicitMention) return guild.channels.cache.get(explicitMention[1]) || null;
+
+  const discordUrlChannel = /discord(?:app)?\.com\/channels\/\d+\/(\d+)/i.exec(classroom);
+  if (discordUrlChannel) return guild.channels.cache.get(discordUrlChannel[1]) || null;
+
+  const classroomName = normalizeDiscordChannelName(classroom);
+  const subjectId = normalizeDiscordChannelName(entry.subject_id);
+  const subjectName = normalizeDiscordChannelName(entry.subject_name);
+  let bestMatch = null;
+  let bestScore = 0;
+
+  guild.channels.cache.forEach(candidate => {
+    if (!candidate?.isTextBased?.() || typeof candidate.send !== 'function') return;
+    const channelName = normalizeDiscordChannelName(candidate.name);
+    let score = 0;
+    if (classroomName && channelName === classroomName) score = 100;
+    else if (classroomName && classroomName.length >= 6 && (channelName.includes(classroomName) || classroomName.includes(channelName))) score = 90;
+    else if (subjectId && channelName === subjectId) score = 80;
+    else if (subjectName && channelName === subjectName) score = 75;
+    else if (subjectId && subjectId.length >= 5 && channelName.includes(subjectId)) score = 65;
+    else if (subjectName && subjectName.length >= 5 && channelName.includes(subjectName)) score = 60;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = candidate;
+    }
+  });
+
+  return bestMatch;
+}
+
+function formatTimetableEntry(entry, guild) {
+  const status = String(entry.status || 'scheduled').toLowerCase();
+  const classroomChannel = resolveClassroomChannel(entry, guild);
+  const classroom = discordFieldValue(entry.classroom, 'Sala nieprzypisana');
+  const classroomDisplay = classroomChannel ? `${classroom} • <#${classroomChannel.id}>` : classroom;
+  const professor = entry.resolved_professor_name || entry.professor_name || 'Nieprzypisany';
+  const substitute = entry.resolved_substitute_professor_name || entry.substitute_professor_name;
+  const originalProfessor = entry.original_professor_name || professor;
+  const classYear = entry.class_year || 'Wszyscy';
+  const topicLine = entry.topic ? `\n📖 **Temat:** ${entry.topic}` : '';
+
+  if (status === 'cancelled') {
+    return [
+      '❌ **ZAJĘCIA ODWOŁANE**',
+      `👤 **Nauczyciel:** ${originalProfessor}`,
+      `🏛️ **Sala:** ${classroomDisplay}`,
+      `🎓 **Klasa:** ${classYear}`,
+      entry.cancellation_reason ? `📝 **Powód:** ${entry.cancellation_reason}` : ''
+    ].filter(Boolean).join('\n');
+  }
+
+  if (status === 'substitution') {
+    return [
+      `🔄 **Zastępstwo:** ${substitute || 'Nauczyciel zastępujący nieprzypisany'}`,
+      `↪️ **Za:** ${originalProfessor}`,
+      `🏛️ **Sala:** ${classroomDisplay}`,
+      `🎓 **Klasa:** ${classYear}`,
+      entry.substitution_reason ? `📝 **Informacja:** ${entry.substitution_reason}` : '',
+      topicLine.trim()
+    ].filter(Boolean).join('\n');
+  }
+
+  return [
+    `👤 **Nauczyciel:** ${professor}`,
+    `🏛️ **Sala:** ${classroomDisplay}`,
+    `🎓 **Klasa:** ${classYear}`,
+    topicLine.trim()
+  ].filter(Boolean).join('\n');
+}
+
+export function buildDailyTimetablePayload(entries = [], { dateKey, dayName, guild } = {}) {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const displayDate = new Date(`${dateKey}T12:00:00Z`).toLocaleDateString('pl-PL', {
+    timeZone: 'Europe/Warsaw',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  const chunks = safeEntries.length > 0
+    ? Array.from({ length: Math.ceil(safeEntries.length / 5) }, (_, index) => safeEntries.slice(index * 5, index * 5 + 5))
+    : [[]];
+
+  const embeds = chunks.map((chunk, index) => {
+    const embed = new EmbedBuilder()
+      .setColor(0xC59F4E)
+      .setTitle(index === 0 ? `📅 PLAN LEKCJI • ${String(dayName || '').toUpperCase()}` : `📅 PLAN LEKCJI • ciąg dalszy (${index + 1})`)
+      .setFooter({ text: `Twierdza Magii Durmstrang • ${displayDate} • czas Europe/Warsaw` })
+      .setTimestamp();
+
+    if (chunk.length === 0) {
+      embed.setDescription(`Na **${displayDate}** nie zaplanowano żadnych zajęć.`);
+    } else {
+      embed.setDescription(`Zajęcia na **${displayDate}**. Kliknij oznaczenie kanału przy sali, aby przejść na Discordzie.`);
+      embed.addFields(chunk.map(entry => ({
+        name: discordFieldValue(`${entry.subject_icon || '📚'} ${entry.start_time}–${entry.end_time} • ${entry.subject_name}`, 'Zajęcia').slice(0, 256),
+        value: discordFieldValue(formatTimetableEntry(entry, guild)).slice(0, 700),
+        inline: false
+      })));
+    }
+    return embed;
+  });
+
+  const frontendUrl = String(process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const components = /^https?:\/\//i.test(frontendUrl)
+    ? [new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Otwórz pełny plan na stronie')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${frontendUrl}/#/plan`)
+          .setEmoji('📜')
+      )]
+    : [];
+
+  return { embeds, components, allowedMentions: { parse: [] } };
+}
+
+export function buildRecruitmentNotificationPayload(application = {}) {
+  const isProfessor = application.role === 'professor';
+  const houseNames = {
+    reinhall: 'Reinhall',
+    bjornhall: 'Björnhall',
+    ravnheim: 'Ravnheim',
+    otergard: 'Otergard'
+  };
+  const submittedAt = application.submittedAt ? new Date(application.submittedAt) : new Date();
+  const timestamp = Number.isNaN(submittedAt.getTime()) ? new Date() : submittedAt;
+  const unixTimestamp = Math.floor(timestamp.getTime() / 1000);
+  const subjects = Array.isArray(application.requestedSubjects)
+    ? application.requestedSubjects.filter(Boolean).join(', ')
+    : application.requestedSubjects;
+
+  const embed = new EmbedBuilder()
+    .setColor(isProfessor ? 0x7C3AED : 0x2563EB)
+    .setTitle(isProfessor ? '🧙 NOWE PODANIE PROFESORSKIE' : '📜 NOWE PODANIE UCZNIOWSKIE')
+    .setDescription(
+      `Do Kancelarii Rekrutacji wpłynęło nowe podanie na stanowisko **${isProfessor ? 'profesora' : 'ucznia'}**.\n` +
+      `Złożono: <t:${unixTimestamp}:F> • <t:${unixTimestamp}:R>`
+    )
+    .addFields(
+      { name: 'Kandydat', value: discordFieldValue(application.fullName), inline: true },
+      { name: 'Login', value: discordFieldValue(application.username ? `\`${application.username}\`` : ''), inline: true },
+      { name: 'E-mail', value: discordFieldValue(application.email), inline: true },
+      { name: 'Pochodzenie', value: discordFieldValue(application.origin), inline: true },
+      { name: 'Wiek', value: discordFieldValue(application.age), inline: true }
+    );
+
+  if (isProfessor) {
+    embed.addFields(
+      { name: 'Katedra', value: discordFieldValue(application.departmentName), inline: true },
+      { name: 'Wybrane przedmioty', value: discordFieldValue(subjects || application.departmentName), inline: false },
+      { name: 'Specjalizacja', value: discordFieldValue(application.specialization), inline: false },
+      { name: 'Gabinet', value: discordFieldValue(application.office), inline: true }
+    );
+  } else {
+    embed.addFields(
+      { name: 'Zakon', value: discordFieldValue(houseNames[String(application.house || '').toLowerCase()] || application.house), inline: true },
+      { name: 'Klasa', value: discordFieldValue(application.classYear), inline: true }
+    );
+  }
+
+  embed
+    .setFooter({ text: `Kancelaria Rekrutacji • ID: ${application.applicationId || 'brak'}` })
+    .setTimestamp(timestamp);
+
+  const frontendUrl = String(process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const components = /^https?:\/\//i.test(frontendUrl)
+    ? [new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Otwórz panel podań')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${frontendUrl}/#/admin`)
+          .setEmoji('🏰')
+      )]
+    : [];
+
+  return { embeds: [embed], components, allowedMentions: { parse: [] } };
+}
+
 export class DurmstrangDiscordBot {
   constructor() {
     this.token = process.env.DISCORD_BOT_TOKEN || '';
     this.clientId = process.env.DISCORD_CLIENT_ID || '';
     this.client = null;
     this.isReady = false;
+    this.timetableScheduler = null;
+    this.timetableCheckInProgress = false;
   }
 
   // Definicje komend Slash
@@ -355,6 +582,7 @@ export class DurmstrangDiscordBot {
       await this.client.login(this.token);
       this.isReady = true;
       console.log(`🏰 [Discord Bot] Pomyślnie zalogowano jako: ${this.client.user.tag}`);
+      this.startDailyTimetableScheduler();
 
       // Rejestracja Slash Commands w Discord API
       if (this.clientId) {
@@ -1270,6 +1498,176 @@ export class DurmstrangDiscordBot {
     });
   }
 
+  // ==================== MODUŁ REKRUTACJI — POWIADOMIENIA ====================
+
+  async announceRecruitmentApplication(application) {
+    if (!this.client?.isReady() || !this.isReady) {
+      console.warn('[Discord Bot] Pominięto powiadomienie rekrutacyjne — bot nie jest połączony.');
+      return { sent: false, reason: 'bot_offline' };
+    }
+
+    try {
+      const config = db.prepare('SELECT guild_id FROM discord_bot_config LIMIT 1').get() || {};
+      const guildId = process.env.DISCORD_GUILD_ID || config.guild_id;
+      let guild = guildId ? this.client.guilds.cache.get(guildId) : null;
+      if (!guild && guildId) guild = await this.client.guilds.fetch(guildId).catch(() => null);
+      guild ||= this.client.guilds.cache.first();
+      if (!guild) {
+        console.warn('[Discord Bot] Pominięto powiadomienie rekrutacyjne — nie znaleziono serwera.');
+        return { sent: false, reason: 'guild_not_found' };
+      }
+
+      const configuredChannelId = process.env.DISCORD_RECRUITMENT_CHANNEL_ID || process.env.DISCORD_LOZA_CHANNEL_ID;
+      let channel = configuredChannelId
+        ? guild.channels.cache.get(configuredChannelId) || await guild.channels.fetch(configuredChannelId).catch(() => null)
+        : null;
+
+      if (!channel) {
+        await guild.channels.fetch().catch(() => null);
+        channel = guild.channels.cache.find(candidate => {
+          if (!candidate?.isTextBased?.()) return false;
+          const normalizedName = normalizeDiscordChannelName(candidate.name);
+          return normalizedName === 'loza-arcymistrzow'
+            || (normalizedName.includes('loza') && normalizedName.includes('arcymistrz'));
+        });
+      }
+
+      if (!channel?.isTextBased?.() || typeof channel.send !== 'function') {
+        console.warn('[Discord Bot] Pominięto powiadomienie rekrutacyjne — nie znaleziono kanału #loża-arcymistrzów.');
+        return { sent: false, reason: 'channel_not_found' };
+      }
+
+      const message = await channel.send(buildRecruitmentNotificationPayload(application));
+      console.log(`📨 [Discord Bot] Wysłano powiadomienie o podaniu (${application.role}) na #${channel.name}.`);
+      return { sent: true, messageId: message.id, channelId: channel.id };
+    } catch (err) {
+      console.warn('[Discord Bot] Błąd wysyłania powiadomienia rekrutacyjnego:', err.message);
+      return { sent: false, reason: 'send_failed', error: err.message };
+    }
+  }
+
+  // ==================== CODZIENNY PLAN LEKCJI ====================
+
+  async announceDailyTimetable({ dateKey, dayOfWeek } = {}) {
+    if (!this.client?.isReady() || !this.isReady) {
+      return { sent: false, reason: 'bot_offline' };
+    }
+
+    try {
+      const context = dateKey && dayOfWeek ? { dateKey, dayOfWeek } : getWarsawDateContext();
+      const dayNames = {
+        1: 'Poniedziałek',
+        2: 'Wtorek',
+        3: 'Środa',
+        4: 'Czwartek',
+        5: 'Piątek',
+        6: 'Sobota',
+        7: 'Niedziela'
+      };
+      const config = db.prepare('SELECT guild_id FROM discord_bot_config LIMIT 1').get() || {};
+      const guildId = process.env.DISCORD_GUILD_ID || config.guild_id;
+      let guild = guildId ? this.client.guilds.cache.get(guildId) : null;
+      if (!guild && guildId) guild = await this.client.guilds.fetch(guildId).catch(() => null);
+      guild ||= this.client.guilds.cache.first();
+      if (!guild) return { sent: false, reason: 'guild_not_found' };
+
+      await guild.channels.fetch().catch(() => null);
+      const configuredChannelId = process.env.DISCORD_TIMETABLE_CHANNEL_ID;
+      let channel = configuredChannelId
+        ? guild.channels.cache.get(configuredChannelId) || await guild.channels.fetch(configuredChannelId).catch(() => null)
+        : null;
+
+      if (!channel) {
+        channel = guild.channels.cache.find(candidate => {
+          if (!candidate?.isTextBased?.() || typeof candidate.send !== 'function') return false;
+          const name = normalizeDiscordChannelName(candidate.name);
+          return name === 'plan-lekcji'
+            || name === 'plan-zajec'
+            || (name.includes('plan') && (name.includes('lekcj') || name.includes('zajec')));
+        });
+      }
+
+      if (!channel?.isTextBased?.() || typeof channel.send !== 'function') {
+        console.warn('[Discord Bot] Nie wysłano planu — nie znaleziono kanału #plan-lekcji.');
+        return { sent: false, reason: 'channel_not_found' };
+      }
+
+      const entries = db.prepare(`
+        SELECT
+          t.*,
+          COALESCE(NULLIF(t.professor_name, ''), NULLIF(professor.full_name, ''), NULLIF(subject.professor_name, ''), 'Nieprzypisany') AS resolved_professor_name,
+          COALESCE(NULLIF(t.substitute_professor_name, ''), NULLIF(substitute.full_name, ''), '') AS resolved_substitute_professor_name
+        FROM timetable_entries t
+        LEFT JOIN users professor ON professor.id = t.professor_id
+        LEFT JOIN users substitute ON substitute.id = t.substitute_professor_id
+        LEFT JOIN subjects subject ON subject.id = t.subject_id
+        WHERE t.is_active = 1 AND t.day_of_week = ?
+        ORDER BY t.start_time ASC, t.sort_order ASC
+      `).all(context.dayOfWeek);
+
+      const payload = buildDailyTimetablePayload(entries, {
+        dateKey: context.dateKey,
+        dayName: dayNames[context.dayOfWeek],
+        guild
+      });
+      const sentMessages = [];
+      for (let index = 0; index < payload.embeds.length; index += 10) {
+        const message = await channel.send({
+          ...payload,
+          embeds: payload.embeds.slice(index, index + 10),
+          components: index === 0 ? payload.components : []
+        });
+        sentMessages.push(message);
+      }
+
+      console.log(`📅 [Discord Bot] Wysłano plan na ${context.dateKey} (${entries.length} pozycji) na #${channel.name}.`);
+      return {
+        sent: true,
+        messageIds: sentMessages.map(message => message.id),
+        channelId: channel.id,
+        entriesCount: entries.length,
+        dateKey: context.dateKey
+      };
+    } catch (err) {
+      console.warn('[Discord Bot] Błąd wysyłania codziennego planu lekcji:', err.message);
+      return { sent: false, reason: 'send_failed', error: err.message };
+    }
+  }
+
+  startDailyTimetableScheduler() {
+    const enabled = !['0', 'false', 'no', 'off'].includes(String(process.env.DISCORD_TIMETABLE_ENABLED || 'true').toLowerCase());
+    if (!enabled || this.timetableScheduler) return;
+
+    const configuredTime = process.env.DISCORD_TIMETABLE_POST_TIME || '07:00';
+    const targetMinutes = parseDailyPostTime(configuredTime);
+    const checkAndPost = async () => {
+      if (this.timetableCheckInProgress || !this.client?.isReady()) return;
+      const context = getWarsawDateContext();
+      if (context.minutesSinceMidnight < targetMinutes) return;
+
+      const lastPostDate = db.prepare("SELECT value FROM school_config WHERE key = 'discord_timetable_last_post_date'").get()?.value;
+      if (lastPostDate === context.dateKey) return;
+
+      this.timetableCheckInProgress = true;
+      try {
+        const result = await this.announceDailyTimetable(context);
+        if (result.sent) {
+          db.prepare(`
+            INSERT INTO school_config (key, value) VALUES ('discord_timetable_last_post_date', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+          `).run(context.dateKey);
+        }
+      } finally {
+        this.timetableCheckInProgress = false;
+      }
+    };
+
+    void checkAndPost();
+    this.timetableScheduler = setInterval(() => void checkAndPost(), 60 * 1000);
+    this.timetableScheduler.unref?.();
+    console.log(`📅 [Discord Bot] Codzienny plan lekcji aktywny: ${configuredTime}, strefa Europe/Warsaw.`);
+  }
+
   // ==================== MODUŁ PRAC DOMOWYCH — POWIADOMIENIA ====================
 
   async announceHomeworkCreated(homework) {
@@ -1426,6 +1824,16 @@ export class DurmstrangDiscordBot {
       .setTimestamp();
     const sent = await target.send({ embeds:[embed] });
     return { messageId:sent.id, channelId:target.id, channelName:target.name };
+  }
+
+  stop() {
+    if (this.timetableScheduler) {
+      clearInterval(this.timetableScheduler);
+      this.timetableScheduler = null;
+    }
+    this.isReady = false;
+    this.client?.destroy();
+    this.client = null;
   }
 }
 
