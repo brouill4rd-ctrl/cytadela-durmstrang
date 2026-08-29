@@ -52,6 +52,12 @@ export const api = {
   createWorldScar: (data) => apiFetch('/world/scars', { method: 'POST', body: JSON.stringify(data) }),
   createWorldEvent: (data) => apiFetch('/world/events', { method: 'POST', body: JSON.stringify(data) }),
   closeWorldEventWithScar: (id, data) => apiFetch(`/world/events/${id}/close-with-scar`, { method: 'POST', body: JSON.stringify(data) }),
+  // Turniej Szermierki Różdżkowej
+  wandFencingStart: () => apiFetch('/minigames/wand-fencing/start', { method: 'POST' }),
+  wandFencingComplete: (runId, actionLog) => apiFetch('/minigames/wand-fencing/complete', { method: 'POST', body: JSON.stringify({ runId, actionLog }) }),
+  wandFencingAbandon: (runId) => apiFetch('/minigames/wand-fencing/abandon', { method: 'POST', body: JSON.stringify({ runId }) }),
+  wandFencingDailyStatus: () => apiFetch('/minigames/wand-fencing/daily-status'),
+
   // Bestiariusz Północy
   getBestiaryCatalog: () => apiFetch('/bestiary/catalog'),
   getBestiaryStatus: () => apiFetch('/bestiary/status'),

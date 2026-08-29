@@ -234,9 +234,10 @@ export function applyPlayerAction(state, actionId, rngVal) {
   // Skupienie
   const newFocus = Math.max(0, Math.min(MAX_FOCUS, state.focus + a.focusDelta));
 
-  // Cooldown (ustawienie, bez dekrementacji w tej turze)
-  const newCooldowns = { ...state.cooldowns };
-  if (a.cooldown > 0) newCooldowns[actionId] = a.cooldown;
+  // Cooldown: ustaw dla użytej akcji, dekrementuj wszystkie pozostałe
+  const rawCooldowns = { ...state.cooldowns };
+  if (a.cooldown > 0) rawCooldowns[actionId] = a.cooldown;
+  const newCooldowns = decrementCooldowns(rawCooldowns, actionId);
 
   // Osłona gracza (Garda)
   const newShield = actionId === 'northern_guard';
@@ -341,7 +342,8 @@ export function resolveEnemyTurn(state, rngVal, playerUsedGuard = false) {
     }
 
     case 'gunnar': {
-      // Wejście w berserk
+      // Wejście w berserk — berserkTurnsLeft nie spada w turze aktywacji
+      const wasAlreadyBerserk = es.berserkActivated;
       if (!es.berserkActivated && state.enemyHp <= 35) {
         es.berserkActivated = true;
         es.berserkTurnsLeft = 2;
@@ -349,7 +351,7 @@ export function resolveEnemyTurn(state, rngVal, playerUsedGuard = false) {
       }
       const bonusDmg = (es.berserkActivated && es.berserkTurnsLeft > 0) ? 4 : 0;
       rawDmg = rngInt(rngVal, opp.minDmg, opp.maxDmg) + bonusDmg;
-      if (es.berserkTurnsLeft > 0) {
+      if (wasAlreadyBerserk && es.berserkTurnsLeft > 0) {
         es.berserkTurnsLeft--;
       }
       es.moveCount++;
@@ -386,7 +388,6 @@ export function resolveEnemyTurn(state, rngVal, playerUsedGuard = false) {
           ...state,
           enemyHp: newEnemyHp,
           enemyState: es,
-          cooldowns: decrementCooldowns(state.cooldowns, null),
         };
         return { newState: healState, events, playerDefeated: false };
       } else {
@@ -456,7 +457,6 @@ export function resolveEnemyTurn(state, rngVal, playerUsedGuard = false) {
     enemyHp: newEnemyHp,
     enemyState: es,
     guardBonuses: newGuardBonuses,
-    cooldowns: decrementCooldowns(state.cooldowns, null),
   };
 
   return { newState, events, playerDefeated };

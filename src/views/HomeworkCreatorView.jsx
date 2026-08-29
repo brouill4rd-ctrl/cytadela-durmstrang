@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -427,13 +428,12 @@ export const HomeworkCreatorView = () => {
 
               <div className="form-field full-width">
                 <label>Krótki opis / Zajawka</label>
-                <textarea
-                  placeholder="Krótki zarys tematyki widoczny na kafelku zadania..."
+                <RichTextEditor
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="tmd-textarea"
-                  rows={2}
-                ></textarea>
+                  onChange={val => setFormData(prev => ({ ...prev, description: val }))}
+                  placeholder="Krótki zarys tematyki widoczny na kafelku zadania..."
+                  minHeight={100}
+                />
               </div>
             </div>
           </div>
@@ -446,13 +446,12 @@ export const HomeworkCreatorView = () => {
           <div className="step-section">
             <div className="form-field full-width">
               <label>Szczegółowa instrukcja dla adeptów *</label>
-              <textarea
-                placeholder="Przedstaw pełną treść zadania, kontekst, pytania problemowe i oczekiwane wnioski..."
+              <RichTextEditor
                 value={formData.instructions}
-                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                className="tmd-textarea"
-                rows={8}
-              ></textarea>
+                onChange={val => setFormData(prev => ({ ...prev, instructions: val }))}
+                placeholder="Przedstaw pełną treść zadania, kontekst, pytania problemowe i oczekiwane wnioski..."
+                minHeight={220}
+              />
             </div>
 
             {/* Requirements Builder */}

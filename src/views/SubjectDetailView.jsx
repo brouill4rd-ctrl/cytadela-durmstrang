@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { RichTextEditor } from '../components/RichTextEditor';
+import { RichTextRenderer } from '../components/RichTextRenderer';
 import { useSchool } from '../context/SchoolContext';
 import { SubjectIcon } from '../components/SubjectIcon';
 import { getSubjectBannerImage } from '../data/subjectBanners';
@@ -200,31 +202,9 @@ function containsSubjectHtml(value) {
 
 const SubjectRichContent = ({ content }) => {
   if (!content) return null;
-  if (!containsSubjectHtml(content)) return <div className="subject-rich-content">{renderMarkdownLite(content)}</div>;
-  return (
-    <div
-      className="subject-rich-content subject-description-card__body"
-      dangerouslySetInnerHTML={{ __html: formatSubjectDescriptionHtml(content) }}
-    />
-  );
+  return <RichTextRenderer content={content} className="subject-rich-content" />;
 };
 
-const SubjectHtmlToolbar = ({ onInsert }) => (
-  <div className="subject-html-toolbar" role="toolbar" aria-label="Formatowanie HTML">
-    <button type="button" onClick={() => onInsert('<p>', '</p>', 'Nowy akapit')}>¶ <span>Akapit</span></button>
-    <button type="button" title="Wyrównaj do obu stron" onClick={() => onInsert('<p style="text-align:justify">', '</p>', 'Wyjustowany akapit')}>⬛ <span>Justify</span></button>
-    <button type="button" title="Wyśrodkuj" onClick={() => onInsert('<p style="text-align:center">', '</p>', 'Wyśrodkowany akapit')}>≡ <span>Środek</span></button>
-    <button type="button" onClick={() => onInsert('<h4>', '</h4>', 'Śródtytuł')}>H <span>Nagłówek</span></button>
-    <button type="button" onClick={() => onInsert('<strong>', '</strong>', 'ważna treść')}><b>B</b> <span>Pogrubienie</span></button>
-    <button type="button" onClick={() => onInsert('<em>', '</em>', 'wyróżniona treść')}><em>I</em> <span>Kursywa</span></button>
-    <button type="button" onClick={() => onInsert('<mark>', '</mark>', 'magiczny termin')}>✦ <span>Wyróżnienie</span></button>
-    <button type="button" onClick={() => onInsert('<blockquote>', '</blockquote>', 'Motto katedry')}>❝ <span>Cytat</span></button>
-    <button type="button" onClick={() => onInsert('<ul>\n  <li>', '</li>\n</ul>', 'element listy')}>☷ <span>Lista</span></button>
-    <button type="button" onClick={() => onInsert('<ol>\n  <li>', '</li>\n</ol>', 'element listy')}>① <span>Numerowana</span></button>
-    <button type="button" title="Pozioma linia" onClick={() => onInsert('<hr>', '', '')}>― <span>Linia</span></button>
-    <button type="button" onClick={() => onInsert('<small>', '</small>', 'drobna adnotacja')}>ₐ <span>Małe</span></button>
-  </div>
-);
 
 const SubjectDescriptionCard = ({ description, subject, compact = false, theme }) => {
   if (!description) return null;
@@ -344,9 +324,6 @@ export const SubjectDetailView = () => {
   const [editingInfo, setEditingInfo] = useState(false);
   const [infoForm, setInfoForm] = useState({});
   const [savingInfo, setSavingInfo] = useState(false);
-  const descriptionEditorRef = useRef(null);
-  const syllabusEditorRef = useRef(null);
-  const regulationsEditorRef = useRef(null);
 
   useEffect(() => {
     const load = async () => {
@@ -469,7 +446,8 @@ export const SubjectDetailView = () => {
   };
 
   const insertHtmlAtSelection = (editorRef, value, setValue, openingTag, closingTag = '', placeholder = 'treść') => {
-    const editor = editorRef.current;
+    // Legacy helper — kept for compatibility but no longer used
+    const editor = editorRef?.current;
     const selectionStart = editor?.selectionStart ?? value.length;
     const selectionEnd = editor?.selectionEnd ?? value.length;
     const selection = value.slice(selectionStart, selectionEnd) || placeholder;
@@ -486,7 +464,7 @@ export const SubjectDetailView = () => {
   };
 
   const insertDescriptionHtml = (openingTag, closingTag = '', placeholder = 'treść') => insertHtmlAtSelection(
-    descriptionEditorRef,
+    null,
     infoForm.description || '',
     nextValue => setInfoForm(prev => ({ ...prev, description: nextValue })),
     openingTag,
@@ -837,14 +815,11 @@ export const SubjectDetailView = () => {
 
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Opis Katedry</label>
-              <SubjectHtmlToolbar onInsert={insertDescriptionHtml} />
-              <textarea
-                ref={descriptionEditorRef}
+              <RichTextEditor
                 value={infoForm.description || ''}
-                onChange={e => setInfoForm(prev => ({ ...prev, description: e.target.value }))}
-                rows={8}
-                placeholder="Wpisz zwykły tekst albo użyj bezpiecznych znaczników HTML…"
-                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '0 0 6px 6px', padding: '0.75rem', color: '#fff', fontSize: '0.86rem', lineHeight: 1.55, fontFamily: 'Consolas, monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                onChange={val => setInfoForm(prev => ({ ...prev, description: val }))}
+                placeholder="Opisz katedrę — czego uczysz, co studentów czeka..."
+                minHeight={200}
               />
               {infoForm.description && (
                 <div className="subject-description-preview">
@@ -982,28 +957,12 @@ export const SubjectDetailView = () => {
 
           {editingSyllabus ? (
             <div>
-              <SubjectHtmlToolbar onInsert={(openingTag, closingTag, placeholder) => insertHtmlAtSelection(
-                syllabusEditorRef,
-                syllabusText,
-                setSyllabusText,
-                openingTag,
-                closingTag,
-                placeholder
-              )} />
-              <textarea
-                ref={syllabusEditorRef}
+              <RichTextEditor
                 value={syllabusText}
-                onChange={e => setSyllabusText(e.target.value)}
-                rows={20}
-                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '0 0 8px 8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder="Wpisz plan nauczania w HTML lub składni Markdown..."
+                onChange={setSyllabusText}
+                placeholder="Napisz plan nauczania — tematy, cele, harmonogram..."
+                minHeight={400}
               />
-              {syllabusText && (
-                <div className="subject-description-preview">
-                  <span className="subject-description-preview__label">Podgląd planu na żywo</span>
-                  <div className="subject-live-document-preview"><SubjectRichContent content={syllabusText} /></div>
-                </div>
-              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.85rem', justifyContent: 'flex-end' }}>
                 <button onClick={() => { setEditingSyllabus(false); setSyllabusText(subject.syllabus || ''); }} style={{ padding: '0.45rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}>Anuluj</button>
                 <button onClick={handleSaveSyllabus} disabled={savingText} className="btn-durmstrang" style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', gap: '0.35rem' }}>
@@ -1045,28 +1004,12 @@ export const SubjectDetailView = () => {
 
           {editingRegulations ? (
             <div>
-              <SubjectHtmlToolbar onInsert={(openingTag, closingTag, placeholder) => insertHtmlAtSelection(
-                regulationsEditorRef,
-                regulationsText,
-                setRegulationsText,
-                openingTag,
-                closingTag,
-                placeholder
-              )} />
-              <textarea
-                ref={regulationsEditorRef}
+              <RichTextEditor
                 value={regulationsText}
-                onChange={e => setRegulationsText(e.target.value)}
-                rows={16}
-                placeholder="Wpisz regulamin w HTML lub składni Markdown..."
-                style={{ width: '100%', background: 'rgba(6,8,14,0.9)', border: '1px solid rgba(197,159,78,0.35)', borderRadius: '0 0 8px 8px', padding: '1rem', color: '#e2e8f0', fontSize: '0.88rem', fontFamily: 'Consolas, monospace', lineHeight: 1.6, resize: 'vertical', boxSizing: 'border-box' }}
+                onChange={setRegulationsText}
+                placeholder="Napisz regulamin zajęć — zasady, wymagania, nieobecności..."
+                minHeight={320}
               />
-              {regulationsText && (
-                <div className="subject-description-preview">
-                  <span className="subject-description-preview__label">Podgląd regulaminu na żywo</span>
-                  <div className="subject-live-document-preview"><SubjectRichContent content={regulationsText} /></div>
-                </div>
-              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.85rem', justifyContent: 'flex-end' }}>
                 <button onClick={() => { setEditingRegulations(false); setRegulationsText(subject.regulations || ''); }} style={{ padding: '0.45rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}>Anuluj</button>
                 <button onClick={handleSaveRegulations} disabled={savingText} className="btn-durmstrang" style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', gap: '0.35rem' }}>

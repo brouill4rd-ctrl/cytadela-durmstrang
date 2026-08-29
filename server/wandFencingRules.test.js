@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PLAYER_ACTIONS, OPPONENTS, MAX_HP, MAX_FOCUS, MAX_TURNS,
+  PLAYER_ACTIONS, OPPONENTS, MAX_HP, MAX_FOCUS, MAX_TURNS, STARTING_FOCUS,
   createPRNG, rngInt,
   initRoundState, isActionLegal, getEnemyIntent,
   applyPlayerAction, resolveEnemyTurn,

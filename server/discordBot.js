@@ -696,11 +696,11 @@ export class DurmstrangDiscordBot {
       if (!interaction.isChatInputCommand()) return;
 
       try {
-        if (!interaction.deferred && !interaction.replied) {
-          await interaction.deferReply().catch(() => {});
-        }
-
         const { commandName } = interaction;
+
+        if (!interaction.deferred && !interaction.replied) {
+          await interaction.deferReply({ ephemeral: commandName === 'lekcja' }).catch(() => {});
+        }
 
         // /powitaj
         if (commandName === 'powitaj') {
@@ -772,10 +772,11 @@ export class DurmstrangDiscordBot {
             }
 
             activeLessonSessions.set(threadId, {
-              lessonId, threadId, subjectName: przedmiot, classYear, topic: temat, professorName, startTime: new Date().toISOString()
+              lessonId, threadId, subjectName: przedmiot, classYear, topic: temat,
+              professorName, professorId: interaction.user.id, startTime: new Date().toISOString()
             });
 
-            const embed = new EmbedBuilder()
+            const publicEmbed = new EmbedBuilder()
               .setTitle('📖 CYTADELA DURMSTRANG — ROZPOCZĘTO SESJĘ LEKCYJNĄ')
               .setDescription(`Oficjalny wątek lekcyjny Katedry został otwarty i jest archiwizowany.`)
               .addFields(
@@ -785,14 +786,25 @@ export class DurmstrangDiscordBot {
                 { name: '✨ Temat Zajęć', value: `**${temat}**` }
               )
               .setColor(0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • Użyj /lekcja zakoncz po zakończeniu zajęć' });
+              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Wątków Lekcyjnych' });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.channel.send({ embeds: [publicEmbed] });
+
+            await interaction.editReply({
+              content: `✅ **Sesja lekcyjna rozpoczęta!**\nWątek jest teraz archiwizowany — wiadomości uczestników zapisują się automatycznie.\n\nZakończ zajęcia komendą \`/lekcja zakoncz\`.`
+            });
           }
 
           if (sub === 'zakoncz') {
             const threadId = interaction.channel.id;
-            const lesson = db.prepare('SELECT * FROM lessons WHERE discord_thread_id = ? ORDER BY created_at DESC LIMIT 1').get(threadId);
+
+            const activeSession = activeLessonSessions.get(threadId);
+            if (activeSession && activeSession.professorId && activeSession.professorId !== interaction.user.id) {
+              await interaction.editReply('⛔ **Brak uprawnień.** Tylko profesor, który rozpoczął tę lekcję, może ją zakończyć.');
+              return;
+            }
+
+            const lesson = db.prepare("SELECT * FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
 
             if (!lesson) {
               await interaction.editReply('⚠️ Nie odnaleziono aktywnej sesji lekcyjnej w tym wątku. Uruchom najpierw `/lekcja rozpocznij`.');
@@ -804,25 +816,33 @@ export class DurmstrangDiscordBot {
 
             activeLessonSessions.delete(threadId);
 
-            const summaryEmbed = new EmbedBuilder()
-              .setTitle('📜 SESJA LEKCYJNA ZAKOŃCZONA — PROTOKÓŁ WYGENEROWANY')
-              .setDescription(`Przebieg zajęć został zarchiwizowany w bazie Cytadeli. Szkic dziennika w stanie **DRAFT** oczekuje na weryfikację obecności i zatwierdzenie punktów przez Profesora.`)
+            const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+            const publicSummaryEmbed = new EmbedBuilder()
+              .setTitle('📜 SESJA LEKCYJNA ZAKOŃCZONA')
+              .setDescription(`Zajęcia z **${lesson.subject_name}** zostały zakończone. Zapis wątku jest gotowy.`)
               .addFields(
                 { name: 'Temat', value: lesson.topic, inline: false },
-                { name: 'Zarchiwizowane wiadomości', value: `${messagesCount?.count || 0}`, inline: true },
-                { name: 'Zarejestrowani uczestnicy', value: `${participants?.count || 0}`, inline: true }
+                { name: 'Wiadomości', value: `${messagesCount?.count || 0}`, inline: true },
+                { name: 'Uczestnicy', value: `${participants?.count || 0}`, inline: true }
               )
               .setColor(0x10B981)
-              .setFooter({ text: 'Cytadela Durmstrang • Panel Dzienników Lekcyjnych' });
+              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Wątków Lekcyjnych' });
+
+            await interaction.channel.send({ embeds: [publicSummaryEmbed] });
 
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
-                .setLabel('Otwórz Dziennik na Stronie')
+                .setLabel('Otwórz Dziennik — Panel Profesora')
                 .setStyle(ButtonStyle.Link)
-                .setURL(`http://localhost:5173/`)
+                .setURL(`${frontendUrl}/#/dzienniki/edytor/${lesson.id}`)
+                .setEmoji('📖')
             );
 
-            await interaction.editReply({ embeds: [summaryEmbed], components: [row] });
+            await interaction.editReply({
+              content: `✅ **Lekcja zakończona!** Szkic dziennika oczekuje na weryfikację obecności i przyznanie punktów.\n**Uczestnicy:** ${participants?.count || 0} | **Wiadomości:** ${messagesCount?.count || 0}`,
+              components: [row]
+            });
           }
         }
 
@@ -1380,6 +1400,17 @@ export class DurmstrangDiscordBot {
     });
 
     // 2. Automatyczna archiwizacja każdej wiadomości, embedu i załącznika w wątku lekcyjnym
+    const resolveMentions = (text, guild) => {
+      if (!text || !guild) return text || '';
+      return text.replace(/<@!?(\d+)>/g, (raw, id) => {
+        const m = guild.members?.cache?.get(id);
+        return m ? `@${m.displayName}` : raw;
+      }).replace(/<#(\d+)>/g, (raw, id) => {
+        const ch = guild.channels?.cache?.get(id);
+        return ch ? `#${ch.name}` : raw;
+      });
+    };
+
     this.client.on('messageCreate', async (message) => {
       // Ignoruj tylko własnego bota Durmstranga, pozwalając na archiwizację botów takich jak Fibi APL. i kart zaklęć
       if (message.author.id === this.client.user?.id) return;
@@ -1417,12 +1448,13 @@ export class DurmstrangDiscordBot {
       }
 
       // Obsługa Discord Embeds (np. Karta Zaklęcia Erecto od Fibi APL.)
+      const guild = message.guild;
       const formattedEmbeds = (message.embeds || []).map(e => ({
-        title: e.title || '',
-        description: e.description || '',
+        title: resolveMentions(e.title || '', guild),
+        description: resolveMentions(e.description || '', guild),
         color: e.hexColor || (e.color ? `#${e.color.toString(16).padStart(6, '0')}` : '#E5C158'),
         author: e.author ? { name: e.author.name || '', icon_url: e.author.iconURL || e.author.icon_url || '' } : null,
-        fields: (e.fields || []).map(f => ({ name: f.name || '', value: f.value || '', inline: !!f.inline })),
+        fields: (e.fields || []).map(f => ({ name: resolveMentions(f.name || '', guild), value: resolveMentions(f.value || '', guild), inline: !!f.inline })),
         footer: e.footer ? { text: e.footer.text || '', icon_url: e.footer.iconURL || e.footer.icon_url || '' } : null,
         thumbnail: e.thumbnail ? { url: e.thumbnail.url } : null,
         image: e.image ? { url: e.image.url } : null,
@@ -1435,8 +1467,9 @@ export class DurmstrangDiscordBot {
       if (message.interactionMetadata || message.interaction) {
         isCommand = 1;
         const meta = message.interactionMetadata || message.interaction;
+        const resolvedName = meta.name || meta.commandName || meta.customId || '';
         commandData = JSON.stringify({
-          name: meta.name || meta.commandName || 'zaklęcie',
+          name: resolvedName,
           author: meta.user?.displayName || meta.user?.username || message.member?.displayName || message.author.username
         });
       }
@@ -1458,7 +1491,7 @@ export class DurmstrangDiscordBot {
         message.member?.displayName || message.author.username,
         message.author.displayAvatarURL(),
         userHouse,
-        message.content || '',
+        resolveMentions(message.content || '', guild),
         message.reference?.messageId || '',
         '',
         '',

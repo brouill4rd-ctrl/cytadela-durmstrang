@@ -718,22 +718,23 @@ export function submitIdentify({ sessionId, userId, actionId, choiceId }) {
   const session = _db.prepare(`SELECT * FROM bestiary_sessions WHERE id = ?`).get(sessionId);
   if (!session) return { notFound: true };
   if (session.user_id !== userId) return { forbidden: true };
-  if (session.status !== 'active') return { error: 'Sesja nieaktywna.' };
-  if (session.current_phase !== 'observe') return { error: 'Błędna faza: oczekiwana faza obserwacji.' };
 
-  const enc = _db.prepare(`
+  // Check idempotency before phase validation so repeated calls return correct duplicate response
+  const encForIdem = _db.prepare(`
     SELECT * FROM bestiary_encounters WHERE session_id = ? AND encounter_index = ?
   `).get(sessionId, session.current_encounter);
-  if (!enc) return { error: 'Brak spotkania.' };
-
-  // Idempotency
-  if (enc.identify_action_id) {
-    if (enc.identify_action_id === actionId) {
-      const freshSession = _db.prepare(`SELECT * FROM bestiary_sessions WHERE id = ?`).get(sessionId);
-      return { duplicate: true, encounter: sanitizeEncounter(enc, freshSession) };
+  if (encForIdem?.identify_action_id) {
+    if (encForIdem.identify_action_id === actionId) {
+      return { duplicate: true, encounter: sanitizeEncounter(encForIdem, session) };
     }
     return { error: 'To spotkanie zostało już rozliczone.' };
   }
+
+  if (session.status !== 'active') return { error: 'Sesja nieaktywna.' };
+  if (session.current_phase !== 'observe') return { error: 'Błędna faza: oczekiwana faza obserwacji.' };
+
+  const enc = encForIdem;
+  if (!enc) return { error: 'Brak spotkania.' };
 
   const options = JSON.parse(enc.identify_options_json || '[]');
   if (!options.includes(choiceId)) return { error: 'Wybrana opcja nie należy do dostępnych odpowiedzi.' };
@@ -813,21 +814,23 @@ export function submitCountermeasure({ sessionId, userId, actionId, choiceId }) 
   const session = _db.prepare(`SELECT * FROM bestiary_sessions WHERE id = ?`).get(sessionId);
   if (!session) return { notFound: true };
   if (session.user_id !== userId) return { forbidden: true };
-  if (session.status !== 'active') return { error: 'Sesja nieaktywna.' };
-  if (session.current_phase !== 'countermeasure') return { error: 'Błędna faza: oczekiwana faza kontrzaklęcia.' };
 
-  const enc = _db.prepare(`
+  // Idempotency before phase check
+  const encForIdem = _db.prepare(`
     SELECT * FROM bestiary_encounters WHERE session_id = ? AND encounter_index = ?
   `).get(sessionId, session.current_encounter);
-  if (!enc) return { error: 'Brak spotkania.' };
-
-  if (enc.counter_action_id) {
-    if (enc.counter_action_id === actionId) {
-      const freshSession = _db.prepare(`SELECT * FROM bestiary_sessions WHERE id = ?`).get(sessionId);
-      return { duplicate: true, encounter: sanitizeEncounter(enc, freshSession) };
+  if (encForIdem?.counter_action_id) {
+    if (encForIdem.counter_action_id === actionId) {
+      return { duplicate: true, encounter: sanitizeEncounter(encForIdem, session) };
     }
     return { error: 'Reakcja obronna dla tego spotkania została już rozliczona.' };
   }
+
+  if (session.status !== 'active') return { error: 'Sesja nieaktywna.' };
+  if (session.current_phase !== 'countermeasure') return { error: 'Błędna faza: oczekiwana faza kontrzaklęcia.' };
+
+  const enc = encForIdem;
+  if (!enc) return { error: 'Brak spotkania.' };
 
   const options = JSON.parse(enc.counter_options_json || '[]');
   if (!options.includes(choiceId)) return { error: 'Wybrana opcja nie należy do dostępnych reakcji.' };
@@ -959,7 +962,15 @@ export function completeSession(sessionId, userId) {
   const finalStatus = failed ? 'failed' : 'completed';
 
   const canReward = !failed && session.mode === 'rewarded';
-  const { housePoints, skirnirs } = canReward ? computeReward(finalScore) : { housePoints: 0, skirnirs: 0 };
+  const rawReward = canReward ? computeReward(finalScore) : { housePoints: 0, skirnirs: 0 };
+
+  // House points require a valid Zakon — resolve before writing to session
+  const userForReward = _db.prepare(`SELECT house FROM users WHERE id = ?`).get(userId);
+  const hasValidHouse = userForReward?.house && VALID_HOUSES.includes(userForReward.house);
+  const { housePoints, skirnirs } = {
+    housePoints: hasValidHouse ? rawReward.housePoints : 0,
+    skirnirs: rawReward.skirnirs
+  };
 
   const txResult = _db.transaction(() => {
     const fresh = _db.prepare(`SELECT * FROM bestiary_sessions WHERE id = ?`).get(sessionId);

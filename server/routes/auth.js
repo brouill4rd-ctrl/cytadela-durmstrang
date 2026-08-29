@@ -68,6 +68,11 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Podaj poprawny adres e-mail, na który Rada ma przesłać korespondencję.' });
   }
 
+  const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(userEmail);
+  if (existingEmail) {
+    return res.status(409).json({ error: 'Podany adres e-mail jest już przypisany do istniejącego konta w Cytadeli.' });
+  }
+
   const role = data.role === 'professor' ? 'professor' : 'student';
   const selectedHouse = String(data.house || '').toLowerCase();
   if (role === 'student' && !HOUSE_EMAIL_THEMES[selectedHouse]) {

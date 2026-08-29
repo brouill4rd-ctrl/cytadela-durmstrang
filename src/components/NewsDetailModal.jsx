@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { CategoryBanner } from './CategoryBanner';
+import { RichTextRenderer } from './RichTextRenderer';
 import {
   X,
   Calendar,
@@ -56,99 +57,6 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
     setCommentText('');
   };
 
-  const renderInline = (text) => {
-    const parts = [];
-    const regex = /(\{color:([^}]+)\}(.+?)\{\/color\}|\*\*(.+?)\*\*|\*(.+?)\*|\[(.+?)\]\((.+?)\))/g;
-    let last = 0, m;
-    while ((m = regex.exec(text)) !== null) {
-      if (m.index > last) parts.push(text.slice(last, m.index));
-      if (m[2]) parts.push(<span key={m.index} style={{ color: m[2] }}>{m[3]}</span>);
-      else if (m[4]) parts.push(<strong key={m.index}>{m[4]}</strong>);
-      else if (m[5]) parts.push(<em key={m.index}>{m[5]}</em>);
-      else if (m[6]) parts.push(<a key={m.index} href={m[7]} style={{ color: 'var(--ice-frost)', textDecoration: 'underline' }} target="_blank" rel="noreferrer">{m[6]}</a>);
-      last = m.index + m[0].length;
-    }
-    if (last < text.length) parts.push(text.slice(last));
-    return parts.length > 0 ? parts : text;
-  };
-
-  const renderContent = (text) => {
-    if (!text) return null;
-    const lines = text.split('\n');
-    const elements = [];
-    let i = 0;
-    while (i < lines.length) {
-      const line = lines[i];
-      if (line.startsWith(':::warning')) {
-        const blockLines = [];
-        i++;
-        while (i < lines.length && !lines[i].startsWith(':::')) { blockLines.push(lines[i]); i++; }
-        elements.push(
-          <div key={`w${i}`} style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.4)', borderLeft: '4px solid #f59e0b', borderRadius: '4px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#fbbf24' }}>
-            <strong>⚠ Uwaga:</strong> {blockLines.join(' ')}
-          </div>
-        );
-      } else if (line.startsWith(':::info')) {
-        const blockLines = [];
-        i++;
-        while (i < lines.length && !lines[i].startsWith(':::')) { blockLines.push(lines[i]); i++; }
-        elements.push(
-          <div key={`info${i}`} style={{ background: 'rgba(164,200,225,0.1)', border: '1px solid rgba(164,200,225,0.3)', borderLeft: '4px solid var(--ice-frost)', borderRadius: '4px', padding: '0.75rem 1rem', marginBottom: '1rem', color: 'var(--ice-crystal)' }}>
-            <strong>ℹ Info:</strong> {blockLines.join(' ')}
-          </div>
-        );
-      } else if (line.startsWith('## ')) {
-        elements.push(<h2 key={i} style={{ color: 'var(--gold-glow)', fontSize: '1.45rem', marginTop: '1.6rem', marginBottom: '0.5rem' }}>{renderInline(line.slice(3))}</h2>);
-      } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={i} style={{ color: 'var(--gold-ancient)', fontSize: '1.2rem', marginTop: '1.3rem', marginBottom: '0.4rem' }}>{renderInline(line.slice(4))}</h3>);
-      } else if (line.startsWith('> ')) {
-        elements.push(
-          <blockquote key={i} style={{ borderLeft: '3px solid var(--gold-ancient)', padding: '0.6rem 1rem', margin: '0.8rem 0', fontStyle: 'italic', color: '#d1d9e6', background: 'rgba(197,159,78,0.05)', borderRadius: '0 4px 4px 0' }}>
-            {renderInline(line.slice(2))}
-          </blockquote>
-        );
-      } else if (line.trim() === '---') {
-        elements.push(<hr key={i} style={{ border: 0, height: '1px', background: 'rgba(164,200,225,0.2)', margin: '1.5rem 0' }} />);
-      } else if (line.startsWith('* ') || line.startsWith('- ')) {
-        const listItems = [];
-        while (i < lines.length && (lines[i].startsWith('* ') || lines[i].startsWith('- '))) {
-          listItems.push(lines[i].slice(2));
-          i++;
-        }
-        elements.push(
-          <ul key={`ul${i}`} style={{ paddingLeft: '1.5rem', marginBottom: '1rem', color: '#cfd7e4' }}>
-            {listItems.map((li, j) => <li key={j} style={{ marginBottom: '0.3rem' }}>{renderInline(li)}</li>)}
-          </ul>
-        );
-        continue;
-      } else if (/^\d+\. /.test(line)) {
-        const listItems = [];
-        while (i < lines.length && /^\d+\. /.test(lines[i])) {
-          listItems.push(lines[i].replace(/^\d+\. /, ''));
-          i++;
-        }
-        elements.push(
-          <ol key={`ol${i}`} style={{ paddingLeft: '1.5rem', marginBottom: '1rem', color: '#cfd7e4' }}>
-            {listItems.map((li, j) => <li key={j} style={{ marginBottom: '0.3rem' }}>{renderInline(li)}</li>)}
-          </ol>
-        );
-        continue;
-      } else if (line.startsWith('![')) {
-        const match = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-        if (match) {
-          elements.push(<img key={i} src={match[2]} alt={match[1]} style={{ maxWidth: '100%', borderRadius: '6px', marginBottom: '1rem', border: '1px solid rgba(164,200,225,0.2)' }} />);
-        }
-      } else if (line.trim() !== '') {
-        elements.push(
-          <p key={i} style={{ marginBottom: '1.2rem', textAlign: 'justify', hyphens: 'auto', lineHeight: 1.8 }}>
-            {renderInline(line)}
-          </p>
-        );
-      }
-      i++;
-    }
-    return elements;
-  };
 
   const handleCopyLink = () => {
     playRuneChime();
@@ -358,10 +266,11 @@ export const NewsDetailModal = ({ article, isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Formatted Article Body — rozszerzony renderer */}
-          <div className="contentBody" style={{ color: '#cfd7e4', fontSize: '0.98rem', lineHeight: 1.8 }}>
-            {currentArticle.content ? renderContent(currentArticle.content) : <p>{currentArticle.summary}</p>}
-          </div>
+          {/* Formatted Article Body */}
+          <RichTextRenderer
+            content={currentArticle.content || currentArticle.summary}
+            style={{ fontSize: '0.98rem' }}
+          />
 
           {/* Tags */}
           {currentArticle.tags && currentArticle.tags.length > 0 && (

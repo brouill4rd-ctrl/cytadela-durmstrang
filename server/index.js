@@ -46,6 +46,7 @@ import hnefataflRoutes from './routes/hnefatafl.js';
 import runicDuelsRoutes from './routes/runicDuels.js';
 import fishingRoutes from './routes/fishing.js';
 import bestiaryRoutes from './routes/bestiary.js';
+import wandFencingRoutes from './routes/wandFencing.js';
 import { discordBot } from './discordBot.js';
 import { initPointsService, recalculateAllUserPoints, backfillSchoolYear } from './services/pointsService.js';
 import { initSkirnirService, recalculateAllBalances } from './services/skirnirService.js';
@@ -140,6 +141,7 @@ app.use('/api/hnefatafl', hnefataflRoutes);
 app.use('/api/runic-duels', runicDuelsRoutes);
 app.use('/api/fishing', fishingRoutes);
 app.use('/api/bestiary', bestiaryRoutes);
+app.use('/api/minigames/wand-fencing', wandFencingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

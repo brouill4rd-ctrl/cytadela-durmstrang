@@ -623,7 +623,8 @@ test('16. Pieczęć badacza odblokowuje się tylko raz i tylko po bezbłędnym s
   submitIdentify({ sessionId: 'run-seal', userId: 'user-1', actionId: 'id-s0', choiceId: enc0.beast_id });
   submitCountermeasure({ sessionId: 'run-seal', userId: 'user-1', actionId: 'ct-s0', choiceId: correctCm0 });
 
-  advanceEncounter('run-seal', 'user-1');
+  advanceEncounter('run-seal', 'user-1'); // encounter_result → countdown enc1
+  advanceEncounter('run-seal', 'user-1'); // countdown → observe enc1
   // Second encounter: wrong identify
   const enc1 = db.prepare('SELECT beast_id, identify_options_json FROM bestiary_encounters WHERE session_id = ? AND encounter_index = 1').get('run-seal');
   const opts1 = JSON.parse(enc1.identify_options_json);
@@ -632,23 +633,31 @@ test('16. Pieczęć badacza odblokowuje się tylko raz i tylko po bezbłędnym s
   const correctCm1 = { frost_drake: 'ignis_furor', shadow_wolf: 'lumos_borealis', ice_jotun: 'thurisaz', kraken: 'tiwaz' }[enc1.beast_id];
   submitCountermeasure({ sessionId: 'run-seal', userId: 'user-1', actionId: 'ct-s1', choiceId: correctCm1 });
 
-  // Skip remaining encounters quickly
+  // Advance from encounter_result (enc1) to encounter 2
+  advanceEncounter('run-seal', 'user-1');
+
+  // Run encounters 2 and 3 (correct both)
   for (let i = 2; i < 4; i++) {
-    const st = getSessionState('run-seal', 'user-1');
-    if (st.session.status !== 'active' || st.session.currentPhase === 'encounter_result') {
-      advanceEncounter('run-seal', 'user-1');
-    }
-    if (st.session.status !== 'active') break;
-    if (st.session.currentPhase === 'countdown') advanceEncounter('run-seal', 'user-1');
+    // advance countdown → observe
+    const adv = advanceEncounter('run-seal', 'user-1');
+    assert.ok(adv.ok, `advance to observe failed at enc${i}: ${JSON.stringify(adv)}`);
 
     const enc = db.prepare('SELECT beast_id FROM bestiary_encounters WHERE session_id = ? AND encounter_index = ?').get('run-seal', i);
-    if (!enc) break;
+    assert.ok(enc, `enc${i} missing`);
     const correctCm = { frost_drake: 'ignis_furor', shadow_wolf: 'lumos_borealis', ice_jotun: 'thurisaz', kraken: 'tiwaz' }[enc.beast_id];
-    submitIdentify({ sessionId: 'run-seal', userId: 'user-1', actionId: `id-s${i}`, choiceId: enc.beast_id });
+
+    const id = submitIdentify({ sessionId: 'run-seal', userId: 'user-1', actionId: `id-s${i}`, choiceId: enc.beast_id });
+    assert.ok(id.ok, `identify enc${i} failed: ${JSON.stringify(id)}`);
     const ct = submitCountermeasure({ sessionId: 'run-seal', userId: 'user-1', actionId: `ct-s${i}`, choiceId: correctCm });
-    if (!ct.ok || ct.failed) break;
-    if (i < 3) advanceEncounter('run-seal', 'user-1');
+    assert.ok(ct.ok, `counter enc${i} failed: ${JSON.stringify(ct)}`);
+    if (ct.failed) break;
+
+    if (i < 3) {
+      const adv2 = advanceEncounter('run-seal', 'user-1'); // encounter_result → countdown
+      assert.ok(adv2.ok, `advance after enc${i} failed: ${JSON.stringify(adv2)}`);
+    }
   }
+  // advance encounter_result → finished
   advanceEncounter('run-seal', 'user-1');
   const result = completeSession('run-seal', 'user-1');
 

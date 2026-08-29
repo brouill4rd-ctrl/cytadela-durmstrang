@@ -247,33 +247,11 @@ router.post('/post-message', (req, res) => {
       attachments = []
     } = req.body;
 
-    let session = activeSessions.get(threadId);
+    const session = activeSessions.get(threadId);
     if (!session) {
-      // Auto create or grab first active session
-      if (activeSessions.size > 0) {
-        session = activeSessions.values().next().value;
-      } else {
-        // Create an active fallback session
-        session = {
-          lessonId: `les-${Date.now()}`,
-          threadId: threadId || `thread-live-${Date.now()}`,
-          threadName: 'Wątek Dydaktyczny',
-          channelId: 'chan-lekcje',
-          guildId: 'guild-durmstrang-1294',
-          threadUrl: 'https://discord.com/channels/guild-durmstrang-1294/chan-lekcje/thread',
-          professorName: '',
-          professorId: '',
-          professorAvatar: '',
-          subjectId: 'eliksiry',
-          subjectName: 'Eliksiry',
-          classYear: 'Klasa II',
-          topic: 'Zajęcia Praktyczne',
-          startedAt: new Date().toISOString(),
-          messages: [],
-          participants: new Map()
-        };
-        activeSessions.set(session.threadId, session);
-      }
+      return res.status(404).json({
+        error: `Brak aktywnej sesji lekcyjnej dla wątku "${threadId}". Uruchom najpierw /lekcja rozpocznij.`
+      });
     }
 
     const newMsg = {
@@ -366,16 +344,18 @@ router.post('/upload-attachment', upload.single('file'), (req, res) => {
 // POST /api/discord/end-lesson - Komenda: /lekcja zakoncz (generuje szkic i link do panelu)
 router.post('/end-lesson', (req, res) => {
   try {
-    const { threadId } = req.body;
+    const { threadId, professorId } = req.body;
 
-    let session = activeSessions.get(threadId);
-    if (!session && activeSessions.size > 0) {
-      session = activeSessions.values().next().value;
+    const session = activeSessions.get(threadId);
+    if (!session) {
+      return res.status(404).json({
+        error: `Nie znaleziono aktywnej sesji lekcyjnej dla wątku "${threadId}".`
+      });
     }
 
-    if (!session) {
-      return res.status(400).json({
-        error: 'Nie znaleziono aktywnej sesji lekcyjnej dla podanego wątku.'
+    if (professorId && session.professorId && professorId !== session.professorId) {
+      return res.status(403).json({
+        error: 'Tylko profesor, który rozpoczął tę lekcję, może ją zakończyć.'
       });
     }
 
@@ -522,8 +502,8 @@ export function resolveRolesForUser(user) {
   const verifiedMap = mappings.find(m => m.internal_key === 'verified');
   if (verifiedMap) matched.push(verifiedMap);
 
-  // 2. House role
-  if (user.house) {
+  // 2. House role (only for students — kadra/dyrekcja do not belong to Zakons)
+  if (user.house && user.role === 'student') {
     const houseKey = user.house.toLowerCase();
     const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === houseKey);
     if (houseMap) matched.push(houseMap);

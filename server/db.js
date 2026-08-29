@@ -2594,36 +2594,71 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
 
 {
   const ceremonyCount = db.prepare('SELECT COUNT(*) as c FROM ceremony_questions').get().c;
-  if (ceremonyCount === 0) {
-    console.log('[DB] Seeding ceremony questions...');
+  if (ceremonyCount < 8) {
+    console.log('[DB] Seeding/updating ceremony questions...');
+    db.prepare('DELETE FROM ceremony_options').run();
+    db.prepare('DELETE FROM ceremony_questions').run();
     const insQ = db.prepare('INSERT INTO ceremony_questions (id, title, scenario, sort_order) VALUES (?,?,?,?)');
     const insO = db.prepare('INSERT INTO ceremony_options (id, question_id, text, house, reason, sort_order) VALUES (?,?,?,?,?,?)');
 
+    // Tasowanie: każdy zakon pojawia się dokładnie 2× na każdej pozycji (1-4) w 8 pytaniach
+    // Q1: reinhall=1, bjornhall=2, ravnheim=3, otergard=4
     insQ.run('cq-1','Próba Lodowego Wichru: Pradawny Manuskrypt','Podczas eksploracji zamarzniętych krypt pod Cytadelą znajdujesz zamkniętą żelazną kasetę z runiczną pieczęcią krwi. Wiesz, że zawiera ona zakazany traktat o manipulacji żywiołami. Co robisz?',1);
-    insO.run('co-1-1','cq-1','Nacinasz opuszki palców i skrapiasz pieczęć własną krwią — starożytne więzy krwi wymagają szacunku i ofiary.','reinhall','Oddanie przymierzom krwi i starożytnym prawom rodowym.',1);
-    insO.run('co-1-2','cq-1','Wypowiadasz bezlitosne zaklęcie kruszące — liczy się potęga i żelazna determinacja, by posiąść wiedzę.','bjornhall','Niezłomna wola, odwaga bojowa i brak lęku przed ryzykiem.',2);
-    insO.run('co-1-3','cq-1','Cierpliwie badasz geometrię run cienia i rozplątujesz astralne sploty zaklęcia w milczeniu nocy.','ravnheim','Dyskrecja, głęboka analiza tajemnic i opanowanie umysłu.',3);
-    insO.run('co-1-4','cq-1','Smarujesz pieczęć kwasem z arktycznego porostu, rozpuszczając metal bez naruszania struktury pergaminu.','otergard','Alchemiczny spryt, precyzja i adaptacja do sytuacji.',4);
+    insO.run('co-1-1','cq-1','Nacinasz opuszki palców i skrapiasz pieczęć własną krwią, oddając cześć pradawnym rytuałom.','reinhall','',1);
+    insO.run('co-1-2','cq-1','Wypowiadasz bezlitosne zaklęcie kruszące — liczy się potęga i żelazna determinacja, by posiąść wiedzę.','bjornhall','',2);
+    insO.run('co-1-3','cq-1','Cierpliwie badasz geometrię run cienia i rozplątujesz astralne sploty zaklęcia w milczeniu nocy.','ravnheim','',3);
+    insO.run('co-1-4','cq-1','Smarujesz pieczęć kwasem z arktycznego porostu, rozpuszczając metal bez naruszania struktury pergaminu.','otergard','',4);
 
+    // Q2: otergard=1, ravnheim=2, reinhall=3, bjornhall=4
     insQ.run('cq-2','Próba Paktu: Konflikt na Murach','Podczas nocnej warty na wałach obronnych dostrzegasz intruza przekraczającego barierę fiordu. To adept z innego rodu, który złamał zakaz opuszczania zamku. Jak reagujesz?',2);
-    insO.run('co-2-1','cq-2','Wymagasz od niego przysięgi na honor rodu i odprowadzasz go przed oblicze Opiekuna Zakonu.','reinhall','Hierarchia, honor i wierność dyscyplinie Cytadeli.',1);
-    insO.run('co-2-2','cq-2','Wyzywasz go na natychmiastowy pojedynek Hólmganga — słabość na murach musi zostać ukarana siłą.','bjornhall','Bojowy duch i bezpośrednia konfrontacja.',2);
-    insO.run('co-2-3','cq-2','Śledzisz go w cieniu, by poznać jego prawdziwy motyw — wiedza o jego sekrecie jest cenniejsza niż kara.','ravnheim','Strategiczne myślenie, zbieranie sekretów i dyskrecja.',3);
-    insO.run('co-2-4','cq-2','Oferujesz mu pomoc w zatarciu śladów w zamian za rzadki składnik alchemiczny lub przysługę.','otergard','Praktycyzm, korzyść taktyczna i elastyczność moralna.',4);
+    insO.run('co-2-1','cq-2','Oferujesz mu pomoc w zatarciu śladów w zamian za rzadki składnik alchemiczny lub przysługę.','otergard','',1);
+    insO.run('co-2-2','cq-2','Śledzisz go w cieniu, by poznać jego prawdziwy motyw — wiedza o jego sekrecie jest cenniejsza niż kara.','ravnheim','',2);
+    insO.run('co-2-3','cq-2','Wymagasz od niego przysięgi na honor rodu i odprowadzasz go przed oblicze Opiekuna Zakonu.','reinhall','',3);
+    insO.run('co-2-4','cq-2','Wyzywasz go na natychmiastowy pojedynek Hólmganga — słabość na murach musi zostać ukarana siłą.','bjornhall','',4);
 
+    // Q3: bjornhall=1, reinhall=2, otergard=3, ravnheim=4
     insQ.run('cq-3','Próba Ołtarza: Źródło Mocy','Gdybyś miał wybrać jedno mistyczne narzędzie do związania swojej duszy na całe życie w Cytadeli, byłoby to:',3);
-    insO.run('co-3-1','cq-3','Róg Przodków inkrustowany złotem, przechowujący pamięć i krew dawnych mistrzów.','reinhall','Kult tradycji i ciągłość pokoleń.',1);
-    insO.run('co-3-2','cq-3','Runiczny miecz lub różdżka z rdzeniem z kła bazyliszka północy, gotowa do druzgotania barier.','bjornhall','Potęga ofensywna i dominacja w starciu.',2);
-    insO.run('co-3-3','cq-3','Zwierciadło z ciemnego obsydianu, ukazujące echa przeszłości i astralne ścieżki zaświatów.','ravnheim','Mistyczne wglądy i tajemna wiedza.',3);
-    insO.run('co-3-4','cq-3','Kryształowa fiola z wiecznie wrzącą esencją, zdolna przemienić ołów w złoto i truciznę w antidotum.','otergard','Mistrzostwo materii i transformacja żywiołów.',4);
+    insO.run('co-3-1','cq-3','Runiczny miecz lub różdżka z rdzeniem z kła bazyliszka północy, gotowa do druzgotania barier.','bjornhall','',1);
+    insO.run('co-3-2','cq-3','Róg Przodków inkrustowany złotem, przechowujący pamięć i krew dawnych mistrzów.','reinhall','',2);
+    insO.run('co-3-3','cq-3','Kryształowa fiola z wiecznie wrzącą esencją, zdolna przemienić ołów w złoto i truciznę w antidotum.','otergard','',3);
+    insO.run('co-3-4','cq-3','Zwierciadło z ciemnego obsydianu, ukazujące echa przeszłości i astralne ścieżki zaświatów.','ravnheim','',4);
 
+    // Q4: ravnheim=1, otergard=2, bjornhall=3, reinhall=4
     insQ.run('cq-4','Próba Przesilenia: Pokusa Północy','W Noc Krwawej Zorzy pradawny duch Cytadeli oferuje ci dar w zamian za część twojego wspomnienia. Co wybierzesz?',4);
-    insO.run('co-4-1','cq-4','Nieugiętą odporność na mróz i ból, godną nieśmiertelnych władców tundry.','reinhall','Niezłomna wytrzymałość i duma.',1);
-    insO.run('co-4-2','cq-4','Zaklęcie bojowe zdolne zburzyć fortecę jednym uderzeniem różdżki.','bjornhall','Niepowstrzymana siła uderzeniowa.',2);
-    insO.run('co-4-3','cq-4','Zdolność czytania w myślach i słyszenia szeptów umarłych.','ravnheim','Dominacja informacyjna i nekromantyczna mądrość.',3);
-    insO.run('co-4-4','cq-4','Sekretną recepturę na Eliksir Wiecznej Młodości i transmutacji.','otergard','Triumf alchemii i przekroczenie barier natury.',4);
+    insO.run('co-4-1','cq-4','Zdolność czytania w myślach i słyszenia szeptów umarłych.','ravnheim','',1);
+    insO.run('co-4-2','cq-4','Sekretną recepturę na Eliksir Wiecznej Młodości i transmutacji.','otergard','',2);
+    insO.run('co-4-3','cq-4','Zaklęcie bojowe zdolne zburzyć fortecę jednym uderzeniem różdżki.','bjornhall','',3);
+    insO.run('co-4-4','cq-4','Nieugiętą odporność na mróz i ból, godną nieśmiertelnych władców tundry.','reinhall','',4);
 
-    console.log('[DB] Seeded 4 ceremony questions with 16 options.');
+    // Q5: reinhall=1, otergard=2, ravnheim=3, bjornhall=4
+    insQ.run('cq-5','Próba Wierności: Uczta Jarla','Na uczcie u Jarla dostrzegasz, że obcy gość skrycie dolewa truciznę do pucharu twojego mistrza. Co czynisz?',5);
+    insO.run('co-5-1','cq-5','Wstajesz i głośno wskazujesz truciciela palcem, wzywając go do wyjaśnień przed zgromadzonymi.','reinhall','',1);
+    insO.run('co-5-2','cq-5','Spokojnie zamieniasz puchary, podmieniając truciznę na nieszkodliwy eliksir z własnej sakwy.','otergard','',2);
+    insO.run('co-5-3','cq-5','Syczysz mu do ucha, że widziałeś wszystko i czekasz na jego kolejny ruch, zbierając informacje.','ravnheim','',3);
+    insO.run('co-5-4','cq-5','Chwytasz truciciela za kark i wyciągasz go z komnaty — siła jest jedyną mową, którą rozumieją zdrajcy.','bjornhall','',4);
+
+    // Q6: bjornhall=1, ravnheim=2, reinhall=3, otergard=4
+    insQ.run('cq-6','Próba Labiryntu: Cień i Iluzja','Zostajesz uwięziony w magicznym labiryncie, który zmienia kształt z każdym krokiem. Jedyne wyjście kryje się za wrotami strzeżonymi przez iluzje twoich lęków. Jak działasz?',6);
+    insO.run('co-6-1','cq-6','Uderzasz w ściany labiryntu pełną mocą czarów destrukcji, aż jedna z nich pęka pod twoim naporem.','bjornhall','',1);
+    insO.run('co-6-2','cq-6','Zamykasz oczy i rozciągasz zmysły magiczne, szukając subtelnych pęknięć w tkance iluzji.','ravnheim','',2);
+    insO.run('co-6-3','cq-6','Konfrontujesz się z każdą iluzją twarzą w twarz — lęki tracą siłę, gdy się przed nimi nie cofa.','reinhall','',3);
+    insO.run('co-6-4','cq-6','Analizujesz wzorzec ruchomych korytarzy i szukasz regularności w chaosie, by znaleźć klucz do przejścia.','otergard','',4);
+
+    // Q7: otergard=1, reinhall=2, bjornhall=3, ravnheim=4
+    insQ.run('cq-7','Próba Lojalności: Wyznanie Towarzysza','Twój najbliższy towarzysz ze studiów wyznaje ci, że zamierza ukraść zakazany artefakt z Sali Relikwii i zbiec z Cytadeli. Prosi o twoje milczenie. Co robisz?',7);
+    insO.run('co-7-1','cq-7','Proponujesz mu alternatywę: razem można zdobyć to, czego szuka, w sposób, który nie skończy się wydaleniem.','otergard','',1);
+    insO.run('co-7-2','cq-7','Natychmiast zgłaszasz sprawę Opiekunowi Zakonu — zdrada Cytadeli to zdrada was obu, bez wyjątku.','reinhall','',2);
+    insO.run('co-7-3','cq-7','Mówisz mu wprost: albo porzuca ten plan, albo sam pójdziesz do Opiekuna. Nie ma miejsca na wahanie.','bjornhall','',3);
+    insO.run('co-7-4','cq-7','Obiecujesz milczenie, ale dyskretnie śledzisz każdy jego krok, by wiedzieć więcej, niż on sądzi.','ravnheim','',4);
+
+    // Q8: ravnheim=1, bjornhall=2, otergard=3, reinhall=4
+    insQ.run('cq-8','Próba Gotowości: Przed Ostatnim Egzaminem','Przed ostatnim egzaminem wstępnym dowiadujesz się, że Mistrz Ceremonii celowo przygotował dla ciebie najtrudniejszą wersję próby. Masz godzinę. Co robisz?',8);
+    insO.run('co-8-1','cq-8','Szukasz informacji o poprzednich próbach — ktoś, kto przeszedł je wcześniej, musiał zostawić ślady.','ravnheim','',1);
+    insO.run('co-8-2','cq-8','Ignorujesz presję i odpoczywasz. Nadchodzące wyzwanie to okazja do pokazania prawdziwej siły — strach to słabość.','bjornhall','',2);
+    insO.run('co-8-3','cq-8','Przygotowujesz awaryjny zestaw eliksirów i narzędzi, które mogą okazać się przydatne w nieprzewidzianych sytuacjach.','otergard','',3);
+    insO.run('co-8-4','cq-8','Ćwiczysz kluczowe zaklęcia i wzorce runiczne do bólu mięśni — gotowość i dyscyplina to twoja tarcza.','reinhall','',4);
+
+    console.log('[DB] Seeded 8 ceremony questions with 32 options.');
   }
 }
 

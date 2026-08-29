@@ -26,92 +26,138 @@ import {
   Bot,
   Zap,
   Flame,
-  Info
+  Info,
+  Plus
 } from 'lucide-react';
 
 // =============================================================================
 // DISCORD MARKDOWN & GFM FORMATTER HELPER
 // =============================================================================
 
-function formatItalicsAndSpoilers(str, keyPrefix) {
-  if (!str) return null;
-  if (str.includes('||')) {
-    const parts = str.split(/\|\|([^|]+)\|\|/g);
-    return (
-      <React.Fragment key={keyPrefix}>
-        {parts.map((p, i) => {
-          if (i % 2 === 1) {
-            return (
-              <span
-                key={i}
-                onClick={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                style={{
-                  background: '#202225',
-                  color: 'transparent',
-                  padding: '0.1rem 0.35rem',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-                title="Kliknij, aby odkryć spoiler"
-              >
-                {p}
-              </span>
-            );
-          }
-          return p;
-        })}
-      </React.Fragment>
-    );
-  }
-  return str;
+// Discord inline markdown — chain approach: każdy format osobno przez split()
+// Kolejność: *** > ** > __ > ~~ > || > * > _italic_
+function applyInlineMarkdown(text, k = '') {
+  if (!text) return null;
+
+  const md = (str, suffix, depth = 0) => {
+    if (!str || depth > 8) return str;
+    const next = (s, i) => md(s, `${suffix}${i}`, depth + 1);
+
+    // *** bold italic
+    if (str.includes('***')) {
+      const parts = str.split(/\*\*\*(.+?)\*\*\*/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <strong key={`${suffix}bi${i}`}><em>{p}</em></strong>
+        : next(p, `bi${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    // ** bold
+    if (str.includes('**')) {
+      const parts = str.split(/\*\*(.+?)\*\*/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <strong key={`${suffix}b${i}`} style={{ fontWeight: 800, color: '#ffffff' }}>{next(p, `bc${i}`)}</strong>
+        : next(p, `br${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    // __underline__
+    if (str.includes('__')) {
+      const parts = str.split(/__(.+?)__/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <span key={`${suffix}u${i}`} style={{ textDecoration: 'underline' }}>{p}</span>
+        : next(p, `ur${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    // ~~strikethrough~~
+    if (str.includes('~~')) {
+      const parts = str.split(/~~(.+?)~~/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <s key={`${suffix}s${i}`} style={{ opacity: 0.7 }}>{p}</s>
+        : next(p, `sr${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    // ||spoiler||
+    if (str.includes('||')) {
+      const parts = str.split(/\|\|(.+?)\|\|/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <span key={`${suffix}sp${i}`}
+            onClick={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ffffff'; }}
+            style={{ background: '#202225', color: 'transparent', padding: '0.1rem 0.35rem', borderRadius: '3px', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.1)' }}
+            title="Kliknij, aby odkryć spoiler">{p}</span>
+        : next(p, `spr${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    // *italic*
+    if (str.includes('*')) {
+      const parts = str.split(/\*([^*\n]+?)\*/s);
+      if (parts.length > 1) return parts.map((p, i) => i % 2 === 1
+        ? <em key={`${suffix}i${i}`}>{p}</em>
+        : next(p, `ir${i}`)
+      ).filter(p => p != null && p !== '');
+    }
+
+    return str;
+  };
+
+  return md(text, k);
 }
 
+// Zachowane dla kompatybilności z wywołaniami niżej
 function formatSimpleFormatting(str, keyPrefix) {
-  if (!str) return null;
-  if (str.includes('**')) {
-    const parts = str.split(/\*\*([^*]+)\*\*/g);
-    return (
-      <React.Fragment key={keyPrefix}>
-        {parts.map((p, i) => (i % 2 === 1 ? <strong key={i} style={{ fontWeight: 800, color: '#ffffff' }}>{p}</strong> : formatItalicsAndSpoilers(p, `b-${i}`))) }
-      </React.Fragment>
-    );
-  }
-  return formatItalicsAndSpoilers(str, keyPrefix);
+  return applyInlineMarkdown(str, String(keyPrefix));
 }
 
 function formatInlineDiscord(text) {
   if (!text) return null;
 
-  // Render Custom Discord Emojis (<a:name:id> or <:name:id>)
-  const emojiRegex = /<(a)?:([a-zA-Z0-9_]+):([0-9]+)>/g;
+  // Obsługa: custom emoji <a:name:id>, user mention <@id>, channel mention <#id>
+  const tokenRegex = /<(a)?:([a-zA-Z0-9_]+):([0-9]+)>|<@!?([0-9]+)>|<#([0-9]+)>/g;
   const elements = [];
   let lastIdx = 0;
   let match;
 
-  while ((match = emojiRegex.exec(text)) !== null) {
+  while ((match = tokenRegex.exec(text)) !== null) {
     if (match.index > lastIdx) {
       elements.push(text.slice(lastIdx, match.index));
     }
-    const isAnimated = match[1] === 'a';
-    const emojiName = match[2];
-    const emojiId = match[3];
-    const ext = isAnimated ? 'gif' : 'png';
-    const url = `https://cdn.discordapp.com/emojis/${emojiId}.${ext}`;
 
-    elements.push(
-      <img
-        key={`emoji-${emojiId}-${match.index}`}
-        src={url}
-        alt={`:${emojiName}:`}
-        title={`:${emojiName}:`}
-        style={{ height: '1.4em', width: 'auto', verticalAlign: 'middle', margin: '0 0.15em', display: 'inline-block' }}
-      />
-    );
+    if (match[2] && match[3]) {
+      // Custom emoji
+      const isAnimated = match[1] === 'a';
+      const emojiName = match[2];
+      const emojiId = match[3];
+      const ext = isAnimated ? 'gif' : 'png';
+      elements.push(
+        <img
+          key={`emoji-${emojiId}-${match.index}`}
+          src={`https://cdn.discordapp.com/emojis/${emojiId}.${ext}`}
+          alt={`:${emojiName}:`}
+          title={`:${emojiName}:`}
+          style={{ height: '1.4em', width: 'auto', verticalAlign: 'middle', margin: '0 0.15em', display: 'inline-block' }}
+        />
+      );
+    } else if (match[4]) {
+      // User mention <@ID> — fallback gdy nie rozwiązany przez bota
+      elements.push(
+        <span key={`mu-${match.index}`}
+          style={{ background: 'rgba(88,101,242,0.25)', color: '#c9cdfb', padding: '0.05rem 0.3rem', borderRadius: '3px', fontWeight: 600, fontSize: '0.9em' }}>
+          @{match[4]}
+        </span>
+      );
+    } else if (match[5]) {
+      // Channel mention <#ID>
+      elements.push(
+        <span key={`mc-${match.index}`}
+          style={{ background: 'rgba(88,101,242,0.15)', color: '#93c5fd', padding: '0.05rem 0.3rem', borderRadius: '3px', fontSize: '0.9em' }}>
+          #{match[5]}
+        </span>
+      );
+    }
+
     lastIdx = match.index + match[0].length;
   }
   if (lastIdx < text.length) {
@@ -1238,8 +1284,8 @@ export const LessonDetailView = () => {
 
                             {/* Embed Description */}
                             {emb.description && (
-                              <div style={{ color: '#cbd5e1', fontSize: '0.86rem', lineHeight: 1.5, marginBottom: '0.6rem' }}>
-                                {emb.description}
+                              <div style={{ color: '#cbd5e1', fontSize: '0.86rem', lineHeight: 1.6, marginBottom: '0.6rem' }}>
+                                {renderDiscordMarkdown(emb.description)}
                               </div>
                             )}
 
@@ -1255,8 +1301,8 @@ export const LessonDetailView = () => {
                               >
                                 {emb.fields.map((f, fIdx) => (
                                   <div key={fIdx} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', fontWeight: 700 }}>{f.name}</div>
-                                    <div style={{ fontSize: '0.82rem', color: '#f8fafc', marginTop: '0.1rem' }}>{f.value}</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', fontWeight: 700 }}>{formatInlineDiscord(f.name)}</div>
+                                    <div style={{ fontSize: '0.82rem', color: '#f8fafc', marginTop: '0.1rem', lineHeight: 1.5 }}>{renderDiscordMarkdown(f.value)}</div>
                                   </div>
                                 ))}
                               </div>

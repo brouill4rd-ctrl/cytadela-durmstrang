@@ -837,6 +837,10 @@
   100% { opacity: 0; transform: translate(var(--dx,0px), var(--dy,80px)) scale(0.3); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ===== Odliczanie busy ===== */
 .tgm-busy-indicator {
   display: flex;
