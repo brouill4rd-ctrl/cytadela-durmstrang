@@ -1,22 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-
-function tryParse(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function normalizePointValue(value) {
-  const numericValue = Number(value);
-  if (Number.isFinite(numericValue)) return Math.max(0, numericValue);
-
-  const recoveredValue = typeof value === 'string' ? Number.parseFloat(value) : 0;
-  return Number.isFinite(recoveredValue) ? Math.max(0, recoveredValue) : 0;
-}
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import { tryParse, normalizePointValue } from './schoolUtils.js';
+import { useNavigationState } from '../hooks/useNavigationState.js';
 import { api } from '../api';
 import { HOUSES } from '../data/seedHouses';
 import { SUBJECTS } from '../data/seedSubjects';
@@ -36,386 +20,49 @@ import { CATEGORY_BANNERS } from '../data/categoryBanners';
 import { DEFAULT_BLOCK_GRAPHICS, DURMSTRANG_PRESET_IMAGES, IMAGE_DIMENSIONS_GUIDE } from '../data/blockGraphics';
 import { INITIAL_DOCUMENTS } from '../data/seedDocuments';
 
-const ROUTE_ALIASES = {
-  '/': 'home',
-  '/glowna': 'home',
-  '/start': 'home',
-  '/home': 'home',
-  '/zasady': 'rules-guide',
-  '/regulamin': 'rules-guide',
-  '/kodeks': 'rules-guide',
-  '/przewodnik': 'rules-guide',
-  '/faq': 'rules-guide',
-  '/zasady-oceniania': 'rules-guide',
-  '/pakt': 'rules-guide',
-  '/rules': 'rules-guide',
-  '/wladze': 'documents',
-  '/obowiazki': 'documents',
-  '/obowiazki-wladz': 'documents',
-  '/kompetencje': 'documents',
-  '/wladze-twierdzy': 'documents',
-  '/dekrety': 'documents',
-  '/edykty': 'documents',
-  '/regulamin-dc': 'documents',
-  '/regulamin-discord': 'documents',
-  '/statut': 'documents',
-  '/zabawy': 'documents',
-  '/gry': 'documents',
-  '/dokumenty': 'documents',
-  '/dokument': 'documents',
-  '/podstrony': 'documents',
-  '/codex': 'documents',
-  '/plan': 'timetable',
-  '/plan-lekcji': 'timetable',
-  '/harmonogram': 'timetable',
-  '/timetable': 'timetable',
-  '/grafik': 'timetable',
-  '/dziennik': 'journals',
-  '/dzienniki': 'journals',
-  '/lekcje': 'journals',
-  '/journals': 'journals',
-  '/przedmioty': 'academic',
-  '/katedry': 'academic',
-  '/akademia': 'academic',
-  '/nauka': 'academic',
-  '/academic': 'academic',
-  '/domy': 'houses',
-  '/zakony': 'houses',
-  '/houses': 'houses',
-  '/reinhall': 'houses',
-  '/bjornhall': 'houses',
-  '/ravnheim': 'houses',
-  '/otergard': 'houses',
-  '/ceremonia': 'ceremony',
-  '/przydzial': 'ceremony',
-  '/kamien-przysiegi': 'ceremony',
-  '/ceremony': 'ceremony',
-  '/warsztat': 'rune-workshop',
-  '/galdrastofa': 'rune-workshop',
-  '/runy': 'rune-workshop',
-  '/alchemia': 'rune-workshop',
-  '/workshop': 'rune-workshop',
-  '/mapa': 'map',
-  '/cytadela': 'map',
-  '/teren': 'map',
-  '/map': 'map',
-  '/rynek': 'markethall',
-  '/sklep': 'markethall',
-  '/kaupangr': 'markethall',
-  '/targ': 'markethall',
-  '/market': 'markethall',
-  '/bank': 'bank',
-  '/skarbiec': 'bank',
-  '/skirnir': 'bank',
-  '/waluta': 'bank',
-  '/profil': 'profile',
-  '/karta-postaci': 'profile',
-  '/ekwipunek': 'profile',
-  '/paszport': 'profile',
-  '/profile': 'profile',
-  '/lore': 'lore',
-  '/kroniki': 'lore',
-  '/archiwum': 'lore',
-  '/historia': 'lore',
-  '/bestiariusz': 'lore',
-  '/poczta': 'raven-post',
-  '/kruki': 'raven-post',
-  '/wiadomosci': 'raven-post',
-  '/raven-post': 'raven-post',
-  '/admin': 'admin',
-  '/cms': 'admin',
-  '/dyrekcja': 'admin',
-  '/gazetka': 'gazette',
-  '/gazeta': 'gazette',
-  '/zelazne-pioro': 'gazette',
-  '/pioro': 'gazette',
-  '/gazette': 'gazette',
-  '/iron-quill': 'gazette',
-  '/gazette-archive': 'gazette-archive',
-  '/gazette-panel': 'gazette-panel',
-  '/gazette-reader': 'gazette-reader',
-  '/egzaminy': 'exams',
-  '/egzamin': 'exams',
-  '/sesja-egzaminacyjna': 'exams',
-  '/exams': 'exams',
-  '/exam': 'exams',
-  '/prace-domowe': 'homework',
-  '/praca-domowa': 'homework',
-  '/homework': 'homework',
-  '/zadania-domowe': 'homework',
-  '/zadania': 'homework',
-  '/prace': 'homework',
-  '/homework-creator': 'homework-creator',
-  '/homework-grading': 'homework-grading',
-  '/zadaj-prace': 'homework-creator',
-  '/sprawdzaj-prace': 'homework-grading',
-  // Izba Przyjęć i Usprawiedliwień
-  '/izba-przyjec': 'absence-chamber',
-  '/usprawiedliwienia': 'absence-chamber',
-  '/nieobecnosci': 'absence-chamber',
-  '/absence': 'absence-chamber',
-  '/absence-chamber': 'absence-chamber',
-  '/izba-usprawiedliwien': 'absence-chamber',
-  // Izba Pamięci
-  '/izba-pamieci': 'memory',
-  '/pamiec': 'memory',
-  '/memory': 'memory',
-  '/archiwum-lat': 'memory',
-  '/sala-pamieci': 'memory',
-  '/sala-pucharow': 'memory',
-  '/sala-dokumentow': 'memory',
-  '/sciana-chwaly': 'memory',
-  '/kronika-ludzi': 'memory',
-  '/os-czasu': 'memory'
-};
-
-const parseHashRoute = () => {
-  if (typeof window === 'undefined') return { view: 'home' };
-  const rawHash = window.location.hash.replace(/^#/, '').trim();
-  if (!rawHash || rawHash === '/' || rawHash === '') return { view: 'home' };
-
-  const normalized = rawHash.startsWith('/') ? rawHash : `/${rawHash}`;
-  const parts = normalized.split('?')[0].split('/').filter(Boolean);
-  const root = `/${parts[0] || ''}`.toLowerCase();
-
-  if (root === '/dokument' || root === '/strona' || root === '/podstrona') {
-    if (parts[1]) return { view: 'documents', docSlug: parts[1] };
-    return { view: 'documents' };
-  }
-  if (['/wladze', '/obowiazki-wladz', '/obowiazki', '/kompetencje', '/wladze-twierdzy'].includes(root)) {
-    return { view: 'documents', docCategory: 'wladze', docSlug: 'obowiazki-i-kompetencje-wladz-twierdzy' };
-  }
-  if (['/dekrety', '/wizytacje', '/hospitacje', '/regulamin-dc', '/regulamin-discord', '/statut', '/zabawy', '/dokumenty'].includes(root)) {
-    return { view: 'documents', docCategory: root.replace('/', '') };
-  }
-
-  if (root === '/lekcja' || root === '/dziennik') {
-    if (parts[1]) return { view: 'lesson-detail', lessonId: parts[1] };
-    return { view: 'journals' };
-  }
-  if (root === '/przedmiot' || root === '/katedra') {
-    if (parts[1]) return { view: 'subject-detail', subjectId: parts[1] };
-    return { view: 'academic' };
-  }
-  if (root === '/domy' || root === '/zakony') {
-    if (parts[1]) return { view: 'houses', houseId: parts[1] };
-    return { view: 'houses' };
-  }
-  if (['/reinhall', '/bjornhall', '/ravnheim', '/otergard'].includes(root)) {
-    return { view: 'houses', houseId: parts[0] };
-  }
-  if (root === '/zasady' || root === '/regulamin' || root === '/kodeks' || root === '/przewodnik' || root === '/faq') {
-    return { view: 'rules-guide', tab: parts[1] || null };
-  }
-
-  // Żelazne Pióro — Gazetka Szkolna
-  if (root === '/gazetka' || root === '/gazeta' || root === '/zelazne-pioro' || root === '/gazette' || root === '/pioro') {
-    if (parts[1] === 'archiwum' || parts[1] === 'archive') return { view: 'gazette-archive' };
-    if ((parts[1] === 'numer' || parts[1] === 'issue' || parts[1] === 'czytaj') && parts[2]) return { view: 'gazette-reader', gazetteIssueId: parts[2] };
-    if (parts[1] === 'panel' || parts[1] === 'redakcja') return { view: 'gazette-panel' };
-    return { view: 'gazette' };
-  }
-  if (root === '/gazette-reader' || root === '/czytnik-gazetki') {
-    return { view: 'gazette-reader', gazetteIssueId: parts[1] || null };
-  }
-  if (root === '/gazette-archive' || root === '/archiwum-gazetki') {
-    return { view: 'gazette-archive' };
-  }
-  if (root === '/gazette-panel' || root === '/redakcja-gazetki' || (root === '/panel' && parts[1] === 'gazetka')) {
-    return { view: 'gazette-panel' };
-  }
-
-  if (root === '/egzaminy' || root === '/egzamin' || root === '/exams' || root === '/exam' || root === '/sesja-egzaminacyjna') {
-    if (parts[1] === 'podejscie' && parts[2]) return { view: 'exam-taking', examAttemptId: parts[2] };
-    if (parts[1] === 'wynik' && parts[2]) return { view: 'exam-result', examAttemptId: parts[2] };
-    if (parts[1] === 'kreator') return { view: 'exam-creator', examId: parts[2] || null };
-    if (parts[1] === 'sprawdzanie' && parts[2]) return { view: 'exam-grading', examId: parts[2] };
-    if (parts[1] === 'bank') return { view: 'exam-bank' };
-    if (parts[1]) return { view: 'exams', examId: parts[1] };
-    return { view: 'exams' };
-  }
-
-  if (root === '/exam-creator') return { view: 'exam-creator', examId: parts[1] || null };
-  if (root === '/exam-grading') return { view: 'exam-grading', examId: parts[1] || null };
-  if (root === '/exam-taking') return { view: 'exam-taking', examAttemptId: parts[1] || null };
-  if (root === '/exam-result') return { view: 'exam-result', examAttemptId: parts[1] || null };
-  if (root === '/exam-bank') return { view: 'exam-bank' };
-
-  // Prace Domowe & Wypracowania (TMD)
-  if (['/prace-domowe', '/praca-domowa', '/homework', '/zadania-domowe', '/zadania', '/prace'].includes(root)) {
-    if (parts[1] === 'kreator' || parts[1] === 'zadaj' || parts[1] === 'nowa') return { view: 'homework-creator' };
-    if (parts[1] === 'sprawdzanie' || parts[1] === 'ocenianie' || parts[1] === 'grading') return { view: 'homework-grading', homeworkId: parts[2] || null };
-    if (parts[1]) return { view: 'homework-detail', homeworkId: parts[1] };
-    return { view: 'homework' };
-  }
-  if (root === '/zadaj-prace' || root === '/homework-creator') {
-    return { view: 'homework-creator' };
-  }
-  if (root === '/sprawdzaj-prace' || root === '/homework-grading') {
-    return { view: 'homework-grading', homeworkId: parts[1] || null };
-  }
-
-  // ==================== IZBA PAMIĘCI (ROUTING) ====================
-  if (['/izba-pamieci', '/pamiec', '/archiwum-lat', '/sala-pamieci', '/memory'].includes(root)) {
-    if (parts[1] === 'rok' || parts[1] === 'year') {
-      return { view: 'memory', memoryTab: 'year', memoryYearId: parts[2] || 'year-xvii' };
-    }
-    if (parts[1] === 'osoba' || parts[1] === 'postac' || parts[1] === 'person') {
-      return { view: 'memory', memoryTab: 'person', memoryPersonId: parts[2] || null };
-    }
-    if (parts[1] === 'zakon' || parts[1] === 'dom' || parts[1] === 'order') {
-      return { view: 'memory', memoryTab: 'order', memoryHouseKey: parts[2] || 'ravnheim' };
-    }
-    if (parts[1] === 'sciana-chwaly' || parts[1] === 'chwala' || parts[1] === 'wall') {
-      return { view: 'memory', memoryTab: 'wall-of-fame' };
-    }
-    if (parts[1] === 'sala-pucharow' || parts[1] === 'puchary' || parts[1] === 'trophies') {
-      return { view: 'memory', memoryTab: 'trophies' };
-    }
-    if (parts[1] === 'sala-dokumentow' || parts[1] === 'dokumenty' || parts[1] === 'documents') {
-      return { view: 'memory', memoryTab: 'documents' };
-    }
-    if (parts[1] === 'kronika' || parts[1] === 'ludzie' || parts[1] === 'people') {
-      return { view: 'memory', memoryTab: 'people' };
-    }
-    if (parts[1] === 'os-czasu' || parts[1] === 'timeline' || parts[1] === 'historia') {
-      return { view: 'memory', memoryTab: 'timeline' };
-    }
-    if (parts[1] === 'kreator' || parts[1] === 'archiwizuj' || parts[1] === 'wizard') {
-      return { view: 'memory', memoryTab: 'wizard' };
-    }
-    if (parts[1]) {
-      // Dynamiczny rok np. /izba-pamieci/2026 lub /izba-pamieci/year-xvii
-      return { view: 'memory', memoryTab: 'year', memoryYearId: parts[1] };
-    }
-    return { view: 'memory', memoryTab: 'overview' };
-  }
-  if (root === '/sala-pucharow') return { view: 'memory', memoryTab: 'trophies' };
-  if (root === '/sala-dokumentow') return { view: 'memory', memoryTab: 'documents' };
-  if (root === '/sciana-chwaly') return { view: 'memory', memoryTab: 'wall-of-fame' };
-  if (root === '/os-czasu') return { view: 'memory', memoryTab: 'timeline' };
-  if (root === '/kronika-ludzi') return { view: 'memory', memoryTab: 'people' };
-
-  if (ROUTE_ALIASES[root]) {
-    return { view: ROUTE_ALIASES[root] };
-  }
-
-  return { view: 'home' };
-};
-
 const SchoolContext = createContext();
 
 export const SchoolProvider = ({ children }) => {
-  // Navigation with Initial URL Route Sync
-  const initialRoute = parseHashRoute();
-  const [activeView, setActiveView] = useState(initialRoute.view || 'home');
-  const [activeHouseTab, setActiveHouseTab] = useState(initialRoute.houseId || null);
-  const [activeSubjectId, setActiveSubjectId] = useState(initialRoute.subjectId || null);
-  const [activeLessonId, setActiveLessonId] = useState(initialRoute.lessonId || null);
-  const [activeLessonTab, setActiveLessonTab] = useState('journal'); // 'journal' | 'log'
-  const [activeDocumentSlug, setActiveDocumentSlug] = useState(initialRoute.docSlug || null);
-  const [activeDocumentCategory, setActiveDocumentCategory] = useState(initialRoute.docCategory || 'all');
-  const [activeGazetteIssueId, setActiveGazetteIssueId] = useState(initialRoute.gazetteIssueId || null);
-
-  // Egzaminy — navigation state
-  const [activeExamId, setActiveExamId] = useState(initialRoute.examId || null);
-  const [activeExamAttemptId, setActiveExamAttemptId] = useState(initialRoute.examAttemptId || null);
-
-  // Izba Pamięci — navigation state
-  const [memoryTab, setMemoryTab] = useState(initialRoute.memoryTab || 'overview');
-  const [memoryYearId, setMemoryYearId] = useState(initialRoute.memoryYearId || 'year-xvii');
-  const [memoryPersonId, setMemoryPersonId] = useState(initialRoute.memoryPersonId || null);
-  const [memoryHouseKey, setMemoryHouseKey] = useState(initialRoute.memoryHouseKey || 'ravnheim');
-
-  // Prace Domowe — state
-  const [activeHomeworkId, setActiveHomeworkId] = useState(initialRoute.homeworkId || null);
-  const [activeHomeworkSubId, setActiveHomeworkSubId] = useState(initialRoute.homeworkSubId || null);
+  const {
+    activeView, setActiveView,
+    activeHouseTab, setActiveHouseTab,
+    activeSubjectId, setActiveSubjectId,
+    activeLessonId, setActiveLessonId,
+    activeLessonTab, setActiveLessonTab,
+    activeDocumentSlug, setActiveDocumentSlug,
+    activeDocumentCategory, setActiveDocumentCategory,
+    activeGazetteIssueId, setActiveGazetteIssueId,
+    activeExamId, setActiveExamId,
+    activeExamAttemptId, setActiveExamAttemptId,
+    memoryTab, setMemoryTab,
+    memoryYearId, setMemoryYearId,
+    memoryPersonId, setMemoryPersonId,
+    memoryHouseKey, setMemoryHouseKey,
+    activeHomeworkId, setActiveHomeworkId,
+    activeHomeworkSubId, setActiveHomeworkSubId,
+    navigateTo,
+    navigateToDocumentModule,
+    navigateToMemory,
+    navigateToMemoryYear,
+    navigateToMemoryPerson,
+    navigateToMemoryOrder,
+    navigateToAbsenceChamber,
+    navigateToGazette,
+    navigateToGazetteIssue,
+    navigateToGazettePanel,
+    navigateToGazetteArchive,
+    navigateToExams,
+    navigateToExamTaking,
+    navigateToExamResult,
+    navigateToExamCreator,
+    navigateToExamGrading,
+    navigateToExamBank,
+  } = useNavigationState();
   const [homeworkDraftLessonData, setHomeworkDraftLessonData] = useState(null);
   const [homeworkAssignments, setHomeworkAssignments] = useState([]);
   const [homeworkOverview, setHomeworkOverview] = useState(null);
   const [homeworkTemplates, setHomeworkTemplates] = useState([]);
   const [homeworkQuickComments, setHomeworkQuickComments] = useState([]);
-
-  const navigateToDocumentModule = (category, slug = null) => {
-    setActiveDocumentCategory(category || 'all');
-    setActiveDocumentSlug(slug);
-    setActiveView('documents');
-    if (slug) {
-      window.location.hash = `#/dokument/${slug}`;
-    } else if (category && category !== 'all') {
-      window.location.hash = `#/${category}`;
-    } else {
-      window.location.hash = '#/dokumenty';
-    }
-  };
-
-  // Izba Pamięci — Navigation Helpers
-  const navigateToMemory = (tab = 'overview') => {
-    setMemoryTab(tab);
-    setActiveView('memory');
-    if (tab === 'overview') window.location.hash = '#/izba-pamieci';
-    else if (tab === 'trophies') window.location.hash = '#/izba-pamieci/sala-pucharow';
-    else if (tab === 'documents') window.location.hash = '#/izba-pamieci/sala-dokumentow';
-    else if (tab === 'wall-of-fame') window.location.hash = '#/izba-pamieci/sciana-chwaly';
-    else if (tab === 'people') window.location.hash = '#/izba-pamieci/kronika';
-    else if (tab === 'timeline') window.location.hash = '#/izba-pamieci/os-czasu';
-    else if (tab === 'wizard') window.location.hash = '#/izba-pamieci/kreator';
-    else window.location.hash = `#/izba-pamieci/${tab}`;
-  };
-
-  const navigateToMemoryYear = (yearId) => {
-    setMemoryYearId(yearId);
-    setMemoryTab('year');
-    setActiveView('memory');
-    window.location.hash = `#/izba-pamieci/${yearId}`;
-  };
-
-  const navigateToMemoryPerson = (personIdentifier) => {
-    setMemoryPersonId(personIdentifier);
-    setMemoryTab('person');
-    setActiveView('memory');
-    window.location.hash = `#/izba-pamieci/osoba/${encodeURIComponent(personIdentifier)}`;
-  };
-
-  const navigateToMemoryOrder = (houseKey) => {
-    setMemoryHouseKey(houseKey);
-    setMemoryTab('order');
-    setActiveView('memory');
-    window.location.hash = `#/izba-pamieci/zakon/${houseKey}`;
-  };
-
-  // Izba Przyjęć i Usprawiedliwień — Navigation
-  const navigateToAbsenceChamber = () => {
-    setActiveView('absence-chamber');
-    window.location.hash = '#/izba-przyjec';
-  };
-
-  // Żelazne Pióro — Navigation helpers
-  const navigateToGazette = () => {
-    setActiveView('gazette');
-    window.location.hash = '#/gazetka';
-  };
-  const navigateToGazetteIssue = (issueId) => {
-    setActiveGazetteIssueId(issueId);
-    setActiveView('gazette-reader');
-    window.location.hash = `#/gazetka/numer/${issueId}`;
-  };
-  const navigateToGazettePanel = () => {
-    setActiveView('gazette-panel');
-    window.location.hash = '#/gazetka/panel';
-  };
-  const navigateToGazetteArchive = () => {
-    setActiveView('gazette-archive');
-    window.location.hash = '#/gazetka/archiwum';
-  };
-
-  // Egzaminy — Navigation helpers
-  const navigateToExams = () => { setActiveView('exams'); window.location.hash = '#/egzaminy'; };
-  const navigateToExamTaking = (attemptId) => { setActiveExamAttemptId(attemptId); setActiveView('exam-taking'); window.location.hash = `#/egzaminy/podejscie/${attemptId}`; };
-  const navigateToExamResult = (attemptId) => { setActiveExamAttemptId(attemptId); setActiveView('exam-result'); window.location.hash = `#/egzaminy/wynik/${attemptId}`; };
-  const navigateToExamCreator = (examId = null) => { setActiveExamId(examId); setActiveView('exam-creator'); window.location.hash = examId ? `#/egzaminy/kreator/${examId}` : '#/egzaminy/kreator'; };
-  const navigateToExamGrading = (examId) => { setActiveExamId(examId); setActiveView('exam-grading'); window.location.hash = `#/egzaminy/sprawdzanie/${examId}`; };
-  const navigateToExamBank = () => { setActiveView('exam-bank'); window.location.hash = '#/egzaminy/bank'; };
 
   // Users Database & Active Account
   const [users, setUsers] = useState(() => {
@@ -791,182 +438,6 @@ Dyrektor Cytadeli Durmstrang`
     showNotification('Przywrócono Domyślne', 'Przywrócono domyślne grafiki bloków bocznych.', 'info');
   };
 
-  // Handle Browser Back/Forward and Hash Changes
-  useEffect(() => {
-    const handleHashChange = () => {
-      const parsed = parseHashRoute();
-      if (parsed.view) {
-        setActiveView(parsed.view);
-        if (parsed.houseId) setActiveHouseTab(parsed.houseId);
-        if (parsed.subjectId) setActiveSubjectId(parsed.subjectId);
-        if (parsed.lessonId) setActiveLessonId(parsed.lessonId);
-        if (parsed.docSlug !== undefined) setActiveDocumentSlug(parsed.docSlug);
-        if (parsed.docCategory !== undefined) setActiveDocumentCategory(parsed.docCategory);
-        if (parsed.gazetteIssueId !== undefined) setActiveGazetteIssueId(parsed.gazetteIssueId);
-        if (parsed.examId !== undefined) setActiveExamId(parsed.examId);
-        if (parsed.examAttemptId !== undefined) setActiveExamAttemptId(parsed.examAttemptId);
-        if (parsed.homeworkId !== undefined) setActiveHomeworkId(parsed.homeworkId);
-        if (parsed.homeworkSubId !== undefined) setActiveHomeworkSubId(parsed.homeworkSubId);
-        if (parsed.memoryTab !== undefined) setMemoryTab(parsed.memoryTab);
-        if (parsed.memoryYearId !== undefined) setMemoryYearId(parsed.memoryYearId);
-        if (parsed.memoryPersonId !== undefined) setMemoryPersonId(parsed.memoryPersonId);
-        if (parsed.memoryHouseKey !== undefined) setMemoryHouseKey(parsed.memoryHouseKey);
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  // Sync state changes to browser URL hash
-  useEffect(() => {
-    let targetHash = '#/';
-    switch (activeView) {
-      case 'home':
-        targetHash = '#/';
-        break;
-      case 'rules-guide':
-        targetHash = '#/zasady';
-        break;
-      case 'timetable':
-        targetHash = '#/plan';
-        break;
-      case 'journals':
-        targetHash = '#/dzienniki';
-        break;
-      case 'lesson-detail':
-        targetHash = activeLessonId ? `#/lekcja/${activeLessonId}` : '#/dzienniki';
-        break;
-      case 'academic':
-        targetHash = '#/przedmioty';
-        break;
-      case 'subject-detail':
-        targetHash = activeSubjectId ? `#/przedmiot/${activeSubjectId}` : '#/przedmioty';
-        break;
-      case 'houses':
-        targetHash = activeHouseTab ? `#/domy/${activeHouseTab}` : '#/domy';
-        break;
-      case 'ceremony':
-        targetHash = '#/ceremonia';
-        break;
-      case 'rune-workshop':
-        targetHash = '#/warsztat';
-        break;
-      case 'map':
-        targetHash = '#/mapa';
-        break;
-      case 'markethall':
-        targetHash = '#/rynek';
-        break;
-      case 'bank':
-        targetHash = '#/bank';
-        break;
-      case 'profile':
-        targetHash = '#/profil';
-        break;
-      case 'lore':
-        targetHash = '#/lore';
-        break;
-      case 'raven-post':
-        targetHash = '#/poczta';
-        break;
-      case 'admin':
-        targetHash = '#/admin';
-        break;
-      case 'professor-journal-editor':
-        targetHash = '#/redaguj-dziennik';
-        break;
-      case 'gazette':
-        targetHash = '#/gazetka';
-        break;
-      case 'gazette-reader':
-        targetHash = activeGazetteIssueId ? `#/gazetka/numer/${activeGazetteIssueId}` : '#/gazetka';
-        break;
-      case 'gazette-archive':
-        targetHash = '#/gazetka/archiwum';
-        break;
-      case 'gazette-panel':
-        targetHash = '#/gazetka/panel';
-        break;
-      case 'exams':
-        targetHash = '#/egzaminy';
-        break;
-      case 'exam-taking':
-        targetHash = activeExamAttemptId ? `#/egzaminy/podejscie/${activeExamAttemptId}` : '#/egzaminy';
-        break;
-      case 'exam-result':
-        targetHash = activeExamAttemptId ? `#/egzaminy/wynik/${activeExamAttemptId}` : '#/egzaminy';
-        break;
-      case 'exam-creator':
-        targetHash = activeExamId ? `#/egzaminy/kreator/${activeExamId}` : '#/egzaminy/kreator';
-        break;
-      case 'exam-grading':
-        targetHash = activeExamId ? `#/egzaminy/sprawdzanie/${activeExamId}` : '#/egzaminy';
-        break;
-      case 'exam-bank':
-        targetHash = '#/egzaminy/bank';
-        break;
-      case 'homework':
-        targetHash = '#/prace-domowe';
-        break;
-      case 'homework-detail':
-        targetHash = activeHomeworkId ? `#/praca-domowa/${activeHomeworkId}` : '#/prace-domowe';
-        break;
-      case 'homework-creator':
-        targetHash = '#/zadaj-prace';
-        break;
-      case 'homework-grading':
-        targetHash = activeHomeworkId ? `#/sprawdzaj-prace/${activeHomeworkId}` : '#/prace-domowe';
-        break;
-      case 'documents':
-        if (activeDocumentSlug) {
-          targetHash = `#/dokument/${activeDocumentSlug}`;
-        } else if (activeDocumentCategory && activeDocumentCategory !== 'all') {
-          targetHash = `#/${activeDocumentCategory}`;
-        } else {
-          targetHash = '#/dokumenty';
-        }
-        break;
-      case 'memory':
-        if (memoryTab === 'overview' || !memoryTab) {
-          targetHash = '#/izba-pamieci';
-        } else if (memoryTab === 'trophies') {
-          targetHash = '#/izba-pamieci/sala-pucharow';
-        } else if (memoryTab === 'documents') {
-          targetHash = '#/izba-pamieci/sala-dokumentow';
-        } else if (memoryTab === 'wall-of-fame') {
-          targetHash = '#/izba-pamieci/sciana-chwaly';
-        } else if (memoryTab === 'people') {
-          targetHash = '#/izba-pamieci/kronika';
-        } else if (memoryTab === 'timeline') {
-          targetHash = '#/izba-pamieci/os-czasu';
-        } else if (memoryTab === 'wizard') {
-          targetHash = '#/izba-pamieci/kreator';
-        } else if (memoryTab === 'person' && memoryPersonId) {
-          targetHash = `#/izba-pamieci/osoba/${encodeURIComponent(memoryPersonId)}`;
-        } else if (memoryTab === 'order' && memoryHouseKey) {
-          targetHash = `#/izba-pamieci/zakon/${memoryHouseKey}`;
-        } else if (memoryTab === 'year' && memoryYearId) {
-          targetHash = `#/izba-pamieci/${memoryYearId}`;
-        } else {
-          targetHash = '#/izba-pamieci';
-        }
-        break;
-      default:
-        targetHash = `#/${activeView}`;
-    }
-
-    if (window.location.hash !== targetHash && !(activeView === 'home' && (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#'))) {
-      window.location.hash = targetHash;
-    }
-  }, [activeView, activeHouseTab, activeSubjectId, activeLessonId, activeDocumentSlug, activeDocumentCategory, activeGazetteIssueId, activeExamId, activeExamAttemptId, activeHomeworkId, memoryTab, memoryYearId, memoryPersonId, memoryHouseKey]);
-
-  const navigateTo = useCallback((view, options = {}) => {
-    if (options.houseId) setActiveHouseTab(options.houseId);
-    if (options.subjectId) setActiveSubjectId(options.subjectId);
-    if (options.lessonId) setActiveLessonId(options.lessonId);
-    setActiveView(view);
-  }, []);
 
   // ==================== DZIENNIKI LEKCYJNE, KSIĘGA PUNKTÓW & RANKING ====================
 

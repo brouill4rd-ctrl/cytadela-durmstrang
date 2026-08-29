@@ -73,6 +73,7 @@ const distPath = path.join(__dirname, '..', 'dist');
 const app = express();
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3001;
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 // Allowed CORS origins
 const allowedOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
