@@ -97,7 +97,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '15mb' }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, scope: 'global' }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 2000, scope: 'global' }));
 
 // Static files for uploads (lesson images, attachments)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
