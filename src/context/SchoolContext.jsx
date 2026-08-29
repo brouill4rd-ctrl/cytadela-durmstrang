@@ -1073,8 +1073,19 @@ Dyrektor Cytadeli Durmstrang`
       const exists = prev.some(entry => entry.id === user.id);
       return exists ? prev.map(entry => entry.id === user.id ? user : entry) : [user, ...prev];
     });
+    if (user.role === 'student') {
+      setStudents(prev => {
+        const exists = prev.some(s => s.id === user.id);
+        return exists ? prev.map(s => s.id === user.id ? user : s) : prev;
+      });
+      if (user.id === currentUserId || user.id === currentUser?.id) setStudentProfile(user);
+    } else if (['professor', 'teacher', 'admin', 'headmaster'].includes(user.role)) {
+      setStaffRanking(prev => {
+        const exists = prev.some(s => s.id === user.id);
+        return exists ? prev.map(s => s.id === user.id ? user : s) : prev;
+      });
+    }
     if (user.id === currentUserId || user.id === currentUser?.id) {
-      if (user.role === 'student') setStudentProfile(user);
       setBankAccount(prev => ({ ...prev, balance: user.currency ?? prev.balance }));
     }
     return true;
@@ -1100,6 +1111,14 @@ Dyrektor Cytadeli Durmstrang`
       return nextUsers;
     });
 
+    // Sync students/staffRanking with optimistic update
+    const optimisticRole = finalUpdates.role || currentUser?.role || studentProfile?.role;
+    if (optimisticRole === 'student') {
+      setStudents(prev => prev.map(s => s.id === targetId ? { ...s, ...finalUpdates } : s));
+    } else if (['professor', 'teacher', 'admin', 'headmaster'].includes(optimisticRole)) {
+      setStaffRanking(prev => prev.map(s => s.id === targetId ? { ...s, ...finalUpdates } : s));
+    }
+
     // 2. Update studentProfile / demo profile
     setStudentProfile(prev => {
       const nextProf = { ...prev, ...finalUpdates };
@@ -1114,14 +1133,15 @@ Dyrektor Cytadeli Durmstrang`
       try {
         const res = await api.updateUser(targetId, finalUpdates);
         if (res.ok && res.data) {
-          setUsers(prev => {
-            const next = prev.map(u => u.id === targetId ? res.data : u);
-            return next;
-          });
-          if (currentUser?.role === 'student' || !currentUser) {
-            setStudentProfile(res.data);
+          const saved = res.data;
+          setUsers(prev => prev.map(u => u.id === targetId ? saved : u));
+          if (saved.role === 'student') {
+            setStudents(prev => prev.map(s => s.id === targetId ? saved : s));
+            setStudentProfile(saved);
+          } else if (['professor', 'teacher', 'admin', 'headmaster'].includes(saved.role)) {
+            setStaffRanking(prev => prev.map(s => s.id === targetId ? saved : s));
           }
-          return res.data;
+          return saved;
         }
       } catch (err) {
         console.error('Error updating user on backend:', err);
@@ -2215,6 +2235,25 @@ Dyrektor Cytadeli Durmstrang`
     return houseRankings;
   };
 
+  // Refresh all user-related state from API (used after direct DB edits)
+  const refreshUsersFromApi = async () => {
+    if (!backendAvailable) return;
+    const res = await api.getUsers();
+    if (!res.ok) return;
+    const fetched = res.data.map(u => ({ ...u, points: normalizePointValue(u.points) }));
+    setUsers(fetched);
+    setStudents(
+      fetched
+        .filter(u => u.role === 'student' && u.status === 'approved')
+        .sort((a, b) => (b.points || 0) - (a.points || 0))
+    );
+    setStaffRanking(
+      fetched
+        .filter(u => ['professor', 'teacher', 'admin', 'headmaster'].includes(u.role))
+        .sort((a, b) => (b.points || 0) - (a.points || 0))
+    );
+  };
+
   // Refresh lessons list
   const refreshLessons = async (filters = {}) => {
     if (backendAvailable) {
@@ -2244,7 +2283,10 @@ Dyrektor Cytadeli Durmstrang`
       const res = await api.publishLesson(lessonId);
       if (res.ok) {
         const { lesson, rankings } = res.data;
-        setLessons(prev => prev.map(l => l.id === lessonId ? lesson : l));
+        setLessons(prev => {
+          const exists = prev.some(l => l.id === lessonId);
+          return exists ? prev.map(l => l.id === lessonId ? lesson : l) : [lesson, ...prev];
+        });
         if (rankings) {
           setHouseRankings(rankings);
           setHouses(prev => {
@@ -2282,7 +2324,10 @@ Dyrektor Cytadeli Durmstrang`
       publishedAt: new Date().toISOString()
     };
 
-    setLessons(prev => prev.map(l => l.id === lessonId ? publishedLesson : l));
+    setLessons(prev => {
+      const exists = prev.some(l => l.id === lessonId);
+      return exists ? prev.map(l => l.id === lessonId ? publishedLesson : l) : [publishedLesson, ...prev];
+    });
 
     // Commit points to local ledger
     const newTx = (lesson.participants || []).filter(p => p.pointsAwarded > 0 && p.isPresent).map(p => ({
@@ -2310,11 +2355,18 @@ Dyrektor Cytadeli Durmstrang`
   // Save / Update Lesson Draft
   const saveLessonDraft = async (lessonId, lessonData) => {
     if (backendAvailable) {
-      const res = await api.updateLesson(lessonId, lessonData);
+      const isNew = !lessons.some(l => l.id === lessonId);
+      const res = isNew
+        ? await api.createLesson({ ...lessonData, id: lessonId })
+        : await api.updateLesson(lessonId, lessonData);
       if (res.ok) {
-        setLessons(prev => prev.map(l => l.id === lessonId ? res.data : l));
+        const saved = res.data;
+        setLessons(prev => {
+          const exists = prev.some(l => l.id === saved.id);
+          return exists ? prev.map(l => l.id === saved.id ? saved : l) : [saved, ...prev];
+        });
         showNotification('Szkic Zapisany', 'Zmiany w dzienniku lekcyjnym zostały zachowane na pergaminie.', 'info');
-        return res.data;
+        return saved;
       } else {
         showNotification('Błąd Zapisu', res.error || 'Nie udało się zapisać zmian.', 'warning');
         return null;
@@ -2322,7 +2374,11 @@ Dyrektor Cytadeli Durmstrang`
     }
 
     // Fallback: local
-    setLessons(prev => prev.map(l => l.id === lessonId ? { ...l, ...lessonData, updatedAt: new Date().toISOString() } : l));
+    setLessons(prev => {
+      const exists = prev.some(l => l.id === lessonId);
+      const updated = { ...(prev.find(l => l.id === lessonId) || {}), ...lessonData, id: lessonId, updatedAt: new Date().toISOString() };
+      return exists ? prev.map(l => l.id === lessonId ? updated : l) : [updated, ...prev];
+    });
     showNotification('Szkic Zapisany', 'Zmiany w dzienniku lekcyjnym zostały zachowane.', 'info');
   };
 
@@ -2448,6 +2504,11 @@ Dyrektor Cytadeli Durmstrang`
     if (res.ok) {
       const { user, email, emailDelivery } = res.data;
       setUsers(prev => [user, ...prev]);
+      if (user.role === 'student') {
+        setStudents(prev => [user, ...prev]);
+      } else if (['professor', 'teacher', 'admin', 'headmaster'].includes(user.role)) {
+        setStaffRanking(prev => [user, ...prev]);
+      }
       if (email) setEmails(prev => [email, ...prev]);
       if (emailDelivery?.status === 'sent') {
         showNotification('Podanie Złożone Pomyślnie! ᛞ', `Karta tożsamości zarejestrowana. Potwierdzenie wysłano na: ${user.email}.`, 'success');
@@ -2470,6 +2531,18 @@ Dyrektor Cytadeli Durmstrang`
       if (res.ok) {
         const { user, email, emailDelivery } = res.data;
         setUsers(prev => prev.map(u => u.id === userId ? user : u));
+        if (user.role === 'student') {
+          setStudents(prev => {
+            const exists = prev.some(s => s.id === user.id);
+            const updated = exists ? prev.map(s => s.id === user.id ? user : s) : [...prev, user];
+            return updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+          });
+        } else if (['professor', 'teacher', 'admin', 'headmaster'].includes(user.role)) {
+          setStaffRanking(prev => {
+            const exists = prev.some(s => s.id === user.id);
+            return exists ? prev.map(s => s.id === user.id ? user : s) : [...prev, user];
+          });
+        }
         setPendingApplications(prev => prev.filter(app => app.userId !== userId && app.id !== userId));
         if (email) setEmails(prev => [email, ...prev]);
         if (emailDelivery?.status === 'sent' || user.role !== 'student') {
@@ -2508,6 +2581,8 @@ Dyrektor Cytadeli Durmstrang`
       const res = await api.rejectUser(userId, currentUser?.fullName || 'Dyrekcja');
       if (res.ok) {
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'rejected' } : u));
+        setStudents(prev => prev.map(s => s.id === userId ? { ...s, status: 'rejected' } : s));
+        setStaffRanking(prev => prev.map(s => s.id === userId ? { ...s, status: 'rejected' } : s));
         showNotification('Podanie Oddalone', 'Zgłoszenie zostało odrzucone.', 'info');
       }
     }
@@ -2528,7 +2603,13 @@ Dyrektor Cytadeli Durmstrang`
         adminName: currentUser?.fullName || 'Rada Dyrekcji'
       });
       if (res.ok && res.data.user) {
-        setUsers(prev => [res.data.user, ...prev]);
+        const newUser = res.data.user;
+        setUsers(prev => [newUser, ...prev]);
+        if (['professor', 'teacher', 'admin', 'headmaster'].includes(newUser.role)) {
+          setStaffRanking(prev => [newUser, ...prev]);
+        } else if (newUser.role === 'student') {
+          setStudents(prev => [newUser, ...prev]);
+        }
         showNotification('Nowy Arcymistrz Mianowany', `Konto dla ${adminData.name} ${adminData.surname} zostało utworzone i przypieczętowane.`, 'success');
         return true;
       } else {
@@ -3553,6 +3634,7 @@ Dyrektor Cytadeli Durmstrang`
         rankingPeriod,
         setRankingPeriod,
         fetchRankings,
+        refreshUsersFromApi,
         refreshLessons,
         getLessonDetails,
         publishLesson,

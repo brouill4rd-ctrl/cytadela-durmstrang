@@ -62,7 +62,7 @@ const TABLE_ICONS = {
 };
 
 export const DatabaseExplorerPanel = () => {
-  const { showNotification, currentUser } = useSchool();
+  const { showNotification, currentUser, refreshUsersFromApi } = useSchool();
   const { playWandSwoosh, playRuneChime } = useSound();
 
   const [tables, setTables] = useState([]);
@@ -189,6 +189,7 @@ export const DatabaseExplorerPanel = () => {
       showNotification('Usunięto Wpis', `Rekord o ID "${rowId}" został usunięty z tabeli ${selectedTable}.`, 'success');
       loadTableRows(selectedTable, searchQuery);
       loadTables();
+      if (selectedTable === 'users') refreshUsersFromApi();
     } else {
       showNotification('Błąd Usuwania', res.error || 'Nie udało się usunąć rekordu z bazy.', 'error');
     }
@@ -226,6 +227,7 @@ export const DatabaseExplorerPanel = () => {
       setEditModalOpen(false);
       loadTableRows(selectedTable, searchQuery);
       loadTables();
+      if (selectedTable === 'users') refreshUsersFromApi();
     } else {
       showNotification('Błąd Zapisu', res.error || 'Nie udało się zapisać rekordu.', 'error');
     }
