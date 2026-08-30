@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Clock, Star, Zap, Coins, Package, MapPin, ChevronRight, Bookmark, BookmarkCheck, Scroll, CheckCircle, PlayCircle } from 'lucide-react';
+import { X, Lock, Clock, Star, Zap, Coins, Package, MapPin, ChevronRight, Bookmark, BookmarkCheck, Scroll, CheckCircle, PlayCircle, MessageSquare, ExternalLink } from 'lucide-react';
 import api from '../../api';
 
 const ACTIVITY_LABELS = {
@@ -42,9 +42,14 @@ export function MapInfoPanel({ marker, onClose, onTrack, onStartActivity, onOpen
   const [activeTab, setActiveTab] = useState('info');
   const [locationQuests, setLocationQuests] = useState([]);
   const [questsLoading, setQuestsLoading] = useState(false);
+  const [discordThreadUrl, setDiscordThreadUrl] = useState('');
+  const [discordThreadLoading, setDiscordThreadLoading] = useState(false);
+  const [discordThreadError, setDiscordThreadError] = useState('');
 
   useEffect(() => {
     setActiveTab('info');
+    setDiscordThreadUrl('');
+    setDiscordThreadError('');
     if (!marker?.id) { setLocationQuests([]); return; }
     setQuestsLoading(true);
     api.getLocationQuests(marker.id)
@@ -60,6 +65,22 @@ export function MapInfoPanel({ marker, onClose, onTrack, onStartActivity, onOpen
       .catch(() => setLocationQuests([]))
       .finally(() => setQuestsLoading(false));
   }, [marker?.id]);
+
+  const openDiscordActions = async () => {
+    if (!marker?.id || discordThreadLoading) return;
+    setDiscordThreadLoading(true);
+    setDiscordThreadError('');
+    try {
+      const res = await api.openLocationDiscordThread(marker.id);
+      const payload = res?.data ?? res;
+      setDiscordThreadUrl(payload?.threadUrl || '');
+      if (!payload?.threadUrl) setDiscordThreadError('Wątek został utworzony, ale nie udało się pobrać jego adresu.');
+    } catch (error) {
+      setDiscordThreadError(error?.response?.data?.error || error?.message || 'Nie udało się otworzyć wątku Discord.');
+    } finally {
+      setDiscordThreadLoading(false);
+    }
+  };
 
   if (!marker) return null;
 
@@ -238,6 +259,40 @@ export function MapInfoPanel({ marker, onClose, onTrack, onStartActivity, onOpen
                     {action}
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={openDiscordActions}
+                  disabled={discordThreadLoading}
+                  style={{
+                    width: '100%', marginTop: '0.65rem', padding: '0.55rem 0.7rem',
+                    borderRadius: '5px', border: '1px solid rgba(142,202,230,0.3)',
+                    background: 'rgba(142,202,230,0.08)', color: '#8ecae6',
+                    fontSize: '0.72rem', fontFamily: 'var(--font-heading)', letterSpacing: '0.06em',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                    cursor: discordThreadLoading ? 'wait' : 'pointer', opacity: discordThreadLoading ? 0.65 : 1,
+                  }}
+                >
+                  <MessageSquare size={13} />
+                  {discordThreadLoading ? 'TWORZENIE WĄTKU…' : 'WYŚLIJ DZIAŁANIA NA DISCORD'}
+                </button>
+                {discordThreadUrl && (
+                  <a
+                    href={discordThreadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      marginTop: '0.45rem', color: '#4ade80', fontSize: '0.72rem', textDecoration: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                    }}
+                  >
+                    <ExternalLink size={12} /> PRZEJDŹ DO WĄTKU
+                  </a>
+                )}
+                {discordThreadError && (
+                  <div style={{ marginTop: '0.45rem', color: '#f87171', fontSize: '0.7rem', lineHeight: 1.4 }}>
+                    {discordThreadError}
+                  </div>
+                )}
               </div>
             )}
 
@@ -282,9 +337,9 @@ export function MapInfoPanel({ marker, onClose, onTrack, onStartActivity, onOpen
                   {quest.category && (
                     <div style={{ fontSize: '0.7rem', color: '#6b7280', marginBottom: '0.3rem' }}>{quest.category}</div>
                   )}
-                  {quest.status === 'active' && quest.currentStageObjective && (
+                  {quest.status === 'active' && quest.currentStageInfo?.objective && (
                     <div style={{ fontSize: '0.76rem', color: '#f59e0b', marginBottom: '0.35rem', display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
-                      <ChevronRight size={10} /> {quest.currentStageObjective}
+                      <ChevronRight size={10} /> {quest.currentStageInfo.objective}
                     </div>
                   )}
                   {quest.description && quest.status !== 'active' && (

@@ -18,6 +18,7 @@ import https from 'https';
 import http from 'http';
 import db from './db.js';
 import { normalizeSubjectId, normalizeClassYear } from './utils.js';
+import { executeLocationAction } from './services/locationActionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'lessons');
@@ -25,7 +26,7 @@ const UPLOADS_DIR = path.join(__dirname, 'uploads', 'lessons');
 const ARXYMISTRZOW_ROLE_ID = '1540710122005733376';
 const TMD_GUILD_ID = '1540707857656193104';
 
-const DIFFICULTY_COLOR = { 'Łatwy': 0x22c55e, 'Średni': 0xf59e0b, 'Trudny': 0xf87171, 'Legendarny': 0xa78bfa };
+const DIFFICULTY_COLOR = { 'Łatwy': 0x22c55e, 'Średni': 0xf59e0b, 'Trudny': 0xf87171, 'Legendarny': 0xa78bfa, 'Arcymistrzowski': 0xa78bfa };
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -2217,6 +2218,14 @@ export class DurmstrangDiscordBot {
       embed.setDescription(stage.narrative.slice(0, 4096));
     }
 
+    if (questState.lastActionResult?.text && questState.lastActionResult.stageIndex < questState.currentStageIndex) {
+      embed.addFields({
+        name: 'Skutek poprzedniego wyboru',
+        value: String(questState.lastActionResult.text).slice(0, 1024),
+        inline: false,
+      });
+    }
+
     if (stage?.objective && stage.type !== 'narrative') {
       embed.addFields({ name: 'Cel', value: stage.objective, inline: false });
     }
@@ -2231,11 +2240,12 @@ export class DurmstrangDiscordBot {
   _buildQuestActionButtons(questState, questId, userId) {
     const stage = questState.stage;
     if (!stage) return [];
+    if (stage.platform === 'web') return [];
 
     if (stage.type === 'narrative') {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`qnarr_${questId.slice(0, 20)}_${userId}`)
+          .setCustomId(`qnarr_${questId.slice(0, 30)}_${userId}`)
           .setLabel('Napisz interpretację')
           .setStyle(ButtonStyle.Primary)
           .setEmoji('✍️')
@@ -2246,7 +2256,7 @@ export class DurmstrangDiscordBot {
     if (stage.type === 'visit_location') {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`qact_${questId.slice(0, 20)}_${userId}_arrived`)
+          .setCustomId(`qact_${questId.slice(0, 30)}_${userId}_arrived`)
           .setLabel('Dotarłem do celu')
           .setStyle(ButtonStyle.Success)
           .setEmoji('✅')
@@ -2257,7 +2267,7 @@ export class DurmstrangDiscordBot {
     if (stage.actions?.length > 0) {
       const buttons = stage.actions.slice(0, 4).map(action =>
         new ButtonBuilder()
-          .setCustomId(`qact_${questId.slice(0, 20)}_${userId}_${action.id.slice(0, 10)}`)
+          .setCustomId(`qact_${questId.slice(0, 30)}_${userId}_${action.id}`)
           .setLabel(action.label.slice(0, 80))
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('⚔️')
@@ -2350,7 +2360,34 @@ export class DurmstrangDiscordBot {
     }
   }
 
-  async sendQuestCompleteToThread(discordId, questId, questTitle, rewards) {
+  async sendQuestWebHandoffToThread(discordId, questId, questState) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const thread = await this._getOrCreateQuestThread(discordId, questId, questState);
+      const stage = questState?.stage;
+      const portalUrl = process.env.FRONTEND_URL || process.env.APP_URL || '';
+      const embed = new EmbedBuilder()
+        .setColor(0x8ecae6)
+        .setTitle('🌐 Dalszy etap na stronie')
+        .setDescription(
+          `Kolejny etap questa **${questState?.title || questId}** wykonuje się na mapie portalu.` +
+          (stage?.title ? `\n\n**Etap:** ${stage.title}` : '') +
+          (stage?.objective ? `\n**Cel:** ${stage.objective}` : '') +
+          (portalUrl ? `\n\n[Przejdź do portalu](${portalUrl})` : '')
+        )
+        .setFooter({ text: 'Po wykonaniu etapu następna scena może wrócić do tego wątku.' });
+
+      await thread.send({
+        content: `<@${discordId}>`,
+        embeds: [embed],
+        allowedMentions: { users: [discordId] },
+      });
+    } catch (err) {
+      console.warn('[Quest Web Handoff Error]', err.message);
+    }
+  }
+
+  async sendQuestCompleteToThread(discordId, questId, questTitle, rewards, outcomeText = '') {
     if (!this.client || !this.isReady) return;
     try {
       const thread = await this._getOrCreateQuestThread(discordId, questId, { title: questTitle });
@@ -2369,6 +2406,9 @@ export class DurmstrangDiscordBot {
 
       if (rewardLines.length > 0) {
         embed.addFields({ name: 'Nagrody', value: rewardLines.join('\n'), inline: false });
+      }
+      if (outcomeText) {
+        embed.addFields({ name: 'Rezultat', value: String(outcomeText).slice(0, 1024), inline: false });
       }
 
       await thread.send({
@@ -2410,6 +2450,121 @@ export class DurmstrangDiscordBot {
     } catch (err) {
       console.warn('[Quest Rejection Thread Error]', err.message);
     }
+  }
+
+  async _getOrCreateLocationThread(discordId, location) {
+    const guild = await this.client.guilds.fetch(TMD_GUILD_ID).catch(() => null);
+    if (!guild) throw new Error('Nie znaleziono serwera TMD.');
+
+    const playChannelId = process.env.DISCORD_QUEST_PLAY_CHANNEL_ID;
+    if (!playChannelId) throw new Error('Brak DISCORD_QUEST_PLAY_CHANNEL_ID w konfiguracji.');
+
+    const parentChannel = await guild.channels.fetch(playChannelId).catch(() => null);
+    if (!parentChannel?.threads?.create) {
+      throw new Error('Kanał działań nie obsługuje publicznych wątków.');
+    }
+
+    const saved = db.prepare(`
+      SELECT thread_id, parent_channel_id
+      FROM location_discord_threads
+      WHERE location_id=? AND discord_user_id=?
+    `).get(location.id, discordId);
+
+    if (saved?.thread_id && saved.parent_channel_id === playChannelId) {
+      let existingThread = await guild.channels.fetch(saved.thread_id).catch(() => null);
+      if (existingThread?.isThread()) {
+        if (existingThread.archived) {
+          existingThread = await existingThread.setArchived(false, 'Powrót do lokacji').catch(() => null);
+        }
+        if (existingThread?.isThread() && !existingThread.archived) {
+          await existingThread.members.add(discordId).catch(() => {});
+          db.prepare(`
+            UPDATE location_discord_threads
+            SET status='active', updated_at=datetime('now')
+            WHERE location_id=? AND discord_user_id=?
+          `).run(location.id, discordId);
+          return existingThread;
+        }
+      }
+    }
+
+    const member = await guild.members.fetch(discordId).catch(() => null);
+    const discordUser = member?.user || await this.client.users.fetch(discordId).catch(() => null);
+    const playerName = member?.displayName || discordUser?.username || `adept-${discordId.slice(-6)}`;
+    const threadName = `📍 ${location.name} — ${playerName}`.slice(0, 100);
+
+    const thread = await parentChannel.threads.create({
+      name: threadName,
+      autoArchiveDuration: 1440,
+      type: ChannelType.PublicThread,
+      reason: `Działania w lokacji ${location.id} dla ${discordId}`,
+    });
+
+    await thread.members.add(discordId).catch(() => {});
+    db.prepare(`
+      INSERT INTO location_discord_threads
+        (location_id, discord_user_id, thread_id, parent_channel_id, status, updated_at)
+      VALUES (?, ?, ?, ?, 'active', datetime('now'))
+      ON CONFLICT(location_id, discord_user_id) DO UPDATE SET
+        thread_id=excluded.thread_id,
+        parent_channel_id=excluded.parent_channel_id,
+        status='active',
+        updated_at=datetime('now')
+    `).run(location.id, discordId, thread.id, playChannelId);
+
+    return thread;
+  }
+
+  async openLocationActionsThread(discordId, locationId) {
+    if (!this.client || !this.isReady) throw new Error('Bot Discord nie jest gotowy.');
+
+    const location = db.prepare(`
+      SELECT id, name, nordic_name, short_desc, full_lore, actions
+      FROM locations WHERE id=?
+    `).get(locationId);
+    if (!location) throw Object.assign(new Error('Lokacja nie istnieje.'), { statusCode: 404 });
+
+    let actions = [];
+    try { actions = JSON.parse(location.actions || '[]'); } catch (_) {}
+    if (actions.length === 0) {
+      throw Object.assign(new Error('Ta lokacja nie ma działań na Discordzie.'), { statusCode: 400 });
+    }
+
+    const thread = await this._getOrCreateLocationThread(discordId, location);
+    const embed = new EmbedBuilder()
+      .setColor(0xc59f4e)
+      .setAuthor({ name: location.nordic_name || 'Mapa Północy' })
+      .setTitle(`📍 ${location.name}`)
+      .setDescription((location.full_lore || location.short_desc || 'Wybierz działanie w tej lokacji.').slice(0, 3500))
+      .addFields({ name: 'Działania', value: 'Wybierz jedną z opcji poniżej. Dalszą deklarację odegraj bezpośrednio w tym wątku.', inline: false })
+      .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Działania lokacji' });
+
+    const rows = [];
+    for (let i = 0; i < actions.length; i += 5) {
+      const row = new ActionRowBuilder();
+      for (let index = i; index < Math.min(i + 5, actions.length); index += 1) {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`qloc_${location.id.slice(0, 30)}_${discordId}_${index}`)
+            .setLabel(String(actions[index]).slice(0, 80))
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⚔️')
+        );
+      }
+      rows.push(row);
+    }
+
+    await thread.send({
+      content: `<@${discordId}>`,
+      embeds: [embed],
+      components: rows.slice(0, 5),
+      allowedMentions: { users: [discordId] },
+    });
+
+    return {
+      threadId: thread.id,
+      threadUrl: `https://discord.com/channels/${TMD_GUILD_ID}/${thread.id}`,
+    };
   }
 
   async sendNarrativeReviewToArxy(reviewId, questId, questTitle, stageTitle, prompt, responseText, playerDiscordId, playerName) {
@@ -2482,6 +2637,63 @@ export class DurmstrangDiscordBot {
   async _handleQuestButton(interaction) {
     const { customId } = interaction;
 
+    // Działanie opisowe lokacji: qloc_{locationId}_{discordUserId}_{actionIndex}
+    if (customId.startsWith('qloc_')) {
+      const parts = customId.split('_');
+      if (parts.length !== 4) return false;
+      const locationId = parts[1];
+      const ownerDiscordId = parts[2];
+      const actionIndex = Number(parts[3]);
+
+      if (interaction.user.id !== ownerDiscordId) {
+        await interaction.reply({ content: '⛔ Ten wątek działań należy do innego adepta.', ephemeral: true });
+        return true;
+      }
+
+      const user = db.prepare('SELECT id FROM users WHERE discord_id=?').get(interaction.user.id);
+      if (!user) {
+        await interaction.reply({ content: '⚠️ Konto Discord nie jest powiązane z portalem. Użyj `/weryfikuj`.', ephemeral: true });
+        return true;
+      }
+
+      let outcome;
+      try {
+        outcome = executeLocationAction({
+          locationId,
+          userId: user.id,
+          actionIndex,
+          discordThreadId: interaction.channelId,
+          db,
+        });
+      } catch (error) {
+        await interaction.reply({ content: `❌ ${error.message}`, ephemeral: true });
+        return true;
+      }
+
+      const effectLines = [
+        outcome.effects?.xpAwarded > 0 && `✨ +${outcome.effects.xpAwarded} XP`,
+        outcome.effects?.skirnirySpent > 0 && `🪙 −${outcome.effects.skirnirySpent} Skirnirów`,
+        outcome.effects?.itemAdded && `🎁 ${outcome.effects.itemAdded}`,
+      ].filter(Boolean);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x8ecae6)
+        .setTitle(`⚔️ ${outcome.definition.label}`)
+        .setDescription(
+          `<@${interaction.user.id}> ${outcome.result}\n\n${outcome.definition.prompt}` +
+          (outcome.duplicate ? '\n\n*To działanie było już wcześniej wykonane — nagrody i koszty nie są naliczane ponownie.*' : '')
+        )
+        .setFooter({ text: 'Działanie zapisane w kronice lokacji' })
+        .setTimestamp();
+      if (effectLines.length > 0) embed.addFields({ name: 'Efekty', value: effectLines.join('\n'), inline: false });
+
+      await interaction.reply({
+        embeds: [embed],
+        allowedMentions: { users: [interaction.user.id] },
+      });
+      return true;
+    }
+
     // Przycisk akcji: qact_{questId}_{discordUserId}_{actionId}
     if (customId.startsWith('qact_')) {
       const parts = customId.split('_');
@@ -2513,13 +2725,18 @@ export class DurmstrangDiscordBot {
 
       await interaction.deferReply({ ephemeral: true }).catch(() => {});
       try {
-        const result = submitAction(questDef.id, user.id, actionId, db);
+        const result = submitAction(questDef.id, user.id, actionId, db, 'discord');
         if (result.completed) {
           await interaction.editReply({ content: `✅ Quest ukończony!` });
-          await this.sendQuestCompleteToThread(interaction.user.id, questDef.id, result.state?.title || questDef.id, result.rewards);
+          await this.sendQuestCompleteToThread(interaction.user.id, questDef.id, result.state?.title || questDef.id, result.rewards, result.actionResult);
         } else {
-          await interaction.editReply({ content: '⚡ Następna scena pojawiła się w tym wątku.' });
-          await this.sendQuestSceneToThread(interaction.user.id, questDef.id, result.state);
+          if (result.state?.stage?.platform === 'web') {
+            await interaction.editReply({ content: '🌐 Następny etap wykonasz na mapie portalu.' });
+            await this.sendQuestWebHandoffToThread(interaction.user.id, questDef.id, result.state);
+          } else {
+            await interaction.editReply({ content: '⚡ Następna scena pojawiła się w tym wątku.' });
+            await this.sendQuestSceneToThread(interaction.user.id, questDef.id, result.state);
+          }
         }
       } catch (err) {
         await interaction.editReply({ content: `❌ ${err.message}` });
@@ -2583,6 +2800,8 @@ export class DurmstrangDiscordBot {
         if (playerUser?.discord_id) {
           if (result.completed) {
             await this.sendQuestCompleteToThread(playerUser.discord_id, result.questId, result.state?.title || result.questId, result.rewards);
+          } else if (result.state?.stage?.platform === 'web') {
+            await this.sendQuestWebHandoffToThread(playerUser.discord_id, result.questId, result.state);
           } else {
             await this.sendQuestSceneToThread(playerUser.discord_id, result.questId, result.state);
           }

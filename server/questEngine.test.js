@@ -363,3 +363,45 @@ test('12. Dwa równoległe żądania ukończenia nie podwajają nagrody', () => 
     /nie można go kontynuować/
   );
 });
+
+test('13. Etap Discord nie może zostać wykonany przez endpoint strony', () => {
+  const db = makeTestDb();
+  const userId = makeUser(db);
+  loadQuestDefinitions(db, [{
+    id: 'platform-discord-q1', version: 1, title: 'Discord stage',
+    location_id: 'test-loc-1', chain_id: 'platform', order_index: 1,
+    requirements: {}, rewards: {},
+    stages: [{
+      index: 0, type: 'choice', platform: 'discord', title: 'Discord',
+      objective: 'Wybierz w wątku', actions: [{ id: 'discord_action_long', label: 'Wykonaj na Discordzie' }]
+    }]
+  }]);
+
+  const state = startQuest('platform-discord-q1', userId, db);
+  assert.equal(state.stage.platform, 'discord');
+  assert.throws(
+    () => submitAction('platform-discord-q1', userId, 'discord_action_long', db, 'web'),
+    /w wątku Discord/
+  );
+  const result = submitAction('platform-discord-q1', userId, 'discord_action_long', db, 'discord');
+  assert.equal(result.completed, true);
+});
+
+test('14. Etap odwiedzenia lokacji przyjmuje akcję arrived', () => {
+  const db = makeTestDb();
+  const userId = makeUser(db);
+  loadQuestDefinitions(db, [{
+    id: 'visit-location-q1', version: 1, title: 'Wizyta',
+    location_id: 'test-loc-1', chain_id: 'visit', order_index: 1,
+    requirements: {}, rewards: {},
+    stages: [{
+      index: 0, type: 'visit_location', platform: 'web', title: 'Dotrzyj',
+      objective: 'Dotrzyj do celu', location_id: 'test-loc-2',
+      actions: [{ id: 'arrived', label: 'Dotarłem' }]
+    }]
+  }]);
+
+  startQuest('visit-location-q1', userId, db);
+  const result = submitAction('visit-location-q1', userId, 'arrived', db, 'web');
+  assert.equal(result.completed, true);
+});

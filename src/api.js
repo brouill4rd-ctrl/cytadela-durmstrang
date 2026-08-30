@@ -86,6 +86,7 @@ export const api = {
   // Quest Engine
   getQuestJournal: () => apiFetch('/quest-engine/journal'),
   getLocationQuests: (locationId) => apiFetch(`/quest-engine/location/${encodeURIComponent(locationId)}`),
+  openLocationDiscordThread: (locationId) => apiFetch(`/quest-engine/location/${encodeURIComponent(locationId)}/discord-thread`, { method: 'POST' }),
   getQuestState: (questId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/state`),
   startQuest: (questId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/start`, { method: 'POST' }),
   submitQuestAction: (questId, actionId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/action`, {

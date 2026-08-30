@@ -59,6 +59,7 @@ import { initRunicDuelService } from './services/runicDuelService.js';
 import { initBestiaryService } from './services/bestiaryService.js';
 import { initQuestService, loadQuestDefinitions } from './services/questService.js';
 import { QUEST_DEFINITIONS } from './seed/questDefinitions.js';
+import { WORLD_QUEST_DEFINITIONS } from './seed/worldQuestDefinitions.js';
 import { isCorsOriginAllowed, parseCorsOrigins } from './config/security.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
@@ -71,7 +72,7 @@ initDungeonEscapeService(db);
 initRunicDuelService(db);
 initBestiaryService(db);
 initQuestService(db);
-loadQuestDefinitions(db, QUEST_DEFINITIONS);
+loadQuestDefinitions(db, [...QUEST_DEFINITIONS, ...WORLD_QUEST_DEFINITIONS]);
 
 // Sync caches with ledger (source of truth)
 backfillSchoolYear();

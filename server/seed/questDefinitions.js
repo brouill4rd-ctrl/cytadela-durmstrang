@@ -22,6 +22,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 0,
         type: 'dialogue',
+        platform: 'web',
         title: 'Strażnik Björnar',
         narrative: 'Leśny Strażnik Björnar stoi przy tablicy z ponurą miną. Wskazuje na świeże ślady butów prowadzące między sosny.\n\n*„Trzecia para zaginiona w tym miesiącu. Żadna nie wróciła sama. Śnieg przyjął ich ślady — możecie je odczytać, jeśli wiecie jak."*',
         objective: 'Wysłuchaj Björnara',
@@ -34,6 +35,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 1,
         type: 'choice',
+        platform: 'discord',
         title: 'Tropienie śladów',
         narrative: 'Ślady są wyraźne w świeżym śniegu. Las milczy. Björnar czeka na twój ruch.',
         objective: 'Wybierz metodę tropienia',
@@ -62,6 +64,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 0,
         type: 'dialogue',
+        platform: 'discord',
         title: 'Porzucony plecak',
         narrative: 'Przy Rozdroźu Wisielców — stary pień z dwoma powieszonymi szmaciami — leży rozdarty plecak. W środku: notatnik z Durmstrangu, kompas (zatrzymany) i mapa lasu z zaznaczonym „X" przy miejscu, które nie ma nazwy.\n\n*Zielarka. Jedyna, która zna las od środka.*',
         objective: 'Zbadaj porzucony plecak',
@@ -74,10 +77,14 @@ export const QUEST_DEFINITIONS = [
       {
         index: 1,
         type: 'visit_location',
+        platform: 'web',
         title: 'Idź do Chatki Zielarki',
         narrative: 'Mapa wskazuje kierunek. Zielarka Skadi — jedyna osoba, która wie co się dzieje w lesie. Chatka leży dalej na zachód.',
         objective: 'Dotrzyj do Chatki Zielarki',
-        location_id: 'wl-jot-chatka'
+        location_id: 'wl-jot-chatka',
+        actions: [
+          { id: 'arrived', label: 'Dotarłem do Chatki Zielarki' }
+        ]
       }
     ],
     rewards: { points: 12, xp: 35, skirniry: 6 }
@@ -98,6 +105,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 0,
         type: 'dialogue',
+        platform: 'discord',
         title: 'Skadi zna odpowiedź',
         narrative: 'Stara kobieta miesza coś w garnku. Nie podnosi głowy.\n\n*„Kamienny Krąg. Ktoś aktywował go tej nocy. Czuję to w ziołach — smakują inaczej, gdy krąg jest aktywny."*\n\n*„Zanim tam pójdziesz, przynieś mi trzy rzeczy. Mech z kamiennych bloków. Pióro białego ptaka. I coś, czego nie ma w lesie w dzień."*',
         objective: 'Przyjmij zlecenie Skadi',
@@ -110,6 +118,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 1,
         type: 'choice',
+        platform: 'web',
         title: 'Zbieranie składników — mech i pióro',
         narrative: 'W lesie znajdziesz dwa pierwsze składniki. Mech powinien być przy starych głazach. Biały ptak — jeśli jest — gniazduje przy strumieniu.\n\nGdzieś tam jest też coś, czego nie ma w lesie w dzień.',
         objective: 'Zbierz mech i białe pióro',
@@ -122,6 +131,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 2,
         type: 'choice',
+        platform: 'discord',
         title: 'Trzeci składnik — nocna wyprawa',
         narrative: '„Coś, czego nie ma w lesie w dzień" — Skadi dała tylko tę podpowiedź. Las w nocy jest innym miejscem niż w dzień.',
         objective: 'Zdobądź trzeci składnik',
@@ -134,6 +144,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 3,
         type: 'dialogue',
+        platform: 'web',
         title: 'Oddanie składników',
         narrative: 'Skadi bierze składniki jeden po jednym. Wącha. Kiwa głową.\n\n*„Dobrze. Rzadko ktoś wraca z całą listą."*\n\nMiesza coś przez chwilę. Podaje ci butelkę z zielonym płynem.\n\n*„Krąg. Idź tam. Ale jeśli coś wychodzi z ziemi — stój nieruchomo. Ono szuka tych, którzy uciekają."*',
         objective: 'Oddaj składniki Skadi',
@@ -155,12 +166,13 @@ export const QUEST_DEFINITIONS = [
     difficulty: 'Średni',
     location_id: 'wl-jot-chatka',
     chain_id: 'jot-main',
-    order_index: 35,
+    order_index: 4,
     requirements: { type: 'quest_completed', id: 'jot-q3-zielarka' },
     stages: [
       {
         index: 0,
         type: 'dialogue',
+        platform: 'web',
         title: 'Skadi żąda próby',
         narrative: 'Zanim oddasz składniki, Skadi zatrzymuje cię gestem.\n\n*„Jeszcze jedno. Wyciągnij runę."*\n\nWskazuje na wachlarz kamieni na stole — każdy wyryty innym znakiem. Zamykasz oczy i bierzesz jeden na ślepo.',
         objective: 'Wysłuchaj Skadi',
@@ -171,6 +183,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 1,
         type: 'narrative',
+        platform: 'discord',
         title: 'Interpretacja wylosowanej runy',
         narrative: '*Trzymasz kamień. Obrócisz go niczym kartkę w książce.*\n\nSkadi obserwuje cię w milczeniu. To nie jest test wiedzy — to próba intuicji i wrażliwości magicznej.\n\n> *„Powiedz mi co widzisz. Nie co POWINIENEŚ widzieć — co WIDZISZ."*',
         prompt: 'Opisz co twoja postać czuje, widzi lub interpretuje w wylosowanej runie. Minimum 3 zdania. Pisz w klimacie TMD — pierwszoosobowo lub jako narracja postaci.',
@@ -192,12 +205,13 @@ export const QUEST_DEFINITIONS = [
     difficulty: 'Średni',
     location_id: 'wl-jot-krag',
     chain_id: 'jot-main',
-    order_index: 4,
-    requirements: { type: 'quest_completed', id: 'jot-q3-zielarka' },
+    order_index: 5,
+    requirements: { type: 'quest_completed', id: 'jot-q3b-runa' },
     stages: [
       {
         index: 0,
         type: 'dialogue',
+        platform: 'web',
         title: 'Kamienny Krąg',
         narrative: 'Siedem kamieni w idealnym okręgu. Runy świecą. Powietrze drży — nie od wiatru, ale od czegoś pod ziemią.\n\nJeden kamień jest pęknięty w połowie. Nowe pęknięcie — świeże.\n\n*Ktoś tu był i coś zrobił.*',
         objective: 'Zbadaj Kamienny Krąg',
@@ -210,6 +224,7 @@ export const QUEST_DEFINITIONS = [
       {
         index: 1,
         type: 'choice',
+        platform: 'discord',
         title: 'Strażnik Kręgu',
         narrative: 'Coś wynurza się z ziemi między kamieniami. Nie jest złe — jest stare. Patrzy na ciebie.\n\n*„Kto cię tu wysłał?"*\n\nSkadi dała ci miksturę. Björnar przestrzegał. Ty tu stoisz.',
         objective: 'Stań twarzą do Strażnika Kręgu',

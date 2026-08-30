@@ -33,6 +33,30 @@ export function initQuestService(db) {
       PRIMARY KEY (quest_id, discord_user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS location_discord_threads (
+      location_id TEXT NOT NULL,
+      discord_user_id TEXT NOT NULL,
+      thread_id TEXT NOT NULL,
+      parent_channel_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (location_id, discord_user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_location_action_log (
+      id TEXT PRIMARY KEY,
+      location_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      action_index INTEGER NOT NULL,
+      action_label TEXT NOT NULL,
+      discord_thread_id TEXT NOT NULL,
+      result_text TEXT NOT NULL DEFAULT '',
+      effect_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, location_id, action_index)
+    );
+
     CREATE TABLE IF NOT EXISTS quest_definitions (
       id TEXT PRIMARY KEY,
       version INTEGER NOT NULL DEFAULT 1,
@@ -80,6 +104,20 @@ export function initQuestService(db) {
       db.exec('ALTER TABLE user_map_tracking ADD COLUMN quest_id TEXT DEFAULT NULL;');
     } catch (_) {}
   }
+
+  const locationActionCols = db.pragma('table_info(user_location_action_log)').map(c => c.name);
+  if (!locationActionCols.includes('result_text')) {
+    try { db.exec("ALTER TABLE user_location_action_log ADD COLUMN result_text TEXT NOT NULL DEFAULT '';"); } catch (_) {}
+  }
+  if (!locationActionCols.includes('effect_json')) {
+    try { db.exec("ALTER TABLE user_location_action_log ADD COLUMN effect_json TEXT NOT NULL DEFAULT '{}';"); } catch (_) {}
+  }
+  try {
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_location_action_once
+      ON user_location_action_log(user_id, location_id, action_index)
+    `);
+  } catch (_) {}
 }
 
 export function loadQuestDefinitions(db, definitions) {
@@ -223,6 +261,7 @@ export function getLocationQuests(locationId, userId, db = _db) {
       currentStageInfo: currentStage ? {
         index: currentStage.index,
         type: currentStage.type,
+        platform: currentStage.platform || 'both',
         title: currentStage.title,
         objective: currentStage.objective,
       } : null,
@@ -312,6 +351,7 @@ export function getQuestState(questId, userId, db = _db) {
 
   let stateJson = {};
   try { stateJson = JSON.parse(progress?.state_json || '{}'); } catch (_) {}
+  if (stateJson.reward_item_override) rewards.item = stateJson.reward_item_override;
 
   const pendingReviewId = stateJson.pending_review_id || null;
 
@@ -329,6 +369,7 @@ export function getQuestState(questId, userId, db = _db) {
     stage: currentStage ? {
       index: currentStage.index,
       type: currentStage.type,
+      platform: currentStage.platform || 'both',
       title: currentStage.title,
       narrative: currentStage.narrative,
       objective: currentStage.objective,
@@ -339,6 +380,7 @@ export function getQuestState(questId, userId, db = _db) {
     } : null,
     rewards: status === 'completed' ? rewards : null,
     completedAt: progress?.completed_at || null,
+    lastActionResult: stateJson.last_action_result || null,
     stateJson,
   };
 }
@@ -374,7 +416,7 @@ export function startQuest(questId, userId, db = _db) {
 
 // ─── Wyślij akcję (przesuń stage) ────────────────────────────────────────────
 
-export function submitAction(questId, userId, actionId, db = _db) {
+export function submitAction(questId, userId, actionId, db = _db, source = 'web') {
   const def = db.prepare('SELECT * FROM quest_definitions WHERE id=? AND is_active=1').get(questId);
   if (!def) throw Object.assign(new Error('Quest nie istnieje.'), { statusCode: 404 });
 
@@ -390,6 +432,12 @@ export function submitAction(questId, userId, actionId, db = _db) {
   const stageIndex = progress.current_stage;
   const currentStage = stages[stageIndex];
   if (!currentStage) throw Object.assign(new Error('Nieprawidłowy etap questa.'), { statusCode: 500 });
+
+  const platform = currentStage.platform || 'both';
+  if (platform !== 'both' && platform !== source) {
+    const target = platform === 'discord' ? 'w wątku Discord' : 'na stronie';
+    throw Object.assign(new Error(`Ten etap wykonuje się ${target}.`), { statusCode: 409 });
+  }
 
   // Walidacja actionId
   const validActions = currentStage.actions || [];
@@ -408,6 +456,20 @@ export function submitAction(questId, userId, actionId, db = _db) {
 
   const choiceKey = `stage_${stageIndex}_choice`;
   state[choiceKey] = { actionId, score: chosenAction.score ?? null };
+  const actionResult = chosenAction.result_narrative
+    ? String(chosenAction.result_narrative).slice(0, 3500)
+    : null;
+  if (actionResult) {
+    state.last_action_result = {
+      stageIndex,
+      actionId,
+      text: actionResult,
+      createdAt: new Date().toISOString(),
+    };
+  }
+  if (chosenAction.reward_item) {
+    state.reward_item_override = String(chosenAction.reward_item).slice(0, 160);
+  }
 
   // Wyznacz następny stage
   const nextStageIndex = chosenAction.next_stage !== undefined
@@ -435,7 +497,7 @@ export function submitAction(questId, userId, actionId, db = _db) {
 
     // Nagrody poza transakcją (nie cofają ukończenia questa przy błędzie serwisu)
     let rewards = {};
-    try { rewards = _awardQuestRewards(def, userId, db); } catch (_) {}
+    try { rewards = _awardQuestRewards(def, userId, db, state); } catch (_) {}
 
     // Odblokowania po ukończeniu
     _processOnComplete(def, userId, db);
@@ -445,6 +507,7 @@ export function submitAction(questId, userId, actionId, db = _db) {
       questId,
       title: def.title,
       rewards,
+      actionResult,
       state: getQuestState(questId, userId, db),
     };
   }
@@ -459,6 +522,7 @@ export function submitAction(questId, userId, actionId, db = _db) {
   return {
     completed: false,
     questId,
+    actionResult,
     state: getQuestState(questId, userId, db),
   };
 }
@@ -503,9 +567,10 @@ export function untrackQuest(userId, db = _db) {
 
 // ─── Prywatne pomocniki ──────────────────────────────────────────────────────
 
-function _awardQuestRewards(def, userId, db) {
+function _awardQuestRewards(def, userId, db, state = {}) {
   let rewards = {};
   try { rewards = JSON.parse(def.rewards_json || '{}'); } catch (_) {}
+  if (state.reward_item_override) rewards.item = state.reward_item_override;
 
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
   if (!user) throw new Error('Użytkownik nie istnieje.');
@@ -663,7 +728,7 @@ export function approveNarrative(reviewId, reviewerDiscordId, db = _db) {
       `).run(nextStageIndex, JSON.stringify(state), review.user_id, review.quest_id);
     })();
     let rewards = {};
-    try { rewards = _awardQuestRewards(def, review.user_id, db); } catch (_) {}
+    try { rewards = _awardQuestRewards(def, review.user_id, db, state); } catch (_) {}
     _processOnComplete(def, review.user_id, db);
     return { completed: true, questId: review.quest_id, userId: review.user_id, rewards, state: getQuestState(review.quest_id, review.user_id, db) };
   }

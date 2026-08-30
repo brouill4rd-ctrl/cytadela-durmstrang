@@ -13,6 +13,7 @@ const STAGE_TYPE_LABEL = {
   dialogue:       'Scena fabularna',
   choice:         'Wybór',
   visit_location: 'Cel: odwiedź lokację',
+  narrative:      'Narracja na Discordzie',
   complete:       'Finał',
 };
 
@@ -211,6 +212,11 @@ export function QuestModal({ questId, isOpen, onClose, onQuestComplete, autoStar
                       {state.completedAt ? new Date(state.completedAt).toLocaleDateString('pl-PL') : ''}
                     </div>
                   </div>
+                  {state.lastActionResult?.text && (
+                    <div style={{ ...narrativeStyle, borderLeft: '3px solid #22c55e', marginBottom: '0.85rem' }}>
+                      {state.lastActionResult.text}
+                    </div>
+                  )}
                   {state.rewards && (
                     <div style={{ background: 'rgba(197,159,78,0.07)', border: '1px solid rgba(197,159,78,0.2)', borderRadius: '6px', padding: '0.75rem' }}>
                       <div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>
@@ -260,10 +266,23 @@ export function QuestModal({ questId, isOpen, onClose, onQuestComplete, autoStar
                     </h3>
                   )}
 
+                  {state.lastActionResult?.text && state.lastActionResult.stageIndex < state.currentStageIndex && (
+                    <div style={{ fontSize: '0.78rem', color: '#b7c3d0', background: 'rgba(34,197,94,0.06)', borderLeft: '3px solid rgba(34,197,94,0.55)', borderRadius: '4px', padding: '0.7rem', marginBottom: '0.85rem', lineHeight: 1.55 }}>
+                      {state.lastActionResult.text}
+                    </div>
+                  )}
+
                   {/* Narracja */}
                   {state.stage.narrative && (
                     <div style={narrativeStyle}>
                       {state.stage.narrative}
+                    </div>
+                  )}
+
+                  {state.stage.platform === 'discord' && state.stage.type !== 'narrative' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#8ecae6', fontSize: '0.82rem', background: 'rgba(142,202,230,0.07)', border: '1px solid rgba(142,202,230,0.2)', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem' }}>
+                      <MessageSquare size={14} />
+                      Ten etap wykonujesz w publicznym wątku questa na Discordzie.
                     </div>
                   )}
 
@@ -301,7 +320,7 @@ export function QuestModal({ questId, isOpen, onClose, onQuestComplete, autoStar
                   )}
 
                   {/* Akcje */}
-                  {state.stage.actions?.length > 0 && state.stage.type !== 'visit_location' && state.stage.type !== 'narrative' && (
+                  {state.stage.actions?.length > 0 && state.stage.platform !== 'discord' && state.stage.type !== 'visit_location' && state.stage.type !== 'narrative' && (
                     <div>
                       <div style={{ fontSize: '0.68rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>
                         Co robisz?
@@ -326,7 +345,7 @@ export function QuestModal({ questId, isOpen, onClose, onQuestComplete, autoStar
                   )}
 
                   {/* Dla visit_location: przycisk "Dotarłem" */}
-                  {state.stage.type === 'visit_location' && (
+                  {state.stage.type === 'visit_location' && state.stage.platform !== 'discord' && (
                     <button
                       onClick={() => handleAction('arrived')}
                       disabled={submitting !== null}
