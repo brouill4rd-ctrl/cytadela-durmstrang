@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 
 let _db;
 let _usersHaveRoleColumn = false;
+let _usersHaveDiscordIdColumn = false;
 
 export function initPointsService(db) {
   _db = db;
@@ -11,6 +12,7 @@ export function initPointsService(db) {
   const colNames = cols.map(c => c.name);
   const userColumns = db.pragma('table_info(users)');
   _usersHaveRoleColumn = userColumns.some(column => column.name === 'role');
+  _usersHaveDiscordIdColumn = userColumns.some(column => column.name === 'discord_id');
 
   if (!colNames.includes('school_year')) {
     db.exec("ALTER TABLE point_transactions ADD COLUMN school_year TEXT DEFAULT ''");
@@ -38,6 +40,26 @@ export function initPointsService(db) {
   // Index for house aggregation
   db.exec("CREATE INDEX IF NOT EXISTS idx_pt_house_active ON point_transactions(house, is_revoked)");
 
+  // Starsze importy lekcji zapisywały Discord ID jako student_id. Ranking osobisty
+  // korzysta z users.id, więc normalizujemy historyczne wpisy do ID konta portalu.
+  if (_usersHaveDiscordIdColumn) {
+    db.prepare(`
+      UPDATE point_transactions
+      SET student_id = (
+        SELECT users.id
+        FROM users
+        WHERE users.discord_id = point_transactions.student_id
+        LIMIT 1
+      )
+      WHERE student_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM users
+          WHERE users.discord_id = point_transactions.student_id
+        )
+    `).run();
+  }
+
   // Kadra może zdobywać punkty osobiste, ale nigdy nie zasila Zakonu.
   // Czyścimy także historyczne wpisy utworzone przez starsze wersje gier.
   if (_usersHaveRoleColumn) {
@@ -54,13 +76,17 @@ export function initPointsService(db) {
   }
 }
 
-function resolveRecipientHouse(studentId, requestedHouse) {
-  if (!studentId || !_usersHaveRoleColumn) {
-    return requestedHouse ? String(requestedHouse).toLowerCase() : null;
-  }
+function resolveRecipient(studentId) {
+  if (!studentId) return null;
 
-  const recipient = _db.prepare('SELECT role, house FROM users WHERE id = ?').get(studentId);
-  if (!recipient) {
+  const byPortalId = _db.prepare('SELECT * FROM users WHERE id = ?').get(studentId);
+  if (byPortalId || !_usersHaveDiscordIdColumn) return byPortalId || null;
+
+  return _db.prepare('SELECT * FROM users WHERE discord_id = ?').get(studentId) || null;
+}
+
+function resolveRecipientHouse(recipient, requestedHouse) {
+  if (!recipient || !_usersHaveRoleColumn) {
     return requestedHouse ? String(requestedHouse).toLowerCase() : null;
   }
 
@@ -99,7 +125,9 @@ export function awardPoints({
   idempotencyKey = ''
 }) {
   const numericPoints = Number(points);
-  const effectiveHouse = resolveRecipientHouse(studentId, house);
+  const recipient = resolveRecipient(studentId);
+  const effectiveStudentId = recipient?.id || studentId;
+  const effectiveHouse = resolveRecipientHouse(recipient, house);
   // Zakon jest opcjonalny dla punktów osobistych — wymagany użytkownik lub Zakon.
   if (!house && !studentId) {
     throw new Error('Wymagany Zakon lub ID użytkownika.');
@@ -128,8 +156,8 @@ export function awardPoints({
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'), ?, 0, ?, ?, datetime('now'))
     `).run(
       txId,
-      studentId || null,
-      studentName || (studentId ? 'Użytkownik' : ''),
+      effectiveStudentId || null,
+      studentName || (effectiveStudentId ? 'Użytkownik' : ''),
       effectiveHouse,
       numericPoints,
       source || 'Ręczne przyznanie',
@@ -146,8 +174,8 @@ export function awardPoints({
     );
 
     // Zawsze aktualizuj cache punktów użytkownika
-    if (studentId) {
-      _db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(numericPoints, numericPoints * 10, studentId);
+    if (effectiveStudentId) {
+      _db.prepare('UPDATE users SET points = points + ?, xp = xp + ? WHERE id = ?').run(numericPoints, numericPoints * 10, effectiveStudentId);
     }
 
     return txId;
@@ -171,6 +199,8 @@ export function deductPoints({
   comment = '',
   idempotencyKey = ''
 }) {
+  const recipient = resolveRecipient(studentId);
+  const effectiveStudentId = recipient?.id || studentId;
   if (!house || !points || points <= 0) {
     throw new Error('Wymagany Zakon i dodatnia liczba punktów do odjęcia.');
   }
@@ -192,7 +222,7 @@ export function deductPoints({
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, date('now'), ?, 0, ?, ?, datetime('now'))
     `).run(
       txId,
-      studentId || null,
+      effectiveStudentId || null,
       studentName || '',
       house.toLowerCase(),
       -Math.abs(points),
@@ -208,8 +238,8 @@ export function deductPoints({
       idempotencyKey || ''
     );
 
-    if (studentId) {
-      _db.prepare('UPDATE users SET points = MAX(0, points - ?) WHERE id = ?').run(Math.abs(points), studentId);
+    if (effectiveStudentId) {
+      _db.prepare('UPDATE users SET points = MAX(0, points - ?) WHERE id = ?').run(Math.abs(points), effectiveStudentId);
     }
 
     return txId;

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
@@ -90,6 +91,7 @@ app.use((_req, res, next) => {
   );
   next();
 });
+app.use(compression());
 app.use(cors({
   origin: (origin, callback) => {
     callback(null, isCorsOriginAllowed(origin, allowedOrigins));
@@ -106,7 +108,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filePath) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-    if (!/\.(?:jpe?g|png|gif|webp)$/i.test(filePath)) {
+    if (/\.(?:jpe?g|png|gif|webp|avif|svg)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    } else {
       res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath).replaceAll('"', '')}"`);
     }
   }
@@ -175,7 +179,16 @@ app.get('/api/health', (_req, res) => {
 
 // Production: Serve React frontend build from dist folder
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else {
+        // Vite hashes asset filenames — safe to cache immutably for a year
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
 
   // SPA fallback for client-side routing (HTML5 history)
   app.use((req, res, next) => {

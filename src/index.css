@@ -388,7 +388,7 @@
   z-index: 2;
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid rgba(199, 166, 90, 0.2);
   border-bottom: 1px solid rgba(199, 166, 90, 0.16);
   background: rgba(2, 5, 8, 0.46);
@@ -615,11 +615,11 @@
 
 .profile-citadel .profile-tabs {
   display: flex;
-  gap: 0;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  overflow: visible;
   border: 1px solid rgba(199, 166, 90, 0.16);
   background: #080c11;
-  scrollbar-width: thin;
 }
 
 .profile-citadel .profile-tab-btn {
@@ -1927,16 +1927,16 @@ a:hover {
 }
 
 .category-banner-script-text {
-  font-family: 'Cinzel Decorative', 'Metamorphous', 'Germania One', serif !important;
-  font-weight: 700;
+  font-family: 'Pirata One', 'Germania One', 'Cinzel Decorative', serif !important;
+  font-weight: 400;
   line-height: 1;
   letter-spacing: 0.05em;
-  transform: rotate(-1.8deg);
+  transform: none;
   transition: var(--transition-smooth);
 }
 .category-banner-wrapper:hover .category-banner-script-text {
   text-shadow: 0 0 16px rgba(255, 255, 255, 0.7), 0 2px 6px rgba(0, 0, 0, 0.95);
-  transform: rotate(-1.8deg) scale(1.02);
+  transform: scale(1.02);
 }
 
 /* ==========================================================================
@@ -6718,6 +6718,336 @@ table {
 }
 
 /* ========================================================================== */
+/* DISCORD RECRUITMENT — CONTINUATION OF THE ORDERS BOARD                     */
+/* ========================================================================== */
+
+.discord-recruitment {
+  position: relative;
+  z-index: 5;
+  width: min(100%, 1380px);
+  min-height: 80px;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(151, 158, 159, 0.34);
+  border-radius: 2px;
+  background:
+    radial-gradient(ellipse at 50% -55%, rgba(255, 255, 255, 0.055), transparent 52%),
+    repeating-linear-gradient(98deg, transparent 0 82px, rgba(255, 255, 255, 0.01) 83px 84px),
+    linear-gradient(180deg, rgba(22, 26, 29, 0.97), rgba(6, 9, 12, 0.99));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.92),
+    inset 0 0 58px rgba(0, 0, 0, 0.5),
+    0 22px 48px rgba(0, 0, 0, 0.58);
+  isolation: isolate;
+}
+
+.discord-recruitment::before,
+.discord-recruitment::after {
+  position: absolute;
+  z-index: 4;
+  width: 58px;
+  height: 22px;
+  content: '';
+  pointer-events: none;
+}
+
+.discord-recruitment::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid rgba(197, 159, 78, 0.42);
+  border-left: 1px solid rgba(197, 159, 78, 0.42);
+  background: linear-gradient(135deg, rgba(197, 159, 78, 0.055), transparent 58%);
+}
+
+.discord-recruitment::after {
+  right: 0;
+  bottom: 0;
+  border-right: 1px solid rgba(197, 159, 78, 0.26);
+  border-bottom: 1px solid rgba(197, 159, 78, 0.26);
+  background: linear-gradient(315deg, rgba(197, 159, 78, 0.04), transparent 58%);
+}
+
+.discord-recruitment::selection,
+.discord-recruitment *::selection {
+  color: #080a0c;
+  background: var(--gold-glow);
+}
+
+.discord-recruitment__frame {
+  position: absolute;
+  z-index: 3;
+  inset: 7px;
+  border: 1px solid rgba(214, 220, 220, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.48);
+  pointer-events: none;
+}
+
+.discord-recruitment__runes {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: 2%;
+  left: 2%;
+  overflow: hidden;
+  color: rgba(194, 205, 207, 0.055);
+  font-family: serif;
+  font-size: clamp(2.1rem, 4.1vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.025), 0 -1px rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.discord-recruitment__content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 100%;
+  min-height: 78px;
+  padding: 0.65rem clamp(1.1rem, 2.2vw, 2rem);
+  align-content: center;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  column-gap: clamp(1.4rem, 3vw, 3rem);
+  background: radial-gradient(circle at 4% 18%, rgba(142, 202, 230, 0.055), transparent 42%);
+}
+
+.discord-recruitment__copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: clamp(0.8rem, 1.7vw, 1.6rem);
+}
+
+.discord-recruitment h2 {
+  flex-shrink: 0;
+  margin: 0;
+  color: #f3f4ef;
+  font-family: var(--font-title);
+  font-size: clamp(1.6rem, 2.2vw, 2.15rem);
+  font-weight: 400;
+  letter-spacing: 0.075em;
+  line-height: 1;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.96), 0 0 18px rgba(142, 202, 230, 0.1);
+  text-transform: uppercase;
+}
+
+.discord-recruitment h2 span {
+  color: #d4bd87;
+}
+
+.discord-recruitment__lead {
+  max-width: 640px;
+  margin: 0;
+  color: rgba(219, 226, 228, 0.78);
+  font-family: var(--font-lore);
+  font-size: clamp(0.84rem, 1vw, 0.98rem);
+  font-weight: 500;
+  line-height: 1.35;
+  text-shadow: 0 2px 7px #000;
+}
+
+.discord-recruitment__footer {
+  display: flex;
+  margin-top: 0;
+  align-items: center;
+  flex-direction: row;
+  grid-column: 2;
+  grid-row: 1;
+  gap: 1.1rem;
+}
+
+.discord-recruitment__cta {
+  position: relative;
+  display: inline-flex;
+  min-width: 218px;
+  min-height: 48px;
+  padding: 0.42rem 0.8rem 0.42rem 0.95rem;
+  align-items: center;
+  gap: 0.68rem;
+  overflow: hidden;
+  border: 1px solid rgba(197, 159, 78, 0.68);
+  border-radius: 2px;
+  color: #f4e5bd;
+  background:
+    linear-gradient(115deg, transparent 0 18%, rgba(255, 255, 255, 0.035) 18.5% 19%, transparent 19.5%),
+    linear-gradient(180deg, rgba(43, 42, 37, 0.96), rgba(12, 14, 16, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 -12px 24px rgba(0, 0, 0, 0.2),
+    0 7px 20px rgba(0, 0, 0, 0.54);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: border-color 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.discord-recruitment__cta::after {
+  position: absolute;
+  right: 10px;
+  bottom: 5px;
+  left: 10px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(197, 159, 78, 0.55), transparent);
+  content: '';
+  opacity: 0.68;
+}
+
+.discord-recruitment__cta > svg:first-child {
+  flex-shrink: 0;
+  color: #d3bc85;
+}
+
+.discord-recruitment__cta > svg:last-child {
+  margin-left: auto;
+  color: rgba(211, 188, 133, 0.62);
+  transition: color 220ms ease, transform 220ms ease;
+}
+
+.discord-recruitment__cta span {
+  display: flex;
+  flex-direction: column;
+}
+
+.discord-recruitment__cta strong {
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  letter-spacing: 0.13em;
+  line-height: 1.1;
+}
+
+.discord-recruitment__cta small {
+  margin-top: 0.24rem;
+  color: rgba(204, 212, 214, 0.64);
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+}
+
+.discord-recruitment__cta:hover {
+  border-color: rgba(232, 205, 137, 0.94);
+  color: #fff4d7;
+  box-shadow: inset 0 0 20px rgba(197, 159, 78, 0.08), 0 9px 24px rgba(0, 0, 0, 0.65), 0 0 18px rgba(197, 159, 78, 0.11);
+  transform: translateY(-2px);
+}
+
+.discord-recruitment__cta:hover > svg:last-child {
+  color: var(--gold-glow);
+  transform: translate(2px, -2px);
+}
+
+.discord-recruitment__cta:focus-visible {
+  outline: 2px solid var(--gold-glow);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1250px) {
+  .discord-recruitment {
+    width: min(100%, 850px);
+  }
+
+  .discord-recruitment__copy {
+    align-items: center;
+    flex-direction: row;
+    gap: 0.7rem;
+  }
+
+  .discord-recruitment h2 {
+    font-size: clamp(1.45rem, 2.35vw, 1.8rem);
+  }
+
+  .discord-recruitment__lead {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .discord-recruitment {
+    min-height: 96px;
+    margin-top: 8px;
+  }
+
+  .discord-recruitment__content {
+    min-height: 94px;
+    padding: 0.7rem 0.8rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.65rem;
+    background: radial-gradient(circle at 10% 10%, rgba(142, 202, 230, 0.055), transparent 48%);
+  }
+
+  .discord-recruitment__copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .discord-recruitment h2 {
+    font-size: clamp(1.35rem, 6.1vw, 1.8rem);
+  }
+
+  .discord-recruitment__lead {
+    display: none;
+  }
+
+  .discord-recruitment__runes {
+    right: 0;
+    left: 0;
+    font-size: 2.6rem;
+    letter-spacing: 0.28em;
+  }
+
+  .discord-recruitment__footer {
+    margin-top: 0;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .discord-recruitment__cta {
+    width: auto;
+    min-width: 156px;
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 390px) {
+  .discord-recruitment {
+    min-height: 96px;
+  }
+
+  .discord-recruitment__content {
+    min-height: 94px;
+    padding-inline: 0.7rem;
+  }
+
+  .discord-recruitment h2 {
+    font-size: 1.3rem;
+  }
+
+  .discord-recruitment__cta {
+    min-width: 148px;
+    padding-inline: 0.7rem;
+  }
+
+  .discord-recruitment__cta strong {
+    font-size: 0.72rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discord-recruitment__cta,
+  .discord-recruitment__cta > svg:last-child {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ========================================================================== */
 /* PROFILE — MODERN DURMSTRANG                                                 */
 /* ========================================================================== */
 
@@ -7403,15 +7733,40 @@ table {
 }
 
 .profile-citadel .profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 0.45rem;
+  padding: 0.45rem;
   border-color: rgba(197, 159, 78, 0.22);
   border-radius: var(--radius-sm);
   background: rgba(7, 10, 16, 0.9);
 }
 
 .profile-citadel .profile-tab-btn {
+  display: flex;
+  flex: 1 1 calc(25% - 0.45rem);
+  min-width: 140px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(197, 159, 78, 0.14);
   border-radius: calc(var(--radius-sm) - 1px);
-  font-size: 0.9rem;
-  letter-spacing: 0.035em;
+  color: #8b97a2;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  transition: all 150ms ease;
+}
+
+.profile-citadel .profile-tab-btn:hover,
+.profile-citadel .profile-tab-btn:focus-visible {
+  color: #fff;
+  border-color: rgba(197, 159, 78, 0.35);
+  background: rgba(197, 159, 78, 0.08);
 }
 
 .profile-citadel .profile-tab-btn.is-active {
@@ -9230,18 +9585,19 @@ table {
 
 .order-segment__summary {
   position: relative;
-  display: grid;
+  display: flex;
   min-width: 0;
+  width: 100%;
   align-items: center;
-  grid-template-columns: clamp(78px, 5.6vw, 96px) minmax(0, 1fr) auto;
-  gap: clamp(0.58rem, 0.75vw, 0.86rem);
+  justify-content: center;
+  gap: clamp(0.75rem, 1.1vw, 1.25rem);
 }
 
 .order-segment__crest {
   position: relative;
   display: flex;
-  width: clamp(78px, 5.6vw, 96px);
-  height: clamp(78px, 5.6vw, 96px);
+  width: clamp(74px, 5.2vw, 88px);
+  height: clamp(74px, 5.2vw, 88px);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -9268,8 +9624,8 @@ table {
 .order-segment__crest-img {
   position: relative;
   z-index: 1;
-  width: clamp(78px, 5.6vw, 96px);
-  height: clamp(78px, 5.6vw, 96px);
+  width: clamp(74px, 5.2vw, 88px);
+  height: clamp(74px, 5.2vw, 88px);
   object-fit: contain;
   filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 5px var(--order-glow));
   transition: filter 260ms ease;
@@ -9288,6 +9644,9 @@ table {
 
 .order-segment__identity {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .order-segment__name-row {
@@ -9338,32 +9697,37 @@ table {
   text-transform: uppercase;
 }
 
-.order-segment__score {
+.order-segment__meter-header {
   display: flex;
-  min-width: 59px;
-  align-items: flex-end;
-  flex-direction: column;
-  flex-shrink: 0;
+  align-items: baseline;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+  margin-bottom: 0.2rem;
+  padding-inline: 4px;
 }
 
-.order-segment__score strong {
-  color: var(--order-text);
+.order-segment__meter-points {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.order-segment__meter-points strong {
   font-family: var(--font-lore);
-  font-size: clamp(3rem, 3.6vw, 4rem);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--order-text);
+  text-shadow: 0 2px 4px #000, 0 0 14px var(--order-glow);
   font-variant-numeric: lining-nums tabular-nums;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  line-height: 0.8;
-  text-shadow: 0 2px 2px #000, 0 0 15px var(--order-glow);
 }
 
-.order-segment__score span {
-  margin-top: 0.3rem;
-  color: rgba(222, 228, 228, 0.65);
+.order-segment__meter-points span {
   font-family: var(--font-heading);
   font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: rgba(222, 228, 228, 0.65);
 }
 
 .order-segment__people {
@@ -10816,14 +11180,13 @@ table {
   }
 
   .profile-tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   .profile-tab-btn {
-    white-space: nowrap;
-    flex-shrink: 0;
+    flex: 1 1 calc(50% - 0.4rem);
+    min-width: 120px;
   }
 
   .profile-inventory-grid {

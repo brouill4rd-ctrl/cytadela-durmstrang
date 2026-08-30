@@ -473,26 +473,18 @@ export const PortalRightSidebar = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Arcymistrzyni & Dyrektorka</div>
-                <strong style={{ color: 'var(--gold-glow)' }}>Valgerda Storm</strong>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Arcymistrzyni</div>
+                <strong style={{ color: 'var(--gold-glow)' }}>Constantine Aguilera</strong>
               </div>
               <Crown size={15} color="var(--gold-ancient)" />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Katedra Czarnej Magii & Klątw</div>
-                <strong style={{ color: '#a4c8e1' }}>Prof. Morana Vane</strong>
-              </div>
-              <Eye size={15} color="#a4c8e1" />
-            </div>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0' }}>
               <div>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Katedra Ligi Bojowej & Szermierki</div>
-                <strong style={{ color: '#a4c8e1' }}>Prof. Gunnar Vargson</strong>
+                <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Arcymistrz</div>
+                <strong style={{ color: 'var(--gold-glow)' }}>Ezra Camhi</strong>
               </div>
-              <Shield size={15} color="#ff7b72" />
+              <Crown size={15} color="var(--gold-ancient)" />
             </div>
           </div>
           <hr />

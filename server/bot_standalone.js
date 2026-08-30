@@ -591,8 +591,16 @@ client.on('interactionCreate', async (interaction) => {
         const professorName = interaction.member?.displayName || interaction.user.username;
         const portalUser = db.prepare('SELECT id FROM users WHERE discord_id = ?').get(interaction.user.id);
         const professorPortalId = portalUser?.id || interaction.user.id;
-        db.prepare(`INSERT INTO lessons (id, discord_thread_id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, date, status, total_points) VALUES (?, ?, 'inne', 'Wątek Discord', 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)`)
-          .run(lessonId, thread.id, channelName, `Wyeksportowany wątek Discord: #${channelName}`, professorPortalId, professorName, new Date().toISOString().split('T')[0]);
+        const profSubjectRow = professorPortalId
+          ? (db.prepare(`SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active' LIMIT 1`).get(professorPortalId)
+             || db.prepare(`SELECT id as subject_id FROM subjects WHERE professor_id = ? LIMIT 1`).get(professorPortalId))
+          : null;
+        const resolvedSubjectId = profSubjectRow?.subject_id || 'inne';
+        const resolvedSubjectName = resolvedSubjectId !== 'inne'
+          ? (db.prepare('SELECT name FROM subjects WHERE id = ?').get(resolvedSubjectId)?.name || 'Wątek Discord')
+          : 'Wątek Discord';
+        db.prepare(`INSERT INTO lessons (id, discord_thread_id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, date, status, total_points) VALUES (?, ?, ?, ?, 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)`)
+          .run(lessonId, thread.id, resolvedSubjectId, resolvedSubjectName, channelName, `Wyeksportowany wątek Discord: #${channelName}`, professorPortalId, professorName, new Date().toISOString().split('T')[0]);
         lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(lessonId);
       }
 
@@ -660,12 +668,16 @@ client.on('interactionCreate', async (interaction) => {
         } catch (_) {}
 
         if (!msg.author.bot) {
-          const ep = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, msg.author.id);
-          if (!ep) {
-            try {
-              db.prepare(`INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment) VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')`)
-                .run(`part-${Date.now()}-${msg.author.id}`, lesson.id, msg.author.id, msg.member?.displayName || msg.author.username, userHouse);
-            } catch (_) {}
+          const isProfessor = lesson.professor_id === msg.author.id ||
+            db.prepare('SELECT id FROM users WHERE id = ? AND discord_id = ?').get(lesson.professor_id, msg.author.id);
+          if (!isProfessor) {
+            const ep = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, msg.author.id);
+            if (!ep) {
+              try {
+                db.prepare(`INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment) VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')`)
+                  .run(`part-${Date.now()}-${msg.author.id}`, lesson.id, msg.author.id, msg.member?.displayName || msg.author.username, userHouse);
+              } catch (_) {}
+            }
           }
         }
       }
@@ -813,8 +825,8 @@ client.on('interactionCreate', async (interaction) => {
           else { assignedRoleNames.push(verifiedMap.discord_role_name); }
         }
 
-        // 2. Zakon
-        if (user.house) {
+        // 2. Zakon (tylko uczniowie)
+        if (user.role === 'student' && user.house) {
           const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
           if (houseMap) {
             const r = await getOrCreateRole(houseMap);
@@ -833,14 +845,14 @@ client.on('interactionCreate', async (interaction) => {
           }
         }
 
-        // 4. Klasa
-        if (user.class_year) {
+        // 4. Klasa (tylko uczniowie)
+        if (user.role === 'student' && user.class_year) {
           const cy = user.class_year.toLowerCase();
           let classKey = '';
-          if (cy.includes('1') || (cy.includes('i') && !cy.includes('ii') && !cy.includes('iii') && !cy.includes('iv'))) classKey = 'klasa_1';
-          else if (cy.includes('2') || (cy.includes('ii') && !cy.includes('iii'))) classKey = 'klasa_2';
-          else if (cy.includes('3') || cy.includes('iii')) classKey = 'klasa_3';
-          else if (cy.includes('4') || cy.includes('iv')) classKey = 'klasa_4';
+          if (cy.includes('1') || /klasa\s*i(?!i)/i.test(cy)) classKey = 'klasa_1';
+          else if (cy.includes('2') || /klasa\s*ii(?!i)/i.test(cy)) classKey = 'klasa_2';
+          else if (cy.includes('3') || /klasa\s*iii/i.test(cy)) classKey = 'klasa_3';
+          else if (cy.includes('4') || /klasa\s*iv/i.test(cy)) classKey = 'klasa_4';
 
           if (classKey) {
             const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
@@ -891,19 +903,21 @@ client.on('interactionCreate', async (interaction) => {
 
       const houseColors = { reinhall: 0xC59F4E, bjornhall: 0x2EC4B6, ravnheim: 0xA855F7, otergard: 0xE63946 };
       const houseNames = { reinhall: '🦌 Zakon Reinhall (Jeleń)', bjornhall: '🐻 Zakon Björnhall (Niedźwiedź)', ravnheim: '🐦 Zakon Ravnheim (Kruk)', otergard: '🦦 Zakon Otergard (Wydra)' };
-      const roleDisplay = user.role === 'admin' ? '⚡ Rada Arcymistrzów' : user.role === 'professor' ? '🧙‍♂️ Profesor Katedry' : user.role === 'prefect' ? '🛡️ Prefekt' : '📜 Adept';
+      const roleDisplay = user.role === 'admin' ? '⚡ Rada Arcymistrzów' : user.role === 'professor' ? '🧙‍♂️ Profesor Katedry' : user.role === 'prefect' ? '🛡️ Strażnik Zakonu' : '📜 Adept';
+      const classOrKadra = user.role === 'student' ? (user.class_year || 'Klasa I') : 'Kadra Katedr';
+      const houseDisplay = user.role === 'student' ? (houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony') : 'Kadra (Poza Zakonami)';
 
       const successEmbed = new EmbedBuilder()
         .setTitle('🏰 TOŻSAMOŚĆ POTWIERDZONA — CYTADELA DURMSTRANG')
         .setDescription(`Witaj w murach Cytadeli, **${user.full_name}**! Twoje konto Discord zostało pomyślnie powiązane z Twoją kartą w Wiecznej Księdze Paktu.`)
         .addFields(
           { name: '👤 Adept / Czarodziej', value: `**${user.full_name}** (\`@${user.username}\`)`, inline: true },
-          { name: '🏛️ Zakon', value: houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony', inline: true },
-          { name: '📜 Status & Klasa', value: `${roleDisplay} • ${user.class_year || 'Kadra'}`, inline: true },
+          { name: '🏛️ Zakon', value: houseDisplay, inline: true },
+          { name: '📜 Status & Klasa', value: `${roleDisplay} • ${classOrKadra}`, inline: true },
           { name: '✨ Nadane Role Discord', value: assignedRoleNames.length > 0 ? assignedRoleNames.map(r => `• \`${r}\``).join('\n') : '• `Zweryfikowany Adept`' },
           { name: '💰 Skarbiec', value: `🪙 **${user.currency || 0}** Skirnirów | 🏆 **${user.points || 0}** Punktów`, inline: true }
         )
-        .setColor(houseColors[user.house?.toLowerCase()] || 0xC59F4E)
+        .setColor(user.role === 'student' ? (houseColors[user.house?.toLowerCase()] || 0xC59F4E) : 0xC59F4E)
         .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
         .setFooter({ text: 'Cytadela Durmstrang • Weryfikacja zakończona sukcesem' })
         .setTimestamp();
@@ -951,7 +965,7 @@ client.on('interactionCreate', async (interaction) => {
           const r = findRole(verifiedMap);
           if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
         }
-        if (user.house) {
+        if (user.role === 'student' && user.house) {
           const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
           if (houseMap) {
             const r = findRole(houseMap);
@@ -963,6 +977,22 @@ client.on('interactionCreate', async (interaction) => {
           if (roleMap) {
             const r = findRole(roleMap);
             if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+          }
+        }
+        if (user.role === 'student' && user.class_year) {
+          const cy = user.class_year.toLowerCase();
+          let classKey = '';
+          if (cy.includes('1') || /klasa\s*i(?!i)/i.test(cy)) classKey = 'klasa_1';
+          else if (cy.includes('2') || /klasa\s*ii(?!i)/i.test(cy)) classKey = 'klasa_2';
+          else if (cy.includes('3') || /klasa\s*iii/i.test(cy)) classKey = 'klasa_3';
+          else if (cy.includes('4') || /klasa\s*iv/i.test(cy)) classKey = 'klasa_4';
+
+          if (classKey) {
+            const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
+            if (classMap) {
+              const r = findRole(classMap);
+              if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+            }
           }
         }
 
@@ -1042,7 +1072,7 @@ client.on('messageCreate', async (message) => {
   if (message.author.id === client.user?.id) return;
 
   const threadId = message.channel.id;
-  const lesson = db.prepare("SELECT id FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
+  const lesson = db.prepare("SELECT id, professor_id FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
   if (!lesson) return;
 
   let userHouse = 'reinhall';
@@ -1124,18 +1154,22 @@ client.on('messageCreate', async (message) => {
   );
 
   if (!message.author.bot) {
-    const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, message.author.id);
-    if (!existingPart) {
-      db.prepare(`
-        INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment)
-        VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')
-      `).run(
-        `part-${Date.now()}-${message.author.id}`,
-        lesson.id,
-        message.author.id,
-        message.member?.displayName || message.author.username,
-        userHouse
-      );
+    const isProfessor = lesson.professor_id === message.author.id ||
+      db.prepare('SELECT id FROM users WHERE id = ? AND discord_id = ?').get(lesson.professor_id, message.author.id);
+    if (!isProfessor) {
+      const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, message.author.id);
+      if (!existingPart) {
+        db.prepare(`
+          INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment)
+          VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')
+        `).run(
+          `part-${Date.now()}-${message.author.id}`,
+          lesson.id,
+          message.author.id,
+          message.member?.displayName || message.author.username,
+          userHouse
+        );
+      }
     }
   }
 });

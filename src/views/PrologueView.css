@@ -845,6 +845,35 @@
 }
 
 /* ============================================================
+   TRAVEL VEIL — stage transition overlay
+   ============================================================ */
+.pl-travel-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #020304;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pl-travel-veil.active {
+  opacity: 1;
+}
+.pl-travel-rune {
+  font-size: 2.2rem;
+  color: rgba(197,159,78,0.45);
+  opacity: 0;
+  transition: opacity 0.25s ease 0.1s;
+  user-select: none;
+}
+.pl-travel-veil.active .pl-travel-rune {
+  opacity: 1;
+}
+
+/* ============================================================
    JOURNEY SCENE
    ============================================================ */
 .pl-journey-scene {
@@ -862,31 +891,190 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(30,40,60,0.4), transparent 60%);
   transition: background 1.2s ease;
 }
+.pl-journey-bg::before,
+.pl-journey-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── PORT — Nabrzeże Czarnej Latarni ── */
 .stage-port .pl-journey-bg {
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(15,20,35,0.7) 0%, transparent 60%),
-    radial-gradient(ellipse at 20% 60%, rgba(197,159,78,0.08), transparent 40%);
+    radial-gradient(ellipse at 18% 62%, rgba(220,130,30,0.22) 0%, transparent 28%),
+    radial-gradient(ellipse at 82% 60%, rgba(200,110,20,0.18) 0%, transparent 25%),
+    radial-gradient(ellipse at 50% 100%, rgba(180,130,50,0.07) 0%, transparent 42%),
+    linear-gradient(180deg, #04060a 0%, #07090f 35%, #0d1018 60%, #080a13 100%);
 }
+.stage-port .pl-journey-bg::before {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px, transparent 2px,
+      rgba(197,159,78,0.045) 2px, rgba(197,159,78,0.045) 3px
+    );
+  mask-image: linear-gradient(to top, black 0%, transparent 38%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, transparent 38%);
+  animation: portWaterShimmer 3.5s ease-in-out infinite alternate;
+}
+.stage-port .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 215 C200 208 400 220 600 212 C800 204 1000 218 1200 211 C1320 207 1400 213 1440 215 L1440 300 L0 300 Z' fill='%230a0c12'/%3E%3Crect x='380' y='188' width='680' height='28' fill='%23060708'/%3E%3Crect x='400' y='193' width='6' height='57' fill='%23050607'/%3E%3Crect x='440' y='193' width='6' height='62' fill='%23050607'/%3E%3Crect x='480' y='193' width='6' height='54' fill='%23050607'/%3E%3Crect x='520' y='193' width='6' height='60' fill='%23050607'/%3E%3Crect x='560' y='193' width='6' height='56' fill='%23050607'/%3E%3Crect x='874' y='193' width='6' height='57' fill='%23050607'/%3E%3Crect x='914' y='193' width='6' height='62' fill='%23050607'/%3E%3Crect x='954' y='193' width='6' height='54' fill='%23050607'/%3E%3Crect x='994' y='193' width='6' height='60' fill='%23050607'/%3E%3Crect x='1034' y='193' width='6' height='56' fill='%23050607'/%3E%3Crect x='600' y='172' width='26' height='20' fill='%23070910'/%3E%3Crect x='634' y='175' width='20' height='17' fill='%23060810'/%3E%3Crect x='800' y='170' width='22' height='22' fill='%23070910'/%3E%3Cline x1='190' y1='118' x2='190' y2='208' stroke='%23060709' stroke-width='3'/%3E%3Cpath d='M175 152 L205 152 L216 174 L174 174 Z' fill='%23060709'/%3E%3Cline x1='1260' y1='128' x2='1260' y2='210' stroke='%23060709' stroke-width='2.5'/%3E%3Cpath d='M1247 162 L1273 162 L1282 182 L1238 182 Z' fill='%23060709'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes portWaterShimmer {
+  from { opacity: 0.4; transform: translateX(-1px); }
+  to   { opacity: 0.9; transform: translateX(1px); }
+}
+
+/* ── SHIP — Morze Północne ── */
 .stage-ship .pl-journey-bg {
   background:
-    radial-gradient(ellipse at 50% 110%, rgba(10,20,45,0.8) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(8,15,30,0.3), transparent 40%);
+    radial-gradient(ellipse at 72% 18%, rgba(200,200,220,0.1) 0%, transparent 25%),
+    radial-gradient(ellipse at 72% 18%, rgba(140,160,200,0.06) 0%, transparent 40%),
+    linear-gradient(180deg, #060810 0%, #08090f 30%, #0c0f1c 55%, #070910 100%);
 }
+.stage-ship .pl-journey-bg::before {
+  background:
+    radial-gradient(ellipse at 72% 18%, rgba(200,210,230,0.15) 0%, transparent 20%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px, transparent 3px,
+      rgba(150,170,210,0.03) 3px, rgba(150,170,210,0.03) 4px
+    );
+  mask-image: linear-gradient(to top, black 0%, transparent 45%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, transparent 45%);
+  animation: shipSea 5s ease-in-out infinite alternate;
+}
+.stage-ship .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 350' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 258 C60 248 120 264 180 256 C240 248 300 262 360 254 C420 246 480 260 540 254 C600 248 660 262 720 256 C780 250 840 263 900 257 C960 251 1020 263 1080 257 C1140 251 1200 262 1260 256 C1320 250 1380 260 1440 256 L1440 350 L0 350 Z' fill='%230a0e1a'/%3E%3Cpath d='M0 278 C80 266 160 282 240 272 C320 262 400 278 480 271 C560 264 640 278 720 272 C800 266 880 279 960 273 C1040 267 1120 278 1200 273 C1280 268 1360 277 1440 273 L1440 350 L0 350 Z' fill='%23080c16'/%3E%3Cpath d='M550 236 L890 236 L928 254 L512 254 Z' fill='%23060809'/%3E%3Cpath d='M590 196 L850 196 L872 236 L568 236 Z' fill='%23070910'/%3E%3Cline x1='672' y1='112' x2='672' y2='200' stroke='%23060809' stroke-width='4'/%3E%3Cline x1='768' y1='100' x2='768' y2='200' stroke='%23060809' stroke-width='4'/%3E%3Cline x1='640' y1='138' x2='706' y2='138' stroke='%23060809' stroke-width='2'/%3E%3Cline x1='733' y1='126' x2='803' y2='126' stroke='%23060809' stroke-width='2'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes shipSea {
+  from { opacity: 0.5; transform: translateX(-2px); }
+  to   { opacity: 0.8; transform: translateX(2px); }
+}
+
+/* ── FJORD — Zorza Polarna ── */
 .stage-fjord .pl-journey-bg {
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(40,80,120,0.35) 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 30%, rgba(80,140,200,0.15), transparent 40%);
+    radial-gradient(ellipse at 50% -5%, rgba(20,80,120,0.3) 0%, transparent 45%),
+    radial-gradient(ellipse at 20% 20%, rgba(20,120,80,0.15) 0%, transparent 35%),
+    radial-gradient(ellipse at 80% 15%, rgba(60,20,120,0.12) 0%, transparent 35%),
+    linear-gradient(180deg, #030507 0%, #05080d 40%, #08090e 70%, #040508 100%);
 }
+.stage-fjord .pl-journey-bg::before {
+  background:
+    radial-gradient(ellipse 80% 25% at 50% 28%, rgba(30,180,100,0.28) 0%, transparent 100%),
+    radial-gradient(ellipse 60% 18% at 30% 22%, rgba(20,160,140,0.22) 0%, transparent 100%),
+    radial-gradient(ellipse 70% 20% at 70% 32%, rgba(80,30,180,0.18) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 14% at 55% 18%, rgba(40,200,120,0.15) 0%, transparent 100%);
+  animation: auroraWave 9s ease-in-out infinite alternate;
+}
+.stage-fjord .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 500' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 500 L0 300 L30 280 L55 305 L80 268 L108 292 L132 252 L158 278 L185 238 L210 264 L240 222 L268 248 L295 275 L325 305 L360 340 L400 500 Z' fill='%23050709'/%3E%3Cpath d='M1440 500 L1440 300 L1410 280 L1385 305 L1360 268 L1332 292 L1308 252 L1282 278 L1255 238 L1230 264 L1200 222 L1172 248 L1145 275 L1115 305 L1080 340 L1040 500 Z' fill='%23050709'/%3E%3Cpath d='M0 478 Q360 468 720 475 Q1080 482 1440 475 L1440 500 L0 500 Z' fill='%23040608'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes auroraWave {
+  0%   { opacity: 0.55; transform: scaleY(1)    translateY(0px)   skewX(0deg); }
+  25%  { opacity: 0.85; transform: scaleY(1.12) translateY(-12px) skewX(1.5deg); }
+  50%  { opacity: 0.65; transform: scaleY(0.92) translateY(6px)   skewX(-1deg); }
+  75%  { opacity: 0.9;  transform: scaleY(1.08) translateY(-6px)  skewX(2deg); }
+  100% { opacity: 0.6;  transform: scaleY(1)    translateY(0px)   skewX(0deg); }
+}
+
+/* ── BORDER_CONTROL — Północna Brama ── */
 .stage-border-control .pl-journey-bg {
-  background: radial-gradient(ellipse at 50% 50%, rgba(80,20,20,0.2), transparent 60%);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(160,200,240,0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(80,15,15,0.15) 0%, transparent 55%),
+    linear-gradient(180deg, #050609 0%, #080a10 40%, #0c0a10 65%, #07070d 100%);
 }
+.stage-border-control .pl-journey-bg::before {
+  background:
+    radial-gradient(ellipse at 50% -5%, rgba(180,210,255,0.12) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 60%, rgba(120,20,20,0.1) 0%, transparent 40%);
+  animation: gateGlow 4s ease-in-out infinite alternate;
+}
+.stage-border-control .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 400' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='360' width='1440' height='40' fill='%23070810'/%3E%3Crect x='510' y='90' width='130' height='300' fill='%23080a10'/%3E%3Crect x='800' y='90' width='130' height='300' fill='%23080a10'/%3E%3Cpath d='M510 290 L510 195 Q720 60 930 195 L930 290 Z' fill='%230a0c12'/%3E%3Cpath d='M555 290 L555 208 Q720 98 885 208 L885 290 Z' fill='%23060710'/%3E%3Crect x='510' y='78' width='130' height='14' fill='%23080a10'/%3E%3Crect x='510' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='532' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='554' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='576' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='598' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='620' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='800' y='78' width='130' height='14' fill='%23080a10'/%3E%3Crect x='800' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='822' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='844' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='866' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='888' y='64' width='14' height='16' fill='%23080a10'/%3E%3Crect x='910' y='64' width='14' height='16' fill='%23080a10'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes gateGlow {
+  from { opacity: 0.6; }
+  to   { opacity: 1.0; }
+}
+
+/* ── GREAT_HALL — Wielka Sala ── */
 .stage-great-hall .pl-journey-bg {
-  background: radial-gradient(ellipse at 50% 30%, rgba(120,80,20,0.2), transparent 50%);
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(180,100,20,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 70%, rgba(160,60,15,0.15) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 70%, rgba(160,60,15,0.15) 0%, transparent 40%),
+    linear-gradient(180deg, #06050a 0%, #090810 35%, #0e0a0c 60%, #07060c 100%);
 }
+.stage-great-hall .pl-journey-bg::before {
+  background:
+    radial-gradient(ellipse at 8%  80%, rgba(200,90,20,0.22) 0%, transparent 35%),
+    radial-gradient(ellipse at 92% 80%, rgba(200,90,20,0.22) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 90%, rgba(160,70,15,0.12) 0%, transparent 40%);
+  animation: hallFlicker 2.5s ease-in-out infinite alternate;
+}
+.stage-great-hall .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 450' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='390' width='1440' height='60' fill='%230a090f'/%3E%3Crect x='70' y='140' width='44' height='280' fill='%230a0910'/%3E%3Crect x='190' y='110' width='44' height='310' fill='%230a0910'/%3E%3Crect x='310' y='140' width='44' height='280' fill='%230a0910'/%3E%3Cpath d='M70 280 L70 212 Q192 100 234 212 L234 280 Z' fill='%2308070e'/%3E%3Cpath d='M190 280 L190 192 Q312 78 354 192 L354 280 Z' fill='%2308070e'/%3E%3Crect x='1326' y='140' width='44' height='280' fill='%230a0910'/%3E%3Crect x='1206' y='110' width='44' height='310' fill='%230a0910'/%3E%3Crect x='1086' y='140' width='44' height='280' fill='%230a0910'/%3E%3Cpath d='M1206 280 L1206 212 Q1328 100 1370 212 L1370 280 Z' fill='%2308070e'/%3E%3Cpath d='M1086 280 L1086 192 Q1208 78 1250 192 L1250 280 Z' fill='%2308070e'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes hallFlicker {
+  0%   { opacity: 0.7; transform: scaleX(1); }
+  30%  { opacity: 0.9; transform: scaleX(1.02); }
+  60%  { opacity: 0.75; transform: scaleX(0.99); }
+  100% { opacity: 0.85; transform: scaleX(1.01); }
+}
+
+/* ── ARRIVED — Twierdza Durmstrang ── */
 .stage-arrived .pl-journey-bg {
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(197,159,78,0.15), transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(10,10,20,0.5), transparent 60%);
+    radial-gradient(ellipse at 50% 100%, rgba(197,159,78,0.18) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 50%, rgba(100,80,30,0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #030508 0%, #05070c 40%, #080910 65%, #050709 100%);
+}
+.stage-arrived .pl-journey-bg::before {
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(255,255,255,0.6) 0%, transparent 0.3%),
+    radial-gradient(ellipse at 40% 8%,  rgba(255,255,255,0.5) 0%, transparent 0.25%),
+    radial-gradient(ellipse at 65% 20%, rgba(255,255,255,0.55) 0%, transparent 0.3%),
+    radial-gradient(ellipse at 85% 10%, rgba(255,255,255,0.5) 0%, transparent 0.28%),
+    radial-gradient(ellipse at 25% 30%, rgba(255,255,255,0.4) 0%, transparent 0.22%),
+    radial-gradient(ellipse at 55% 12%, rgba(255,255,255,0.45) 0%, transparent 0.25%),
+    radial-gradient(ellipse at 75% 32%, rgba(255,255,255,0.4) 0%, transparent 0.2%),
+    radial-gradient(ellipse at 92% 25%, rgba(255,255,255,0.5) 0%, transparent 0.28%),
+    radial-gradient(ellipse at 8%  40%, rgba(255,255,255,0.35) 0%, transparent 0.2%),
+    radial-gradient(ellipse at 48% 35%, rgba(255,255,255,0.4) 0%, transparent 0.22%),
+    radial-gradient(ellipse at 33% 5%,  rgba(255,255,255,0.5) 0%, transparent 0.27%),
+    radial-gradient(ellipse at 78% 5%,  rgba(255,255,255,0.45) 0%, transparent 0.25%);
+  animation: starTwinkle 6s ease-in-out infinite alternate;
+}
+.stage-arrived .pl-journey-bg::after {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 400' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='370' width='1440' height='30' fill='%23060810'/%3E%3Crect x='380' y='210' width='680' height='190' fill='%23070a12'/%3E%3Crect x='180' y='248' width='215' height='155' fill='%23060910'/%3E%3Crect x='1045' y='248' width='215' height='155' fill='%23060910'/%3E%3Crect x='640' y='100' width='160' height='270' fill='%23080b14'/%3E%3Crect x='440' y='155' width='110' height='245' fill='%23070b13'/%3E%3Crect x='890' y='155' width='110' height='245' fill='%23070b13'/%3E%3Crect x='200' y='208' width='90' height='195' fill='%23060910'/%3E%3Crect x='1150' y='208' width='90' height='195' fill='%23060910'/%3E%3Crect x='640' y='87' width='160' height='15' fill='%23080b14'/%3E%3Crect x='640' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='663' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='686' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='709' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='732' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='755' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='778' y='75' width='16' height='14' fill='%23080b14'/%3E%3Crect x='440' y='143' width='110' height='13' fill='%23070b13'/%3E%3Crect x='440' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='460' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='480' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='500' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='520' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='890' y='143' width='110' height='13' fill='%23070b13'/%3E%3Crect x='890' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='910' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='930' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='950' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='970' y='131' width='13' height='13' fill='%23070b13'/%3E%3Crect x='680' y='132' width='22' height='30' rx='3' fill='%23c9952a' opacity='0.75'/%3E%3Crect x='718' y='132' width='22' height='30' rx='3' fill='%23c9952a' opacity='0.7'/%3E%3Crect x='465' y='182' width='18' height='24' rx='2' fill='%23c9952a' opacity='0.55'/%3E%3Crect x='910' y='182' width='18' height='24' rx='2' fill='%23c9952a' opacity='0.55'/%3E%3Crect x='530' y='238' width='16' height='20' rx='2' fill='%23c9952a' opacity='0.4'/%3E%3Crect x='894' y='238' width='16' height='20' rx='2' fill='%23c9952a' opacity='0.4'/%3E%3C/svg%3E");
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+@keyframes starTwinkle {
+  0%   { opacity: 0.4; }
+  40%  { opacity: 0.9; }
+  70%  { opacity: 0.6; }
+  100% { opacity: 0.8; }
 }
 
 /* Route map */

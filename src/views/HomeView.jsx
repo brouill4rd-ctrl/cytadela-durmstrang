@@ -5,6 +5,7 @@ import { SecretRune } from '../components/SecretRune';
 import { NewsDetailModal } from '../components/NewsDetailModal';
 import { NewsEditorModal } from '../components/NewsEditorModal';
 import { CategoryBanner } from '../components/CategoryBanner';
+import { RichTextRenderer } from '../components/RichTextRenderer';
 import {
   Scroll,
   Sparkles,
@@ -315,9 +316,14 @@ export const HomeView = () => {
 
               {/* Article Content / Lead (Justified) */}
               <div className="contentBody">
-                <p style={{ textAlign: 'justify', textJustify: 'inter-word', hyphens: 'auto', lineHeight: 1.8, marginBottom: '1.2rem', color: '#cfd7e4' }}>
-                  {article.summary}
-                </p>
+                {article.summary && (
+                  <p style={{ textAlign: 'justify', textJustify: 'inter-word', hyphens: 'auto', lineHeight: 1.8, marginBottom: '0.8rem', color: '#cfd7e4', fontStyle: 'italic' }}>
+                    {article.summary}
+                  </p>
+                )}
+                {article.content && article.content !== article.summary && (
+                  <RichTextRenderer content={article.content} style={{ color: '#cfd7e4', lineHeight: 1.8 }} />
+                )}
 
                 {/* If the article has standings (like Week #8 summary) */}
                 {article.id === 'news-1' && (

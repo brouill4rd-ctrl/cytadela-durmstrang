@@ -262,9 +262,6 @@ export const ProfileView = () => {
           <button className="profile-command" onClick={() => openActivity(setPassportOpen, true)}>
             <Download size={16} /><span><small>Dokument</small>Paszport adepta</span>
           </button>
-          <button className="profile-command" onClick={() => openActivity(setGrimoireOpen)}>
-            <BookOpen size={16} /><span><small>Arkana</small>Grimuar zaklęć</span>
-          </button>
         </div>
 
         <div className="profile-xp">

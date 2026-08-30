@@ -2,10 +2,13 @@ import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES } from './HeraldicEmblems';
+import { cleanPersonName } from '../context/schoolUtils';
+import { DiscordRecruitmentBanner } from './DiscordRecruitmentBanner';
 import {
   Flame,
   UserPlus,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 const HOUSE_ORNAMENT_CLASS = {
@@ -19,6 +22,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
   const {
     houses,
     houseRankings,
+    fortressGuardian,
     setActiveView,
     setActiveHouseTab,
     currentUser,
@@ -121,6 +125,36 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
           „Nie każda magia powinna zostać poznana.”
         </p>
 
+        {fortressGuardian?.name && (
+          <div
+            onClick={() => { playWandSwoosh(); setActiveView('houses'); }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              background: 'linear-gradient(135deg, rgba(20, 26, 38, 0.9) 0%, rgba(10, 14, 22, 0.95) 100%)',
+              border: '1px solid var(--gold-ancient)',
+              borderRadius: '20px',
+              padding: '0.35rem 1.1rem',
+              marginTop: '0.9rem',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.6), 0 0 15px rgba(197, 159, 78, 0.2)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Kliknij, aby otworzyć widok Zakonów i Strażnika Twierdzy"
+          >
+            <Shield size={14} color="var(--gold-glow)" />
+            <span style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>
+              Strażnik Twierdzy:
+            </span>
+            <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>
+              {fortressGuardian.name}
+            </strong>
+            <span style={{ fontSize: '0.7rem', color: 'var(--gold-glow)', background: 'rgba(197, 159, 78, 0.18)', padding: '0.08rem 0.45rem', borderRadius: '10px', fontWeight: 700 }}>
+              {fortressGuardian.house ? fortressGuardian.house.toUpperCase() : 'CYTADELA'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ===== TABLICA ZAKONÓW ===== */}
@@ -226,21 +260,23 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
                     </div>
                     <span className="order-segment__subtitle">{item.subtitle}</span>
                   </div>
-
-                  <div className="order-segment__score">
-                    <strong>{item.points}</strong>
-                    <span>Punktów</span>
-                  </div>
                 </div>
 
                 <div className="order-segment__people">
                   <div className="order-segment__person">
                     <span>Opiekun</span>
-                    <strong>{item.head}</strong>
+                    <strong>{cleanPersonName(item.head)}</strong>
                   </div>
                   <div className="order-segment__person">
-                    <span>Prefekt</span>
-                    <strong>{item.prefect}</strong>
+                    <span>Strażnik</span>
+                    <strong>{cleanPersonName(item.prefect)}</strong>
+                  </div>
+                </div>
+
+                <div className="order-segment__meter-header">
+                  <div className="order-segment__meter-points">
+                    <strong>{item.points}</strong>
+                    <span>Punktów</span>
                   </div>
                 </div>
 
@@ -271,6 +307,8 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
           <span aria-hidden="true">ᛞ ᚱ ᛉ ᚦ</span>
         </footer>
       </section>
+
+      <DiscordRecruitmentBanner />
     </section>
   );
 };

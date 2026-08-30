@@ -489,6 +489,61 @@ Dyrektor Cytadeli Durmstrang`
   const [houses, setHouses] = useState(() => {
     return tryParse('durmstrang_houses', HOUSES);
   });
+
+  // Fortress Guardian (Strażnik Twierdzy - odpowiednik Prefekta Naczelnego)
+  const [fortressGuardian, setFortressGuardian] = useState(() => {
+    return tryParse('durmstrang_fortress_guardian', {
+      name: 'Valdemar Krag-Hansen',
+      house: 'ravnheim',
+      title: 'Strażnik Twierdzy Durmstrang',
+      appointedAt: '2026-09-01',
+      note: 'Wybrany jednogłośnie przez Radę Mistrzów Cytadeli.'
+    });
+  });
+
+  const updateFortressGuardian = async (guardianData) => {
+    setFortressGuardian(guardianData);
+    try {
+      localStorage.setItem('durmstrang_fortress_guardian', JSON.stringify(guardianData));
+    } catch (_) {}
+
+    if (backendAvailable) {
+      try {
+        await api.updateFortressGuardian(guardianData);
+      } catch (err) {
+        console.error('Error updating fortress guardian on backend:', err);
+      }
+    }
+
+    showNotification('Strażnik Twierdzy Mianowany', `Zaktualizowano Strażnika Twierdzy: ${guardianData.name}`, 'success');
+  };
+
+  const updateHouseLeaders = async (houseId, { headOfHouse, prefect }) => {
+    setHouses(prev => {
+      const current = prev[houseId] || {};
+      const updatedHouse = {
+        ...current,
+        ...(headOfHouse !== undefined ? { headOfHouse } : {}),
+        ...(prefect !== undefined ? { prefect } : {})
+      };
+      const updated = { ...prev, [houseId]: updatedHouse };
+      try {
+        localStorage.setItem('durmstrang_houses', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (backendAvailable) {
+      try {
+        await api.updateHouse(houseId, { headOfHouse, prefect });
+      } catch (err) {
+        console.error(`Error updating leaders for house ${houseId} on backend:`, err);
+      }
+    }
+
+    showNotification('Zakon Zaktualizowany', `Zapisano Opiekuna i Strażnika dla Zakonu ${houses[houseId]?.name || houseId}.`, 'success');
+  };
+
   const [locations, setLocations] = useState([]);
   const [shops, setShops] = useState([]);
   const [elderFutharkRunes, setElderFutharkRunes] = useState([]);
@@ -778,19 +833,23 @@ Dyrektor Cytadeli Durmstrang`
       }
 
       // Load domain data z backendu
-      const [housesRes, locationsRes, shopsRes, futharkRes, runeFormulasRes, ceremonyRes, salaryRes] = await Promise.all([
+      const [housesRes, locationsRes, shopsRes, futharkRes, runeFormulasRes, ceremonyRes, salaryRes, fortressGuardianRes] = await Promise.all([
         api.getHouses(),
         api.getLocations(),
         api.getShops(),
         api.getLotteryRunes(),
         api.getRuneFormulas(),
         api.getCeremonyQuestions(),
-        api.getSalaryConfig()
+        api.getSalaryConfig(),
+        api.getFortressGuardian()
       ]);
       if (housesRes.ok && housesRes.data.length > 0) {
         const housesObj = {};
         for (const h of housesRes.data) housesObj[h.id] = h;
         setHouses(housesObj);
+      }
+      if (fortressGuardianRes.ok && fortressGuardianRes.data && fortressGuardianRes.data.name) {
+        setFortressGuardian(fortressGuardianRes.data);
       }
       if (locationsRes.ok && locationsRes.data.length > 0) setLocations(locationsRes.data);
       if (shopsRes.ok && shopsRes.data.length > 0) setShops(shopsRes.data);
@@ -2305,6 +2364,9 @@ Dyrektor Cytadeli Durmstrang`
         // Refresh ledger
         const ledgerRes = await api.getPointLedger();
         if (ledgerRes.ok) setPointLedger(ledgerRes.data);
+        // Punktacja osobista jest przechowywana na kontach użytkowników.
+        // Odśwież ranking adeptów od razu po zaksięgowaniu lekcji.
+        await refreshUsersFromApi();
 
         showNotification('Dziennik Opublikowany', `Lekcja „${lesson.topic}” została wpisana do ksiąg Cytadeli. Punkty zasiliły Puchar Zakonów!`, 'success');
         return lesson;
@@ -3746,6 +3808,10 @@ Dyrektor Cytadeli Durmstrang`
         navigateToMemoryYear,
         navigateToMemoryPerson,
         navigateToMemoryOrder,
+        // Strażnicy i Opiekunowie Zakonów oraz Strażnik Twierdzy
+        fortressGuardian,
+        updateFortressGuardian,
+        updateHouseLeaders,
         // Izba Przyjęć i Usprawiedliwień
         navigateToAbsenceChamber
       }}

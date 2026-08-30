@@ -3,6 +3,7 @@ import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { CommonRoomModal } from '../components/CommonRoomModal';
 import { OrderCrest, normalizeHouseKey, HOUSE_RUNIC_DATA } from '../components/HeraldicEmblems';
+import { cleanPersonName } from '../context/schoolUtils';
 import {
   Shield,
   Sparkles,
@@ -58,6 +59,7 @@ export const HousesView = () => {
     setActiveHouseTab,
     students,
     staffRanking,
+    fortressGuardian,
     setActiveView,
     setActiveLessonId,
     pointLedger,
@@ -405,6 +407,92 @@ export const HousesView = () => {
         </div>
       </div>
 
+      {/* =========================================================================
+          KARTA: 🛡️ STRAŻNIK TWIERDZY (ODPOWIEDNIK PREFEKTA NACZELNEGO)
+          ========================================================================= */}
+      {fortressGuardian?.name && (() => {
+        const fgHouseKey = normalizeHouseKey(fortressGuardian.house || 'ravnheim');
+        const fgRunic = HOUSE_RUNIC_DATA[fgHouseKey] || HOUSE_RUNIC_DATA.ravnheim;
+        const fgHouseObj = houses[fgHouseKey] || { name: fortressGuardian.house || 'Ravnheim' };
+
+        return (
+          <div
+            className="gothic-card runic-corners"
+            style={{
+              padding: '1.6rem 2.2rem',
+              background: `linear-gradient(135deg, ${fgRunic.primaryColor}22 0%, rgba(10, 14, 22, 0.95) 100%)`,
+              border: '1px solid var(--gold-ancient)',
+              boxShadow: '0 12px 35px rgba(0,0,0,0.85), 0 0 25px rgba(197, 159, 78, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', right: '20px', top: '-10px', fontSize: '6rem', opacity: 0.05, fontFamily: 'serif', pointerEvents: 'none', color: 'var(--gold-glow)' }}>
+              {fgRunic.rune}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', zIndex: 2 }}>
+              <div style={{ position: 'relative' }}>
+                <OrderCrest houseKey={fgHouseKey} size={68} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-4px',
+                    right: '-4px',
+                    background: 'var(--gold-ancient)',
+                    color: '#090d14',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '0.75rem',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.8)'
+                  }}
+                  title="Pieczęć Strażnika Twierdzy"
+                >
+                  🛡️
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.68rem', background: 'rgba(197, 159, 78, 0.2)', color: 'var(--gold-glow)', padding: '0.15rem 0.55rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    🛡️ STRAŻNIK TWIERDZY
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: fgRunic.secondaryColor, fontWeight: 700 }}>
+                    Zakon {fgHouseObj.name} {fgRunic.rune}
+                  </span>
+                </div>
+
+                <h3 style={{ margin: '0.3rem 0 0 0', fontSize: '1.65rem', color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                  {fortressGuardian.name}
+                </h3>
+                <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+                  {fortressGuardian.title || 'Strażnik Twierdzy Durmstrang (odpowiednik Prefekta Naczelnego)'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ zIndex: 2, maxWidth: '420px', textAlign: 'right' }}>
+              <div style={{ fontSize: '0.8rem', color: '#9ca3af', fontStyle: 'italic', lineHeight: 1.5 }}>
+                „{fortressGuardian.note || 'Reprezentant całej społeczności adeptów, stróż dyscypliny i honoru Twierdzy Magii Durmstrang.'}”
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', marginTop: '0.4rem', letterSpacing: '0.05em' }}>
+                ᛞ Mianowany z mocy Paktu 1294 ᛞ
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* House Selector Tabs — W JEDNEJ LINII (4 KOLUMNY W 1 RZĘDZIE) */}
       <div
         style={{
@@ -652,10 +740,10 @@ export const HousesView = () => {
 
             <div style={{ background: 'rgba(10, 13, 18, 0.7)', padding: '1.2rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: houseTheme.secondaryColor, fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
-                <User size={16} /> Opiekun & Prefekt
+                <User size={16} /> Opiekun & Strażnik Zakonu
               </div>
-              <div style={{ color: '#ffffff', fontWeight: 600 }}>{house.headOfHouse}</div>
-              <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.2rem' }}>Prefekt: {house.prefect}</div>
+              <div style={{ color: '#ffffff', fontWeight: 600 }}>{cleanPersonName(house.headOfHouse)}</div>
+              <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.2rem' }}>Strażnik: {cleanPersonName(house.prefect)}</div>
             </div>
           </div>
 

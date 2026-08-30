@@ -592,7 +592,8 @@ export const RulesGuideView = () => {
               {[
                 { title: 'Adept Klasy I', desc: 'Nowo przyjęty uczeń, który przeszedł Ceremonię Przydziału. Poznaje podstawy magii Północy.' },
                 { title: 'Adept Klasy II', desc: 'Uczeń po zdaniu egzaminów rocznych. Uzyskuje dostęp do zaawansowanych traktatów i pojedynków.' },
-                { title: 'Prefekt Zakonu', desc: 'Wybitny adept reprezentujący swój Zakon, odpowiedzialny za dyscyplinę młodszych roczników.' },
+                { title: 'Strażnik Zakonu', desc: 'Wybitny adept reprezentujący swój Zakon, odpowiedzialny za dyscyplinę młodszych roczników.' },
+                { title: 'Strażnik Twierdzy', desc: 'Naczelny reprezentant całej społeczności uczniowskiej (odpowiednik Prefekta Naczelnego), stróż Paktu 1294.' },
                 { title: 'Profesor Katedry', desc: 'Mistrz danej dziedziny magii prowadzący wykłady, oceniający prace i zarządzający dziennikiem.' },
                 { title: 'Arcymistrz Dyrekcji', desc: 'Najwyższa władza Twierdzy sprawująca pieczę nad Paktem z 1294 roku oraz Radą Mistrzów.' }
               ].map((role, i) => (

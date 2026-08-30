@@ -11,6 +11,7 @@ function createDb() {
       full_name TEXT,
       role TEXT NOT NULL,
       house TEXT,
+      discord_id TEXT DEFAULT '',
       points INTEGER DEFAULT 0,
       xp INTEGER DEFAULT 0
     );
@@ -24,7 +25,7 @@ function createDb() {
     );
   `);
   db.prepare('INSERT INTO school_config (key, value) VALUES (?, ?)').run('school_year', 'XIX');
-  db.prepare('INSERT INTO users (id, full_name, role, house) VALUES (?, ?, ?, ?)').run('student-1', 'Adept Testowy', 'student', 'ravnheim');
+  db.prepare('INSERT INTO users (id, full_name, role, house, discord_id) VALUES (?, ?, ?, ?, ?)').run('student-1', 'Adept Testowy', 'student', 'ravnheim', 'discord-student-1');
   // Celowo pozostawiony stary Zakon na koncie kadry: serwis musi go zignorować.
   db.prepare('INSERT INTO users (id, full_name, role, house) VALUES (?, ?, ?, ?)').run('staff-1', 'Profesor Testowy', 'professor', 'ravnheim');
   initPointsService(db);
@@ -62,6 +63,38 @@ test('punkty adepta nadal zasilają jego Zakon', () => {
 
   assert.equal(getUserPointsTotal('student-1'), 7);
   assert.equal(getHousePointsTotal('ravnheim'), 7);
+  db.close();
+});
+
+test('ID Discorda jest mapowane na konto portalu w rankingu osobistym', () => {
+  const db = createDb();
+  awardPoints({
+    studentId: 'discord-student-1',
+    studentName: 'Adept Testowy',
+    house: 'ravnheim',
+    points: 11,
+    source: 'Lekcja Discord'
+  });
+
+  const transaction = db.prepare('SELECT student_id FROM point_transactions').get();
+  assert.equal(transaction.student_id, 'student-1');
+  assert.equal(db.prepare('SELECT points FROM users WHERE id = ?').get('student-1').points, 11);
+  assert.equal(getUserPointsTotal('student-1'), 11);
+  db.close();
+});
+
+test('migracja przepina historyczne transakcje z Discord ID na konto portalu', () => {
+  const db = createDb();
+  db.prepare(`
+    INSERT INTO point_transactions
+      (id, student_id, student_name, house, points, source, is_revoked)
+    VALUES ('legacy-discord', 'discord-student-1', 'Adept Testowy', 'ravnheim', 13, 'Stara lekcja Discord', 0)
+  `).run();
+
+  initPointsService(db);
+
+  assert.equal(db.prepare('SELECT student_id FROM point_transactions WHERE id = ?').get('legacy-discord').student_id, 'student-1');
+  assert.equal(getUserPointsTotal('student-1'), 13);
   db.close();
 });
 

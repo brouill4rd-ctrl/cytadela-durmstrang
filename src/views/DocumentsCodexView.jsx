@@ -723,14 +723,24 @@ export const DocumentsCodexView = () => {
                 >
                   {[
                     {
-                      name: 'Arcymistrzyni Valgerda Storm',
+                      name: 'Arcymistrzyni Constantine Aguilera',
                       role: 'Dyrekcja Naczelna • Strażniczka Paktu 1294',
                       office: 'Komnaty Najwyższej Wieży Durmstrang',
                       spec: 'Najwyższe dekrety, reprezentacja, budżet, pakt obronny',
                       badge: 'DYREKCJA',
                       badgeBg: '#b45309',
                       avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
-                      recipientId: 'usr-valgerda'
+                      recipientId: 'usr-constantine'
+                    },
+                    {
+                      name: 'Arcymistrz Ezra Camhi',
+                      role: 'Dyrekcja Naczelna • Strażnik Paktu 1294',
+                      office: 'Komnaty Najwyższej Wieży Durmstrang',
+                      spec: 'Najwyższe dekrety, dyscyplina, obrona cytadeli, pakt obronny',
+                      badge: 'DYREKCJA',
+                      badgeBg: '#b45309',
+                      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
+                      recipientId: 'usr-ezra'
                     },
                     {
                       name: 'Prof. Gunnar Vargson',

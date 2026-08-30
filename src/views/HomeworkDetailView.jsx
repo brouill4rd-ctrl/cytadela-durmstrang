@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { RichTextRenderer } from '../components/RichTextRenderer';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -403,15 +404,10 @@ export const HomeworkDetailView = () => {
               <span>TREŚĆ ZADANIA</span>
             </h3>
             <div className="task-content-body">
-              {homework.instructions ? (
-                <div className="formatted-instructions">
-                  {homework.instructions.split('\n\n').map((para, i) => (
-                    <p key={i}>{para}</p>
-                  ))}
-                </div>
-              ) : (
-                <p>{homework.description}</p>
-              )}
+              <RichTextRenderer
+                content={homework.instructions || homework.description}
+                className="formatted-instructions"
+              />
             </div>
           </div>
 

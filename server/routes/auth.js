@@ -186,7 +186,7 @@ router.post('/register', async (req, res) => {
     default_banner_category: data.department || null,
     office: data.office || (role === 'professor' ? 'Wieża Nocnych Szeptów' : null),
     specialization: data.specialization || (role === 'professor' ? 'Teoria i Praktyka Magii Starożytnej' : null),
-    class_year: data.classYear || (role === 'student' ? 'Klasa I • Fundamenty' : null),
+    class_year: role === 'student' ? (data.classYear || 'Klasa I • Fundamenty Magii (Nowicjusz)') : null,
     origin: data.origin || 'Skandynawia (Norwegia)',
     gender: data.gender || 'Kobieta',
     level: 1,
@@ -214,10 +214,11 @@ router.post('/register', async (req, res) => {
       VALUES (@id, @username, @password, @email, @name, @surname, @full_name, @role, @status, @house, @title, @avatar, @department, @department_name, @default_banner_category, @office, @specialization, @class_year, @origin, @gender, @level, @xp, @next_level_xp, @points, @currency, @wand, @patronus, @companion, @appearance, @backstory, @taught_subject_ids, @grades, @inventory, @created_at)
     `).run(userFields);
 
+    const prologueRoles = ['student', 'teacher', 'professor'];
     db.prepare(`
       INSERT INTO character_prologues (user_id, stage, completed)
       VALUES (?, ?, ?)
-    `).run(newId, role === 'student' ? 'LETTER_PENDING' : 'COMPLETED', role === 'student' ? 0 : 1);
+    `).run(newId, prologueRoles.includes(role) ? 'LETTER_PENDING' : 'COMPLETED', prologueRoles.includes(role) ? 0 : 1);
 
     db.prepare(`
       INSERT INTO pending_applications (id, user_id, email, name, surname, role, department_name, origin, age, wand, patronus, companion, appearance, backstory, status, date_submitted)
@@ -226,7 +227,7 @@ router.post('/register', async (req, res) => {
       appId, newId, userEmail,
       userFields.name, userFields.surname, role,
       userFields.department_name,
-      userFields.origin, data.age ? `${data.age}` : '14',
+      userFields.origin, data.age && role === 'student' ? `${data.age}` : (role === 'student' ? '11' : '35'),
       userFields.wand || 'Różdżka Adepta',
       userFields.patronus || 'Brak',
       userFields.companion || 'Brak',

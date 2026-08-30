@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { RichTextRenderer } from '../components/RichTextRenderer';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -252,6 +253,8 @@ export const HomeworkCreatorView = () => {
     });
   };
 
+  const returnView = homeworkDraftLessonData?.returnView || 'homework';
+
   // Final Publish
   const handlePublishHomework = async () => {
     if (!formData.title.trim()) {
@@ -264,7 +267,7 @@ export const HomeworkCreatorView = () => {
     try {
       playWandSwoosh();
       await createHomeworkAssignment(formData);
-      setActiveView('homework');
+      setActiveView(returnView);
     } catch (err) {
       console.error(err);
     } finally {
@@ -280,7 +283,7 @@ export const HomeworkCreatorView = () => {
           className="tmd-back-btn"
           onClick={() => {
             playWandSwoosh();
-            setActiveView('homework');
+            setActiveView(returnView);
           }}
         >
           <ArrowLeft size={16} />
@@ -838,7 +841,7 @@ export const HomeworkCreatorView = () => {
 
                 <div className="sheet-block">
                   <h4>TREŚĆ ZADANIA</h4>
-                  <p>{formData.instructions || formData.description || 'Brak treści zadania.'}</p>
+                  <RichTextRenderer content={formData.instructions || formData.description || 'Brak treści zadania.'} />
                 </div>
 
                 {formData.requirements.length > 0 && (

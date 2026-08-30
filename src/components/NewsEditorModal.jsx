@@ -8,7 +8,7 @@ import { RichTextRenderer } from './RichTextRenderer';
 import api from '../api';
 import {
   X, Scroll, Eye, Edit3, Pin, Calendar,
-  Clock, Image as ImageIcon, User, ChevronDown
+  Clock, Image as ImageIcon, User, ChevronDown, Type
 } from 'lucide-react';
 
 const TITLE_TEMPLATES = [
@@ -33,7 +33,7 @@ const FALLBACK_AUTHORS = [
   { id: '', fullName: 'Prof. Gunnar Vargson', departmentName: 'Katedra Szermierki Runicznej', signaturePng: '', role: 'professor' },
   { id: '', fullName: 'Prof. Sigrid Hällström', departmentName: 'Katedra Starożytnych Run i Astromagii', signaturePng: '', role: 'professor' },
   { id: '', fullName: 'Rada Mistrzów Cytadeli', departmentName: 'Kolegium Katedr Magicznych', signaturePng: '', role: 'admin' },
-  { id: '', fullName: 'Rada Prefektów Durmstrang', departmentName: 'Przedstawicielstwo Adeptów', signaturePng: '', role: 'admin' }
+  { id: '', fullName: 'Rada Strażników Durmstrang', departmentName: 'Przedstawicielstwo Adeptów', signaturePng: '', role: 'admin' }
 ];
 
 function estimateReadTime(htmlOrText) {

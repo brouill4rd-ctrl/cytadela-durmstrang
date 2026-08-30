@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { api } from '../api';
 import { useSchool } from '../context/SchoolContext';
 import './PrologueView.css';
@@ -138,9 +138,9 @@ export const PrologueView = ({ onComplete }) => {
   const [opening, setOpening] = useState(false);
   const [busy, setBusy] = useState(false);
   const [marketMode, setMarketMode] = useState(false);
-  const didAutoRedirect = useRef(false);
+  const [veiling, setVeiling] = useState(false);
 
-  const { setActiveView } = useSchool();
+  const { setActiveView, currentUser } = useSchool();
 
   const loadData = useCallback(() => {
     api.getMyPrologue().then(r => {
@@ -151,6 +151,12 @@ export const PrologueView = ({ onComplete }) => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Refresh kit status whenever the user's inventory changes (e.g. after a market purchase)
+  const inventoryKey = (currentUser?.inventory || []).map(i => i.id).join(',');
+  useEffect(() => {
+    if (stage === 'PREPARATION') loadData();
+  }, [inventoryKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const stage = data?.stage;
   const scene = scenes[stage];
   const kitStatus = data?.kitStatus || [];
@@ -159,14 +165,30 @@ export const PrologueView = ({ onComplete }) => {
   const allMandatoryOwned = mandatoryItems.length > 0 && mandatoryItems.every(i => i.owned);
   const ownedCount = kitStatus.filter(i => i.owned).length;
 
+  const VEIL_MS = 480;
+
   const advance = async (choiceId) => {
     if (!nextStage[stage] || busy) return;
     setBusy(true);
     setError('');
-    const result = await api.advancePrologue(nextStage[stage], choiceId);
+
+    const isJourney = JOURNEY_STAGES.includes(stage);
+    if (isJourney) setVeiling(true);
+
+    const waiters = [api.advancePrologue(nextStage[stage], choiceId)];
+    if (isJourney) waiters.push(new Promise(r => setTimeout(r, VEIL_MS)));
+
+    const [result] = await Promise.all(waiters);
+
     setBusy(false);
-    if (!result.ok) return setError(result.error);
+    if (!result.ok) {
+      if (isJourney) setVeiling(false);
+      return setError(result.error);
+    }
     setData(result.data);
+    if (isJourney) {
+      requestAnimationFrame(() => requestAnimationFrame(() => setVeiling(false)));
+    }
     if (result.data.completed) onComplete?.();
   };
 
@@ -174,15 +196,6 @@ export const PrologueView = ({ onComplete }) => {
     setOpening(true);
     setTimeout(() => advance(), 650);
   };
-
-  // Auto-redirect to market once when first entering PREPARATION (if items still needed)
-  useEffect(() => {
-    if (stage === 'PREPARATION' && !allMandatoryOwned && !didAutoRedirect.current) {
-      didAutoRedirect.current = true;
-      setMarketMode(true);
-      setActiveView('markethall');
-    }
-  }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGoToMarket = () => {
     setMarketMode(true);
@@ -397,8 +410,8 @@ export const PrologueView = ({ onComplete }) => {
             <h1 className="pl-preparation-title">Gotowy na podróż</h1>
             <ul className="pl-kit-list" role="list">
               {kitStatus.map(item => (
-                <li key={item.id} className="pl-kit-item owned">
-                  <span className="pl-kit-check" aria-hidden="true">✓</span>
+                <li key={item.id} className={`pl-kit-item ${item.owned ? 'owned' : 'optional'}`}>
+                  <span className="pl-kit-check" aria-hidden="true">{item.owned ? '✓' : '◌'}</span>
                   <span className="pl-kit-icon" aria-hidden="true">{item.icon}</span>
                   <span className="pl-kit-name">{item.name.split('—')[0].trim()}</span>
                 </li>
@@ -456,6 +469,9 @@ export const PrologueView = ({ onComplete }) => {
       <div className={`prologue-root stage-journey stage-${stage.toLowerCase().replace('_', '-')}`}>
         <SnowFlakes />
         <div className="pl-journey-bg" aria-hidden="true" />
+        <div className={`pl-travel-veil${veiling ? ' active' : ''}`} aria-hidden="true">
+          <span className="pl-travel-rune">ᛗ</span>
+        </div>
         <main className="pl-journey-scene">
           <RouteMap currentStage={stage} />
           <div className="pl-scene-panel">

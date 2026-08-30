@@ -27,8 +27,13 @@ import {
   Zap,
   Flame,
   Info,
-  Plus
+  Plus,
+  Pencil,
+  Save,
+  Check,
+  XCircle
 } from 'lucide-react';
+import { OrderCrest, normalizeHouseKey } from '../components/HeraldicEmblems';
 
 // =============================================================================
 // DISCORD MARKDOWN & GFM FORMATTER HELPER
@@ -319,6 +324,7 @@ export const LessonDetailView = () => {
     setActiveView,
     getLessonDetails,
     publishLesson,
+    saveLessonDraft,
     houses,
     currentUser,
     hasPermission,
@@ -333,6 +339,12 @@ export const LessonDetailView = () => {
   const [highlightedMsgId, setHighlightedMsgId] = useState(null);
   const [threadSearch, setThreadSearch] = useState('');
   const [showEditHistoryModal, setShowEditHistoryModal] = useState(null);
+  const [rosterEditMode, setRosterEditMode] = useState(false);
+  const [rosterParticipants, setRosterParticipants] = useState([]);
+  const [rosterSaving, setRosterSaving] = useState(false);
+  const [descEditMode, setDescEditMode] = useState(false);
+  const [descDraft, setDescDraft] = useState('');
+  const [descSaving, setDescSaving] = useState(false);
   const messageRefs = useRef({});
 
   useEffect(() => {
@@ -389,6 +401,71 @@ export const LessonDetailView = () => {
     if (published) {
       setLesson(published);
     }
+  };
+
+  const enterRosterEdit = () => {
+    setRosterParticipants((lesson.participants || []).map(p => ({ ...p })));
+    setRosterEditMode(true);
+  };
+
+  const cancelRosterEdit = () => {
+    setRosterParticipants([]);
+    setRosterEditMode(false);
+  };
+
+  const updateRosterParticipant = (id, field, value) => {
+    setRosterParticipants(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const removeRosterParticipant = (id) => {
+    setRosterParticipants(prev => prev.filter(p => p.id !== id));
+  };
+
+  const addRosterParticipant = () => {
+    setRosterParticipants(prev => [...prev, {
+      id: `p-${Date.now()}`,
+      studentId: '',
+      studentName: 'Nowy Adept',
+      house: 'reinhall',
+      isPresent: true,
+      pointsAwarded: 10,
+      comment: 'Aktywny udział'
+    }]);
+  };
+
+  const saveRosterChanges = async () => {
+    setRosterSaving(true);
+    const updated = await saveLessonDraft(lesson.id, { ...lesson, participants: rosterParticipants });
+    if (updated) {
+      const refreshed = await getLessonDetails(lesson.id);
+      if (refreshed) setLesson(refreshed);
+    }
+    setRosterSaving(false);
+    setRosterEditMode(false);
+    setRosterParticipants([]);
+  };
+
+  const enterDescEdit = () => {
+    setDescDraft(lesson?.description || '');
+    setDescEditMode(true);
+  };
+
+  const cancelDescEdit = () => {
+    setDescDraft(lesson?.description || '');
+    setDescEditMode(false);
+  };
+
+  const saveDescChanges = async () => {
+    if (!lesson) return;
+    setDescSaving(true);
+    const updated = await saveLessonDraft(lesson.id, { ...lesson, description: descDraft });
+    if (updated) {
+      setLesson(prev => ({ ...prev, description: descDraft }));
+      const refreshed = await getLessonDetails(lesson.id);
+      if (refreshed) setLesson(refreshed);
+    }
+    setDescSaving(false);
+    setDescEditMode(false);
   };
 
   if (loading || !lesson) {
@@ -627,7 +704,7 @@ export const LessonDetailView = () => {
               borderRadius: '12px',
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), inset 0 0 50px rgba(197, 159, 78, 0.05)',
               padding: '3rem 2.5rem',
-              overflow: 'hidden'
+              overflow: 'hidden',
             }}
           >
             {/* Top Seal & Inscription */}
@@ -724,24 +801,119 @@ export const LessonDetailView = () => {
 
             {/* Pedagogical Description */}
             <div style={{ marginBottom: '2.5rem' }}>
-              <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
-                Opis Przebiegu Zajęć i Cel Dydaktyczny:
-              </h4>
-              <p
-                style={{
-                  background: 'rgba(8, 11, 16, 0.6)',
-                  borderLeft: '3px solid var(--gold-ancient)',
-                  padding: '1.2rem 1.5rem',
-                  borderRadius: '0 8px 8px 0',
-                  color: '#e2e8f0',
-                  fontSize: '0.95rem',
-                  lineHeight: 1.7,
-                  margin: 0,
-                  fontStyle: 'italic'
-                }}
-              >
-                „{lesson.description || 'Przebieg zajęć zarejestrowany w protokole Katedry Twierdzy Magii (TMD).'}”
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                  Opis Przebiegu Zajęć i Cel Dydaktyczny:
+                </h4>
+                {canManage && !descEditMode && (
+                  <button
+                    onClick={enterDescEdit}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.35rem 0.85rem',
+                      background: 'rgba(197, 159, 78, 0.12)',
+                      border: '1px solid rgba(197, 159, 78, 0.4)',
+                      borderRadius: '6px',
+                      color: 'var(--gold-ancient)',
+                      fontSize: '0.78rem',
+                      fontFamily: 'var(--font-heading)',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(197, 159, 78, 0.25)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(197, 159, 78, 0.12)'; }}
+                  >
+                    <Pencil size={13} /> Edytuj opis
+                  </button>
+                )}
+                {canManage && descEditMode && (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={saveDescChanges}
+                      disabled={descSaving}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.35rem 0.85rem',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        border: '1px solid #10b981',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        fontSize: '0.78rem',
+                        cursor: descSaving ? 'not-allowed' : 'pointer',
+                        fontWeight: 800,
+                        opacity: descSaving ? 0.7 : 1
+                      }}
+                    >
+                      <Save size={13} /> {descSaving ? 'Zapisuję...' : 'Zapisz opis'}
+                    </button>
+                    <button
+                      onClick={cancelDescEdit}
+                      disabled={descSaving}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.35rem 0.75rem',
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px',
+                        color: '#9ca3af',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <XCircle size={13} /> Anuluj
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!descEditMode ? (
+                <p
+                  style={{
+                    background: 'rgba(8, 11, 16, 0.6)',
+                    borderLeft: '3px solid var(--gold-ancient)',
+                    padding: '1.2rem 1.5rem',
+                    borderRadius: '0 8px 8px 0',
+                    color: '#e2e8f0',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.7,
+                    margin: 0,
+                    fontStyle: 'italic',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
+                  „{lesson.description || 'Przebieg zajęć zarejestrowany w protokole Katedry Twierdzy Magii (TMD).'}”
+                </p>
+              ) : (
+                <div style={{ background: 'rgba(8, 11, 16, 0.8)', border: '1px solid var(--gold-ancient)', borderRadius: '8px', padding: '1rem', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                  <textarea
+                    rows={5}
+                    value={descDraft}
+                    onChange={(e) => setDescDraft(e.target.value)}
+                    placeholder="Wpisz opis przebiegu zajęć, zagadnienia merytoryczne i cel dydaktyczny..."
+                    autoFocus
+                    style={{
+                      width: '100%',
+                      background: 'rgba(5, 7, 12, 0.95)',
+                      border: '1px solid rgba(197, 159, 78, 0.35)',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      fontSize: '0.95rem',
+                      lineHeight: 1.6,
+                      padding: '0.9rem 1.1rem',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                      boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)'
+                    }}
+                  />
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Wskazówka: Zapisany opis natychmiast zaktualizuje oficjalny protokół lekcyjny.</span>
+                    <span style={{ color: 'var(--gold-ancient)', fontWeight: 600 }}>{descDraft.length} znaków</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* House Points Summary Cards */}
@@ -750,7 +922,7 @@ export const LessonDetailView = () => {
                 🏆 Zasilenie Punktacji Zakonów (Puchar Twierdzy):
               </h4>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                 {Object.keys(houses).map(hKey => {
                   const h = houses[hKey];
                   const pts = housePointsSummary[hKey] || 0;
@@ -760,34 +932,26 @@ export const LessonDetailView = () => {
                       style={{
                         background: 'rgba(12, 16, 25, 0.85)',
                         border: `1px solid ${pts > 0 ? h.colors.border : 'rgba(255,255,255,0.06)'}`,
-                        borderRadius: '8px',
-                        padding: '1rem',
+                        borderRadius: '10px',
+                        padding: '1.2rem 0.8rem 1rem',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
+                        gap: '0.5rem',
                         boxShadow: pts > 0 ? `0 0 15px ${h.colors.glow}` : 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{ fontSize: '1.4rem' }}>{h.crestIcon}</span>
-                        <div>
-                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
-                            {h.name}
-                          </div>
-                          <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
-                            {pts > 0 ? `${pts} pkt z lekcji` : 'Brak punktów'}
-                          </div>
-                        </div>
+                      <OrderCrest houseKey={normalizeHouseKey(hKey)} size={56} />
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)', textAlign: 'center', letterSpacing: '0.04em' }}>
+                        {h.name}
                       </div>
-                      <div
-                        style={{
-                          fontSize: '1.25rem',
-                          fontWeight: 800,
-                          color: pts > 0 ? h.colors.secondary : '#6b7280',
-                          fontFamily: 'var(--font-heading)'
-                        }}
-                      >
-                        {pts > 0 ? `+${pts}` : '0'}
+                      <div style={{
+                        fontSize: pts > 0 ? '1.3rem' : '0.9rem',
+                        fontWeight: 800,
+                        color: pts > 0 ? h.colors.secondary : '#6b7280',
+                        fontFamily: 'var(--font-heading)'
+                      }}>
+                        {pts > 0 ? `+${pts} pkt` : 'Brak punktów'}
                       </div>
                     </div>
                   );
@@ -854,22 +1018,92 @@ export const LessonDetailView = () => {
 
             {/* Participants Table */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
-                  👥 Wykaz Obecności i Punktacja Adeptów ({participants.length}):
+                  👥 Wykaz Obecności i Punktacja Adeptów ({rosterEditMode ? rosterParticipants.length : participants.length}):
                 </h4>
+                {canManage && !rosterEditMode && (
+                  <button
+                    onClick={enterRosterEdit}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.35rem 0.85rem',
+                      background: 'rgba(197, 159, 78, 0.12)',
+                      border: '1px solid rgba(197, 159, 78, 0.4)',
+                      borderRadius: '6px',
+                      color: 'var(--gold-ancient)',
+                      fontSize: '0.78rem',
+                      fontFamily: 'var(--font-heading)',
+                      cursor: 'pointer',
+                      fontWeight: 700
+                    }}
+                  >
+                    <Pencil size={13} /> Edytuj adeptów
+                  </button>
+                )}
+                {canManage && rosterEditMode && (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={addRosterParticipant}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.35rem 0.75rem',
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        border: '1px solid #10b981',
+                        borderRadius: '6px',
+                        color: '#10b981',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                        fontWeight: 700
+                      }}
+                    >
+                      <Plus size={13} /> Dodaj adepta
+                    </button>
+                    <button
+                      onClick={saveRosterChanges}
+                      disabled={rosterSaving}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.35rem 0.85rem',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        border: '1px solid #10b981',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        fontSize: '0.78rem',
+                        cursor: rosterSaving ? 'not-allowed' : 'pointer',
+                        fontWeight: 800,
+                        opacity: rosterSaving ? 0.7 : 1
+                      }}
+                    >
+                      <Save size={13} /> {rosterSaving ? 'Zapisuję...' : 'Zapisz zmiany'}
+                    </button>
+                    <button
+                      onClick={cancelRosterEdit}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.35rem 0.75rem',
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px',
+                        color: '#9ca3af',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <XCircle size={13} /> Anuluj
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
+              {/* READ-ONLY TABLE */}
+              {!rosterEditMode && (
+              <div style={{ overflowX: 'auto', background: 'rgba(8, 11, 16, 0.7)', borderRadius: '8px', border: '1px solid rgba(197, 159, 78, 0.2)' }}>
                 <table
                   style={{
                     width: '100%',
                     borderCollapse: 'collapse',
-                    textAlign: 'left',
-                    background: 'rgba(8, 11, 16, 0.7)',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    border: '1px solid rgba(197, 159, 78, 0.2)'
+                    textAlign: 'left'
                   }}
                 >
                   <thead>
@@ -942,6 +1176,101 @@ export const LessonDetailView = () => {
                   </tbody>
                 </table>
               </div>
+              )}
+
+              {/* EDIT MODE TABLE */}
+              {rosterEditMode && (
+              <div style={{ overflowX: 'auto', background: 'rgba(8, 11, 16, 0.7)', borderRadius: '8px', border: '1px solid rgba(197, 159, 78, 0.35)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(197, 159, 78, 0.12)', borderBottom: '1px solid rgba(197, 159, 78, 0.3)' }}>
+                      <th style={{ padding: '0.65rem 0.8rem', color: 'var(--gold-ancient)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '90px' }}>Obecność</th>
+                      <th style={{ padding: '0.65rem 0.8rem', color: 'var(--gold-ancient)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Adept</th>
+                      <th style={{ padding: '0.65rem 0.8rem', color: 'var(--gold-ancient)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '140px' }}>Zakon</th>
+                      <th style={{ padding: '0.65rem 0.8rem', color: 'var(--gold-ancient)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '80px', textAlign: 'center' }}>Punkty</th>
+                      <th style={{ padding: '0.65rem 0.8rem', color: 'var(--gold-ancient)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Komentarz</th>
+                      <th style={{ padding: '0.65rem 0.8rem', width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rosterParticipants.map((p, idx) => {
+                      const h = houses[p.house] || { colors: { secondary: '#c59f4e', border: 'rgba(197,159,78,0.4)' } };
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                          <td style={{ padding: '0.5rem 0.8rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.78rem', color: p.isPresent ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={p.isPresent}
+                                onChange={(e) => updateRosterParticipant(p.id, 'isPresent', e.target.checked)}
+                                style={{ accentColor: p.isPresent ? '#10b981' : '#ef4444' }}
+                              />
+                              {p.isPresent ? '✓' : '✗'}
+                            </label>
+                          </td>
+                          <td style={{ padding: '0.5rem 0.8rem' }}>
+                            <input
+                              type="text"
+                              value={p.studentName}
+                              onChange={(e) => updateRosterParticipant(p.id, 'studentName', e.target.value)}
+                              placeholder="Imię i nazwisko..."
+                              style={{ width: '100%', padding: '0.35rem 0.55rem', background: '#0d111a', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '5px', color: '#ffffff', fontSize: '0.85rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.5rem 0.8rem' }}>
+                            <select
+                              value={p.house}
+                              onChange={(e) => updateRosterParticipant(p.id, 'house', e.target.value)}
+                              style={{ width: '100%', padding: '0.35rem 0.55rem', background: '#0d111a', border: `1px solid ${h.colors?.border || 'rgba(255,255,255,0.15)'}`, borderRadius: '5px', color: h.colors?.secondary || '#ffffff', fontSize: '0.82rem', fontWeight: 600, boxSizing: 'border-box' }}
+                            >
+                              <option value="reinhall">ᚦ Reinhall</option>
+                              <option value="bjornhall">ᛉ Björnhall</option>
+                              <option value="ravnheim">ᚱ Ravnheim</option>
+                              <option value="otergard">ᛞ Otergard</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={p.pointsAwarded}
+                              onChange={(e) => updateRosterParticipant(p.id, 'pointsAwarded', parseInt(e.target.value, 10) || 0)}
+                              style={{ width: '64px', padding: '0.35rem 0.4rem', background: '#0d111a', border: '1px solid #2ec4b6', borderRadius: '5px', color: '#2ec4b6', fontSize: '0.88rem', fontWeight: 800, textAlign: 'center' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.5rem 0.8rem' }}>
+                            <input
+                              type="text"
+                              value={p.comment}
+                              onChange={(e) => updateRosterParticipant(p.id, 'comment', e.target.value)}
+                              placeholder="Komentarz prowadzącego..."
+                              style={{ width: '100%', padding: '0.35rem 0.55rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '5px', color: '#cbd5e1', fontSize: '0.78rem', fontStyle: 'italic', boxSizing: 'border-box' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.5rem 0.6rem', textAlign: 'center' }}>
+                            <button
+                              onClick={() => removeRosterParticipant(p.id)}
+                              title="Usuń adepta"
+                              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '5px', color: '#ef4444', cursor: 'pointer', padding: '0.3rem 0.45rem', display: 'inline-flex', alignItems: 'center' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {rosterParticipants.length === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                          Brak adeptów. Użyj przycisku „Dodaj adepta" powyżej.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              )}
             </div>
 
             {/* Bottom Button to Discord Log */}

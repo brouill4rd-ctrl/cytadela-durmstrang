@@ -12,12 +12,12 @@ const router = express.Router();
 
 // Słownik wag i etykiet dla skali HP
 const HP_GRADES = {
-  'W': { label: 'Wybitny (W)', value: 6, color: '#eab308' },
-  'PO': { label: 'Powyżej Oczekiwań (PO)', value: 5, color: '#10b981' },
-  'Z': { label: 'Zadowalający (Z)', value: 4, color: '#3b82f6' },
-  'N': { label: 'Nędzny (N)', value: 3, color: '#f97316' },
-  'O': { label: 'Okropny (O)', value: 2, color: '#ba36b0' },
-  'T': { label: 'Troll (T)', value: 1, color: '#ef4444' }
+  'W':  { label: 'Wybitny (W)',              value: 6, color: '#eab308' },
+  'PO': { label: 'Powyżej Oczekiwań (PO)',   value: 5, color: '#10b981' },
+  'Z':  { label: 'Zadowalający (Z)',          value: 4, color: '#3b82f6' },
+  'N':  { label: 'Nędzny (N)',               value: 3, color: '#f97316' },
+  'O':  { label: 'Okropny (O)',              value: 2, color: '#ba36b0' },
+  'T':  { label: 'Troll (T)',                value: 1, color: '#ef4444' }
 };
 
 // GET /api/subjects - Lista wszystkich przedmiotów
@@ -105,7 +105,7 @@ router.get('/:id', requireAuth, (req, res) => {
       .map(dbSubjectAchievementToFrontend);
 
     // Statystyki
-    const gradeDistribution = { W: 0, P: 0, Z: 0, N: 0, T: 0 };
+    const gradeDistribution = { W: 0, PO: 0, Z: 0, N: 0, O: 0, T: 0 };
     let sumGrades = 0;
     gradesRows.forEach(g => {
       if (gradeDistribution[g.grade] !== undefined) {
@@ -221,6 +221,7 @@ router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
       category,
       description,
       classroom,
+      discordChannelId,
       professorId,
       professorName,
       bannerUrl,
@@ -235,6 +236,12 @@ router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
       return res.status(404).json({ error: 'Nie znaleziono przedmiotu do aktualizacji.' });
     }
 
+    if (discordChannelId !== undefined && discordChannelId !== '') {
+      if (!/^\d{17,19}$/.test(String(discordChannelId).trim())) {
+        return res.status(400).json({ error: 'discord_channel_id musi być prawidłowym ID kanału Discord (17–19 cyfr).' });
+      }
+    }
+
     db.prepare(`
       UPDATE subjects
       SET name = COALESCE(?, name),
@@ -243,6 +250,7 @@ router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
           category = COALESCE(?, category),
           description = COALESCE(?, description),
           classroom = COALESCE(?, classroom),
+          discord_channel_id = COALESCE(?, discord_channel_id),
           professor_id = COALESCE(?, professor_id),
           professor_name = COALESCE(?, professor_name),
           banner_url = COALESCE(?, banner_url),
@@ -259,6 +267,7 @@ router.put('/:id', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
       category !== undefined ? category.trim() : null,
       description !== undefined ? description.trim() : null,
       classroom !== undefined ? classroom.trim() : null,
+      canManageSubjectAssignment && discordChannelId !== undefined ? String(discordChannelId).trim() : null,
       canManageSubjectAssignment && professorId !== undefined ? professorId.trim() : null,
       canManageSubjectAssignment && professorName !== undefined ? professorName.trim() : null,
       bannerUrl !== undefined ? bannerUrl.trim() : null,
@@ -408,7 +417,7 @@ router.post('/:id/grades', requireAuth, requireSubjectOwnerOrAdmin, (req, res) =
 
     const hpInfo = HP_GRADES[grade.toUpperCase()];
     if (!hpInfo) {
-      return res.status(400).json({ error: 'Nieprawidłowa ocena. Dopuszczalne: W (Wybitny), P (Powyżej Oczekiwań), Z (Zadowalający), N (Nędzny), T (Troll).' });
+      return res.status(400).json({ error: 'Nieprawidłowa ocena. Dopuszczalne: W, PO, Z, N, O, T.' });
     }
 
     const gradeId = `grd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
@@ -460,6 +469,69 @@ router.post('/:id/grades', requireAuth, requireSubjectOwnerOrAdmin, (req, res) =
   }
 });
 
+// POST /api/subjects/:id/grades/batch - Masowe wystawianie ocen wielu uczniom (Profesor / Admin)
+router.post('/:id/grades/batch', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
+  try {
+    const {
+      studentIds,
+      categoryId,
+      grade,
+      title = '',
+      comment = '',
+      lessonId = '',
+      date = new Date().toISOString().split('T')[0]
+    } = req.body;
+
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ error: 'Wymagana lista adeptów (studentIds).' });
+    }
+    if (!grade || !categoryId) {
+      return res.status(400).json({ error: 'Wymagane pola: kategoria oraz ocena HP.' });
+    }
+
+    const hpInfo = HP_GRADES[grade.toUpperCase()];
+    if (!hpInfo) {
+      return res.status(400).json({ error: 'Nieprawidłowa ocena. Dopuszczalne: W, PO, Z, N, O, T.' });
+    }
+
+    const category = db.prepare('SELECT id FROM grade_categories WHERE id = ? AND subject_id = ?').get(categoryId, req.params.id);
+    if (!category) return res.status(400).json({ error: 'Kategoria nie należy do tego przedmiotu.' });
+
+    const insertedGrades = [];
+
+    for (const studentId of studentIds) {
+      const student = db.prepare("SELECT id, full_name, house FROM users WHERE id = ? AND role = 'student'").get(studentId);
+      if (!student) continue;
+
+      const gradeId = `grd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      db.prepare(`
+        INSERT INTO grades (id, subject_id, category_id, student_id, student_name, house, grade, grade_label, grade_value, title, comment, professor_id, professor_name, lesson_id, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        gradeId, req.params.id, categoryId,
+        student.id, student.full_name,
+        (student.house || 'ravnheim').toLowerCase(),
+        grade.toUpperCase(), hpInfo.label, hpInfo.value,
+        title || 'Ocena cząstkowa', comment,
+        req.user.id, req.user.fullName,
+        lessonId, date
+      );
+
+      const inserted = db.prepare(`
+        SELECT g.*, gc.name as category_name, gc.icon as category_icon
+        FROM grades g LEFT JOIN grade_categories gc ON g.category_id = gc.id
+        WHERE g.id = ?
+      `).get(gradeId);
+      if (inserted) insertedGrades.push(dbGradeToFrontend(inserted));
+    }
+
+    res.status(201).json({ count: insertedGrades.length, grades: insertedGrades });
+  } catch (err) {
+    console.error(`[API POST /subjects/${req.params.id}/grades/batch] Błąd:`, err);
+    res.status(500).json({ error: 'Nie udało się wystawić ocen.' });
+  }
+});
+
 // DELETE /api/subjects/:id/grades/:gradeId - Usunięcie oceny (Profesor / Admin)
 router.delete('/:id/grades/:gradeId', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
   try {
@@ -497,6 +569,34 @@ router.post('/:id/categories', requireAuth, requireSubjectOwnerOrAdmin, (req, re
   } catch (err) {
     console.error(`[API POST /subjects/${req.params.id}/categories] Błąd:`, err);
     res.status(500).json({ error: 'Nie udało się dodać kategorii ocen.' });
+  }
+});
+
+// PUT /api/subjects/:id/categories/:catId - Aktualizacja kategorii ocen (Profesor / Admin)
+router.put('/:id/categories/:catId', requireAuth, requireSubjectOwnerOrAdmin, (req, res) => {
+  try {
+    const { name, weight, icon } = req.body;
+    const existing = db.prepare('SELECT * FROM grade_categories WHERE id = ? AND subject_id = ?').get(req.params.catId, req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Nie znaleziono kategorii.' });
+
+    db.prepare(`
+      UPDATE grade_categories SET
+        name = COALESCE(?, name),
+        weight = COALESCE(?, weight),
+        icon = COALESCE(?, icon)
+      WHERE id = ? AND subject_id = ?
+    `).run(
+      name !== undefined ? name.trim() : null,
+      weight !== undefined ? Number(weight) || 1.0 : null,
+      icon !== undefined ? icon.trim() : null,
+      req.params.catId, req.params.id
+    );
+
+    const updated = db.prepare('SELECT * FROM grade_categories WHERE id = ?').get(req.params.catId);
+    res.json(dbGradeCategoryToFrontend(updated));
+  } catch (err) {
+    console.error(`[API PUT /subjects/categories] Błąd:`, err);
+    res.status(500).json({ error: 'Nie udało się zaktualizować kategorii.' });
   }
 });
 

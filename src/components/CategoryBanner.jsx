@@ -254,13 +254,12 @@ export const CategoryBanner = ({ category, customText, height = 140, style = {},
         style={{
           position: 'relative',
           zIndex: 3,
-          fontFamily: "'Cinzel Decorative', 'Metamorphous', 'Germania One', serif",
+          fontFamily: "'Pirata One', 'Cinzel Decorative', 'Germania One', serif",
           fontSize: '2.6rem',
-          fontWeight: 700,
+          fontWeight: 400,
           color: '#ffffff',
           letterSpacing: '0.04em',
           textShadow: '0 0 12px rgba(255, 255, 255, 0.45), 0 2px 5px rgba(0, 0, 0, 0.95)',
-          transform: 'rotate(-1.5deg)',
           display: 'inline-block',
           whiteSpace: 'nowrap'
         }}

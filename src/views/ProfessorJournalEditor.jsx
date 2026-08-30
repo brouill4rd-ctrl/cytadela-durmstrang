@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
+import api from '../api';
 import {
   BookOpen,
   CheckCircle2,
@@ -34,10 +35,13 @@ export const ProfessorJournalEditor = () => {
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('dziennik');
+
+  const profDefaultSubjectId = currentUser?.taughtSubjectIds?.[0] || 'eliksiry';
+
   const [formData, setFormData] = useState({
     id: `les-${Date.now()}`,
-    subjectId: 'eliksiry',
-    subjectName: 'Eliksiry',
+    subjectId: profDefaultSubjectId,
+    subjectName: '',
     classYear: 'Klasa II',
     topic: '',
     description: '',
@@ -50,16 +54,34 @@ export const ProfessorJournalEditor = () => {
     participants: []
   });
 
+  // Once subjects list loads, ensure formData reflects a valid subject
+  useEffect(() => {
+    if (subjects.length === 0) return;
+    setFormData(prev => {
+      const found = subjects.find(s => s.id === prev.subjectId)
+        || subjects.find(s => s.id === profDefaultSubjectId)
+        || subjects[0];
+      if (found.id === prev.subjectId && found.name === prev.subjectName) return prev;
+      return { ...prev, subjectId: found.id, subjectName: found.name };
+    });
+  }, [subjects]);
+
   useEffect(() => {
     const loadLesson = async () => {
       if (activeLessonId) {
         setLoading(true);
         const data = await getLessonDetails(activeLessonId);
         if (data) {
+          // If stored subjectId is unrecognised, prefer professor's own subject
+          const knownIds = subjects.map(s => s.id);
+          const resolvedSubjectId = (data.subjectId && knownIds.includes(data.subjectId))
+            ? data.subjectId
+            : profDefaultSubjectId;
+          const resolvedSubjectName = subjects.find(s => s.id === resolvedSubjectId)?.name || data.subjectName || '';
           setFormData({
             id: data.id,
-            subjectId: data.subjectId || 'eliksiry',
-            subjectName: data.subjectName || 'Eliksiry',
+            subjectId: resolvedSubjectId,
+            subjectName: resolvedSubjectName,
             classYear: data.classYear || 'Klasa II',
             discordThreadId: data.discordThreadId || '',
             topic: data.topic || '',
@@ -135,6 +157,16 @@ export const ProfessorJournalEditor = () => {
     }));
   };
 
+  const handleDeleteDraft = async () => {
+    if (!window.confirm('Na pewno chcesz usunąć ten szkic dziennika? Tej operacji nie można cofnąć.')) return;
+    const res = await api.deleteLessonDraft(formData.id);
+    if (res.ok) {
+      setActiveView('journals');
+    } else {
+      alert(res.data?.error || 'Nie udało się usunąć szkicu.');
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (!formData.topic.trim()) {
       alert('Wprowadź temat lekcji przed zapisaniem.');
@@ -206,7 +238,7 @@ export const ProfessorJournalEditor = () => {
           <button
             type="button"
             onClick={() => {
-              navigateToHomeworkCreator({ lesson: formData });
+              navigateToHomeworkCreator({ lesson: formData, returnView: 'professor-journal' });
             }}
             className="btn-durmstrang"
             style={{
@@ -220,6 +252,23 @@ export const ProfessorJournalEditor = () => {
           >
             <BookOpen size={15} color="var(--gold-ancient)" /> Zadaj Pracę Domową
           </button>
+
+          {formData.status === 'draft' && activeLessonId && (
+            <button
+              onClick={handleDeleteDraft}
+              className="btn-durmstrang"
+              style={{
+                padding: '0.6rem 1.2rem',
+                background: 'rgba(239, 68, 68, 0.12)',
+                borderColor: '#ef4444',
+                color: '#ef4444',
+                fontSize: '0.85rem'
+              }}
+              title="Usuń ten szkic dziennika"
+            >
+              <Trash2 size={15} /> Usuń Szkic
+            </button>
+          )}
 
           <button
             onClick={handleSaveDraft}

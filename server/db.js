@@ -2011,7 +2011,7 @@ if (roleMappingsCount === 0) {
     ['map-house-otergard', 'house', 'otergard', 'Zakon Otergard (Wydra)', '', '🦦 Otergard', '#3aaa9f', 1],
     // Ranks / Roles
     ['map-role-student', 'role', 'student', 'Adept Cytadeli (Uczeń)', '', '📜 Adept Cytadeli', '#94a3b8', 1],
-    ['map-role-prefect', 'role', 'prefect', 'Prefekt Zakonu', '', '🛡️ Prefekt Zakonu', '#38bdf8', 1],
+    ['map-role-prefect', 'role', 'prefect', 'Strażnik Zakonu', '', '🛡️ Strażnik Zakonu', '#38bdf8', 1],
     ['map-role-professor', 'role', 'professor', 'Profesor / Mistrz Katedry', '', '🧙‍♂️ Profesor', '#f59e0b', 1],
     ['map-role-teacher', 'role', 'teacher', 'Profesor Katedry', '', '🧙‍♂️ Profesor', '#f59e0b', 1],
     ['map-role-headmaster', 'role', 'headmaster', 'Dyrekcja Cytadeli', '', '👑 Dyrekcja Cytadeli', '#fcd34d', 1],
@@ -2929,7 +2929,13 @@ export function dbLessonToFrontend(row, messages = [], participants = []) {
     description: row.description || '',
     professorId: row.professor_id,
     professorName: row.professor_name,
-    professorAvatar: row.professor_avatar || '',
+    professorAvatar: (() => {
+      if (row.professor_id) {
+        const prof = db.prepare('SELECT avatar FROM users WHERE id = ?').get(row.professor_id);
+        if (prof?.avatar) return prof.avatar;
+      }
+      return row.professor_avatar || '';
+    })(),
     date: row.date,
     status: row.status,
     discordThreadId: row.discord_thread_id || '',
@@ -3092,7 +3098,10 @@ export function isProfessorOfSubject(professorId, subjectId) {
   return !!db.prepare(`
     SELECT 1 FROM teacher_subject_assignments
     WHERE professor_id = ? AND subject_id = ? AND status = 'active'
-  `).get(professorId, subjectId);
+    UNION
+    SELECT 1 FROM subjects
+    WHERE id = ? AND professor_id = ?
+  `).get(professorId, subjectId, subjectId, professorId);
 }
 
 export function dbSubjectToFrontend(row, categories = [], grades = [], recentLessons = [], stats = {}) {
@@ -3106,6 +3115,7 @@ export function dbSubjectToFrontend(row, categories = [], grades = [], recentLes
     category: row.category || 'Ogólne',
     description: row.description || '',
     classroom: row.classroom || '',
+    discordChannelId: row.discord_channel_id || '',
     professorId: row.professor_id || '',
     professorName: row.professor_name || '',
     professors: professors.map(p => ({
@@ -3581,7 +3591,7 @@ if (false && documentsCount === 0) {
       { type: 'paragraph', text: '1. Zabrania się wszelkich prób rzucania uroków z zakresu Magii Cienia, Klątw Tkankowych, Nekromancji Użytkowej oraz manipulacji temperaturą poniżej -30°C w obrębie Komnat Wspólnych oraz sypialni Zakonów Reinhall, Björnhall, Ravnheim oraz Otergard.' },
       { type: 'paragraph', text: '2. Wszelkie eksperymenty runiczne i transmutacje żywiołów wolno przeprowadzać wyłącznie w Warsztacie Runicznym (Galdrastofa), Laboratoriach Katedry Alchemii lub w obecności uprawnionego Profesora.' },
       { type: 'heading', text: '§ 2. Sankcje Dyscyplinarne' },
-      { type: 'list', items: ['Pierwsze naruszenie: Utrata 50 punktów dla macierzystego Zakonu oraz tydzień aresztu w Skalnym Bastionie.', 'Drugie naruszenie: Konfiskata różdżki i artefaktów na okres 14 dni oraz chłosta runiczna pod okiem Prefekta.', 'Trzecie naruszenie: Natychmiastowe postawienie przed Trybunałem Krwi i wydalenie z Cytadeli.'] }
+      { type: 'list', items: ['Pierwsze naruszenie: Utrata 50 punktów dla macierzystego Zakonu oraz tydzień aresztu w Skalnym Bastionie.', 'Drugie naruszenie: Konfiskata różdżki i artefaktów na okres 14 dni oraz chłosta runiczna pod okiem Strażnika.', 'Trzecie naruszenie: Natychmiastowe postawienie przed Trybunałem Krwi i wydalenie z Cytadeli.'] }
     ]),
     JSON.stringify(['Dekret', 'Dyscyplina', 'Bezpieczeństwo', 'Dormitoria']),
     1,
@@ -4307,6 +4317,7 @@ try { db.exec("ALTER TABLE users ADD COLUMN signature_png TEXT DEFAULT ''"); } c
 // HTML transaction e-mail archive and link to the external delivery ledger.
 try { db.exec("ALTER TABLE emails ADD COLUMN html_body TEXT DEFAULT ''"); } catch (_) {}
 try { db.exec("ALTER TABLE emails ADD COLUMN delivery_id TEXT DEFAULT ''"); } catch (_) {}
+try { db.exec("ALTER TABLE subjects ADD COLUMN discord_channel_id TEXT DEFAULT ''"); } catch (_) {}
 
 export function dbRoleMappingToFrontend(row) {
   if (!row) return null;

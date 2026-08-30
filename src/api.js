@@ -73,6 +73,9 @@ export const api = {
 
   // Domain data
   getHouses: () => apiFetch('/houses'),
+  updateHouse: (id, data) => apiFetch(`/houses/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getFortressGuardian: () => apiFetch('/houses/fortress-guardian'),
+  updateFortressGuardian: (data) => apiFetch('/houses/fortress-guardian', { method: 'PUT', body: JSON.stringify(data) }),
   getLocations: () => apiFetch('/locations'),
   getRunesCatalog: () => apiFetch('/workshop/runes'),
   getRuneFormulas: () => apiFetch('/workshop/rune-formulas'),
@@ -174,6 +177,7 @@ export const api = {
   updateLesson: (id, lessonData) => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(lessonData) }),
   publishLesson: (id) => apiFetch(`/lessons/${id}/publish`, { method: 'POST' }),
   deleteLesson: (id) => apiFetch(`/lessons/${id}`, { method: 'DELETE' }),
+  deleteLessonDraft: (id) => apiFetch(`/lessons/${id}/draft`, { method: 'DELETE' }),
   
   // House Rankings & Ledger
   getHouseRankings: (period = 'overall') => apiFetch(`/lessons/rankings/houses?period=${period}`),
@@ -225,8 +229,10 @@ export const api = {
     return apiFetch(`/subjects/${subjectId}/grades${query}`);
   },
   addGrade: (subjectId, gradeData) => apiFetch(`/subjects/${subjectId}/grades`, { method: 'POST', body: JSON.stringify(gradeData) }),
+  batchAddGrades: (subjectId, batchData) => apiFetch(`/subjects/${subjectId}/grades/batch`, { method: 'POST', body: JSON.stringify(batchData) }),
   deleteGrade: (subjectId, gradeId) => apiFetch(`/subjects/${subjectId}/grades/${gradeId}`, { method: 'DELETE' }),
   addGradeCategory: (subjectId, data) => apiFetch(`/subjects/${subjectId}/categories`, { method: 'POST', body: JSON.stringify(data) }),
+  updateGradeCategory: (subjectId, catId, data) => apiFetch(`/subjects/${subjectId}/categories/${catId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteGradeCategory: (subjectId, catId) => apiFetch(`/subjects/${subjectId}/categories/${catId}`, { method: 'DELETE' }),
 
   // ==================== MODUŁ PLANU LEKCJI & HARMONOGRAM ====================

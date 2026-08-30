@@ -328,199 +328,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <ProfessorHomeworkWidget />
 
       {/* =========================================================================
-          1. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
-          ========================================================================= */}
-      <div className="menuBlock" style={{ border: '1px solid rgba(197, 159, 78, 0.4)' }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('activities')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('activities').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('activities')?.rune || 'ᛏ'}</div>
-          <Zap size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
-
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
-          <span className="rune-bracket">ᚦ</span>
-          <span>Gry & Aktywności</span>
-          <span className="rune-bracket">ᚦ</span>
-        </div>
-
-        <div className="menuBlockContent">
-          <ul>
-            <li>
-              <button
-                onClick={() => openActivity(setOracleModalOpen, 'Wyrocznia Przeznaczenia (Seidr)')}
-                style={{ color: '#ffe599' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Sparkles size={14} color="var(--gold-ancient)" /> Wyrocznia Przeznaczenia (Seidr)
-                </span>
-                <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  BUFF
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setExpeditionsModalOpen, 'Ekspedycje do Puszczy & Fiordów')}
-                style={{ color: '#4ade80' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Compass size={14} color="#4ade80" /> Ekspedycje do Puszczy & Fiordów
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#22c55e', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  RPG
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setTargetModalOpen, 'Runiczna Strzelnica Różdżkowa')}
-                style={{ color: '#38bdf8' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Crosshair size={14} color="#38bdf8" /> Runiczna Strzelnica Różdżkowa
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#38bdf8', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  ZRĘCZNOŚĆ
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setEscapeModalOpen, 'Labirynt Tajemnic: Escape Room')}
-                style={{ color: '#fcd34d' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Key size={14} color="#f59e0b" /> Labirynt Tajemnic: Escape Room
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#f59e0b', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  ZAGADKI
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setHnefataflModalOpen, 'Hnefatafl (Szachy Wikingów)')}
-                style={{ color: '#c084fc' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Gamepad2 size={14} color="#a855f7" /> Hnefatafl (Szachy Wikingów)
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#a855f7', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  PLANSZA
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setFishingModalOpen, 'Połów w Zamarzniętym Fiordzie')}
-                style={{ color: '#93c5fd' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Anchor size={14} color="#0284c7" /> Połów w Zamarzniętym Fiordzie
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#0284c7', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  RELAKS
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setTournamentModalOpen, 'Turniej Szermierki')}
-                style={{ color: '#f87171' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Award size={14} color="#ef4444" /> Turniej Szermierki: Droga Mistrza
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#ef4444', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  TURNIEJ
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setBestiaryModalOpen, 'Bestiariusz Północy')}
-                style={{ color: '#fed7aa' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Eye size={14} color="#f97316" /> Bestiariusz Północy (Karty Bestii)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setBlackMarketModalOpen, 'Czarny Rynek')}
-                style={{ color: '#cbd5e1' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Skull size={14} color="#94a3b8" /> Czarny Rynek Przemytników (Svartálfar)
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#334155', color: '#f8fafc', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  KONTRA
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setDuelModalOpen, 'Sala Pojedynków')}
-                style={{ color: '#fca5a5' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Swords size={14} color="#ef4444" /> Wielka Sala Pojedynków (Hólmganga)
-                </span>
-                <span style={{ fontSize: '0.62rem', background: '#991b1b', color: '#ffffff', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  PVP
-                </span>
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setGrimoireModalOpen, 'Grimuar Zaklęć')}
-                style={{ color: '#fde68a' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <BookOpen size={14} color="var(--gold-ancient)" /> Grimuar Pradawnych Zaklęć
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => openActivity(setRuneCalligraphyModalOpen, 'Kaligrafia Run')}
-                style={{ color: '#fed7aa' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <span style={{ fontSize: '1rem', color: '#f59e0b' }}>ᚠ</span> Akademia Kaligrafii Run
-                </span>
-                <span style={{ fontSize: '0.6rem', background: 'rgba(245, 158, 11, 0.25)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.4)', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  ᚠ 5 ALFABETÓW
-                </span>
-              </button>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          2. BLOK: GŁÓWNA STRUKTURA TWIERDZY MAGII
+          1. BLOK: GŁÓWNA STRUKTURA TWIERDZY MAGII
           ========================================================================= */}
       <div className="menuBlock">
         <div
@@ -563,28 +371,24 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
               <button
                 onClick={() => handleNav('journals')}
                 style={{
-                  color: activeView === 'journals' ? '#ffffff' : '#c59f4e',
-                  background: activeView === 'journals' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(197, 159, 78, 0.08)',
-                  border: activeView === 'journals' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.25)',
-                  fontWeight: 700
+                  color: activeView === 'journals' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'journals' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  border: activeView === 'journals' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Scroll size={14} color="var(--gold-ancient)" /> Dzienniki Lekcyjne
                 </span>
-                <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                  DISCORD
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => handleNav('timetable')}
                 style={{
-                  color: activeView === 'timetable' ? '#ffffff' : '#f7dca0',
-                  background: activeView === 'timetable' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(197, 159, 78, 0.06)',
-                  border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
-                  fontWeight: 700
+                  color: activeView === 'timetable' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'timetable' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -612,36 +416,30 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
               <button
                 onClick={() => handleNav('documents')}
                 style={{
-                  color: activeView === 'documents' ? '#ffffff' : '#f7dca0',
-                  background: activeView === 'documents' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(197, 159, 78, 0.08)',
-                  border: activeView === 'documents' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
-                  fontWeight: 700
+                  color: activeView === 'documents' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'documents' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  border: activeView === 'documents' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Scroll size={14} color="var(--gold-ancient)" /> Dekrety, Regulamin DC & Statut
                 </span>
-                <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  NOWE
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => handleNav('memory')}
                 style={{
-                  color: activeView === 'memory' ? '#ffffff' : '#f7dca0',
-                  background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'rgba(197, 159, 78, 0.08)',
-                  border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.2)',
-                  fontWeight: 700
+                  color: activeView === 'memory' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
+                  border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Landmark size={14} color="var(--gold-glow)" /> Izba Pamięci & Kroniki
+                  <Landmark size={14} color="var(--gold-ancient)" /> Izba Pamięci & Kroniki
                 </span>
-                <span style={{ fontSize: '0.6rem', background: 'var(--gold-ancient)', color: '#090d14', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  ARCHIWUM
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
@@ -655,6 +453,142 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Scale size={14} color="var(--gold-ancient)" /> Kodeks & Pakt 1294
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          2. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
+          ========================================================================= */}
+      <div className="menuBlock" style={{ border: '1px solid rgba(197, 159, 78, 0.4)' }}>
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('activities')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('activities').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('activities')?.rune || 'ᛏ'}</div>
+          <Zap size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Gry & Aktywności</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          <ul>
+            <li>
+              <button onClick={() => openActivity(setOracleModalOpen, 'Wyrocznia Przeznaczenia (Seidr)')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Sparkles size={14} color="var(--gold-ancient)" /> Wyrocznia Przeznaczenia (Seidr)
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setExpeditionsModalOpen, 'Ekspedycje do Puszczy & Fiordów')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Compass size={14} color="var(--gold-ancient)" /> Ekspedycje do Puszczy & Fiordów
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setTargetModalOpen, 'Runiczna Strzelnica Różdżkowa')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Crosshair size={14} color="var(--gold-ancient)" /> Runiczna Strzelnica Różdżkowa
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setEscapeModalOpen, 'Labirynt Tajemnic: Escape Room')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Key size={14} color="var(--gold-ancient)" /> Labirynt Tajemnic: Escape Room
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setHnefataflModalOpen, 'Hnefatafl (Szachy Wikingów)')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Gamepad2 size={14} color="var(--gold-ancient)" /> Hnefatafl (Szachy Wikingów)
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setFishingModalOpen, 'Połów w Zamarzniętym Fiordzie')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Anchor size={14} color="var(--gold-ancient)" /> Połów w Zamarzniętym Fiordzie
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setTournamentModalOpen, 'Turniej Szermierki')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Award size={14} color="var(--gold-ancient)" /> Turniej Szermierki: Droga Mistrza
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setBestiaryModalOpen, 'Bestiariusz Północy')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Eye size={14} color="var(--gold-ancient)" /> Bestiariusz Północy (Karty Bestii)
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setBlackMarketModalOpen, 'Czarny Rynek')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Skull size={14} color="var(--gold-ancient)" /> Czarny Rynek Przemytników (Svartálfar)
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setDuelModalOpen, 'Sala Pojedynków')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Swords size={14} color="var(--gold-ancient)" /> Wielka Sala Pojedynków (Hólmganga)
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setGrimoireModalOpen, 'Grimuar Zaklęć')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <BookOpen size={14} color="var(--gold-ancient)" /> Grimuar Pradawnych Zaklęć
+                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => openActivity(setRuneCalligraphyModalOpen, 'Kaligrafia Run')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>ᚠ</span> Akademia Kaligrafii Run
                 </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
@@ -701,17 +635,15 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
                 style={{
-                  color: 'var(--gold-ancient)',
+                  color: activeView === 'documents' && activeDocumentCategory === 'wladze' ? '#ffffff' : '#a4b2c9',
                   background: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 800 : 600
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 800 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Crown size={14} color="var(--gold-ancient)" /> Obowiązki Władz Twierdzy
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#b45309', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  WŁADZE
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
@@ -726,77 +658,67 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <ShieldAlert size={14} color="#ef4444" /> Dekrety Władz & Edykty
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#991b1b', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  EDYKT
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('wizytacje'); }}
                 style={{
-                  color: '#93c5fd',
-                  background: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 800 : 600
+                  color: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 800 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <ClipboardCheck size={14} color="#38bdf8" /> Wizytacje Nauczycieli
+                  <ClipboardCheck size={14} color="var(--gold-ancient)" /> Wizytacje Nauczycieli
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#0284c7', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  NADZÓR
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('statut'); }}
                 style={{
-                  color: '#fef08a',
-                  background: activeView === 'documents' && activeDocumentCategory === 'statut' ? 'rgba(234, 179, 8, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'statut' ? 800 : 600
+                  color: activeView === 'documents' && activeDocumentCategory === 'statut' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'documents' && activeDocumentCategory === 'statut' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'statut' ? 800 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scale size={14} color="#eab308" /> Statut Instytutu TMD
+                  <Scale size={14} color="var(--gold-ancient)" /> Statut Instytutu TMD
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#a16207', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  USTAWA
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('regulamin-dc'); }}
                 style={{
-                  color: '#c7d2fe',
-                  background: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 800 : 600
+                  color: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 800 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <MessageSquare size={14} color="#818cf8" /> Regulamin Serwera Discord
+                  <MessageSquare size={14} color="var(--gold-ancient)" /> Regulamin Serwera Discord
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#4f46e5', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  DC
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
             <li>
               <button
                 onClick={() => { playWandSwoosh(); navigateToDocumentModule('zabawy'); }}
                 style={{
-                  color: '#a7f3d0',
-                  background: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 800 : 600
+                  color: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? '#ffffff' : '#a4b2c9',
+                  background: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
+                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 800 : 500
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Gamepad2 size={14} color="#34d399" /> Opis Zabaw & Gier RPG
+                  <Gamepad2 size={14} color="var(--gold-ancient)" /> Opis Zabaw & Gier RPG
                 </span>
-                <span style={{ fontSize: '0.6rem', background: '#059669', color: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 800 }}>
-                  RPG
-                </span>
+                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
           </ul>
@@ -944,15 +866,6 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
         </div>
 
         <div className="menuBlockContent">
-          {currentUser && studentProfile && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(197, 159, 78, 0.1)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '4px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>Stan Sakiewki:</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--gold-glow)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Coins size={13} color="var(--gold-ancient)" /> {studentProfile.currency || 0} Skirnirów
-              </span>
-            </div>
-          )}
-
           <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
             Wyprawki szkolne, kramy różdżkarskie, kociołki, rzadkie składniki alchemiczne i eliksiry.
           </p>
@@ -992,6 +905,15 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
         </div>
 
         <div className="menuBlockContent">
+          {currentUser && studentProfile && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(197, 159, 78, 0.1)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '4px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>Stan Sakiewki:</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--gold-glow)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Coins size={13} color="var(--gold-ancient)" /> {studentProfile.currency || 0} Skirnirów
+              </span>
+            </div>
+          )}
+
           <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.6rem 0', lineHeight: 1.5 }}>
             Oficjalny skarbiec Północy. Wymiana Galionów na Skirniry, skrytki depozytowe i depozyty rodowe.
           </p>
@@ -1047,75 +969,6 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
             </li>
-            {currentUser && (
-              <li>
-                <button
-                  onClick={() => handleNav('bank')}
-                  style={{
-                    color: activeView === 'bank' ? '#ffffff' : '#f7dca0',
-                    background: activeView === 'bank' ? 'rgba(197, 159, 78, 0.2)' : 'rgba(197, 159, 78, 0.08)',
-                    border: activeView === 'bank' ? '1px solid var(--gold-ancient)' : '1px solid rgba(197, 159, 78, 0.25)',
-                    fontWeight: 700
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Coins size={14} color="var(--gold-ancient)" /> Bank Skirnirów (Skarbiec)
-                  </span>
-                  <span style={{ fontSize: '0.62rem', background: 'var(--gold-ancient)', color: '#090d14', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                    BANK
-                  </span>
-                </button>
-              </li>
-            )}
-            {currentUser && (
-              <li>
-                <button
-                  onClick={() => handleNav('markethall')}
-                  style={{
-                    color: activeView === 'markethall' ? '#ffffff' : '#a4b2c9',
-                    background: activeView === 'markethall' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                    border: activeView === 'markethall' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <ShoppingBag size={14} color="var(--gold-ancient)" /> Rynek Kaupangr & Wyprawki
-                  </span>
-                  <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-                </button>
-              </li>
-            )}
-            <li>
-              <button
-                onClick={() => handleNav('lore')}
-                style={{
-                  color: activeView === 'lore' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'lore' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                  border: activeView === 'lore' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <BookOpen size={14} color="var(--gold-ancient)" /> Kroniki & Bestiariusz
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            {currentUser && (
-              <li>
-                <button
-                  onClick={() => handleNav('raven-post')}
-                  style={{
-                    color: activeView === 'raven-post' ? '#ffffff' : '#a4b2c9',
-                    background: activeView === 'raven-post' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                    border: activeView === 'raven-post' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Mail size={14} color="var(--gold-ancient)" /> Krucza Poczta
-                  </span>
-                  <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-                </button>
-              </li>
-            )}
             <li>
               <button
                 onClick={() => handleNav('gazette')}

@@ -1,4 +1,5 @@
 import express from 'express';
+import { discordBot } from '../discordBot.js';
 import db, {
   dbLessonToFrontend,
   dbMessageToFrontend,
@@ -357,9 +358,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), requireLesson
       participants = []
     } = req.body;
 
-    if (req.user.role === 'professor' && !isProfessorOfSubject(req.user.id, subjectId)) {
-      return res.status(403).json({ error: 'Nie możesz przenieść dziennika do nieprowadzonego przedmiotu.' });
-    }
+    const resolvedSubjectId = (req.user.role === 'professor' && subjectId !== existing.subject_id && !isProfessorOfSubject(req.user.id, subjectId))
+      ? existing.subject_id
+      : subjectId;
     if (participants.some(p => !Number.isInteger(Number(p.pointsAwarded || 0)) || Number(p.pointsAwarded || 0) < 0 || Number(p.pointsAwarded || 0) > 100)) {
       return res.status(400).json({ error: 'Punkty uczestnika muszą być liczbą całkowitą od 0 do 100.' });
     }
@@ -374,7 +375,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), requireLesson
           participants_count = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(
-      subjectId, subjectName, classYear, topic, description,
+      resolvedSubjectId, subjectName, classYear, topic, description,
       existing.professor_id, existing.professor_name, date, status, totalPoints,
       participants.length, id
     );
@@ -479,6 +480,15 @@ router.post('/:id/publish', requireAuth, requireRole('admin', 'professor'), requ
     const parts = db.prepare('SELECT * FROM lesson_participants WHERE lesson_id = ?').all(id);
     const updatedRankings = calculateHouseRankings('overall');
 
+    // Ogłoszenie Discord na kanał sali lekcyjnej — non-blocking
+    if (discordBot?.isReady) {
+      const subjectForBot = db.prepare('SELECT discord_channel_id FROM subjects WHERE id = ?').get(lesson.subject_id);
+      if (subjectForBot?.discord_channel_id) {
+        discordBot.announceLessonPublished(updated, subjectForBot)
+          .catch(e => console.error(`[Discord] Błąd ogłoszenia lekcji ${id}:`, e.message));
+      }
+    }
+
     res.json({
       success: true,
       message: `Dziennik „${lesson.topic}” został pomyślnie opublikowany! Punkty zasiliły ranking Zakonów.`,
@@ -537,6 +547,29 @@ router.post('/points/award', requireAuth, (_req, res) => {
   res.status(410).json({
     error: 'Uniwersalne przyznawanie punktów zostało wyłączone. Nagrody rozlicza wyłącznie serwer konkretnej aktywności.'
   });
+});
+
+// DELETE /api/lessons/:id/draft - Usunięcie szkicu przez autora lub admina (tylko status=draft)
+router.delete('/:id/draft', requireAuth, (req, res) => {
+  try {
+    const { id } = req.params;
+    const lesson = db.prepare('SELECT * FROM lessons WHERE id = ?').get(id);
+    if (!lesson) return res.status(404).json({ error: 'Dziennik nie istnieje.' });
+    if (lesson.status !== 'draft') return res.status(403).json({ error: 'Można usunąć tylko szkice (status=draft).' });
+
+    const isAdmin = req.user.role === 'admin';
+    const isAuthor = lesson.professor_id === req.user.id;
+    if (!isAdmin && !isAuthor) return res.status(403).json({ error: 'Brak uprawnień do usunięcia tego szkicu.' });
+
+    db.prepare('DELETE FROM lesson_participants WHERE lesson_id = ?').run(id);
+    db.prepare('DELETE FROM lesson_messages WHERE lesson_id = ?').run(id);
+    db.prepare('DELETE FROM lessons WHERE id = ?').run(id);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(`[API DELETE /lessons/${req.params.id}/draft] Błąd:`, err);
+    res.status(500).json({ error: 'Nie udało się usunąć szkicu.' });
+  }
 });
 
 // DELETE /api/lessons/:id - Usunięcie dziennika i wycofanie punktów (Admin)

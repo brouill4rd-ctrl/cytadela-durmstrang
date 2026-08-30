@@ -9,6 +9,8 @@ import { DatabaseExplorerPanel } from '../components/DatabaseExplorerPanel';
 import { MemoryArchiveWizardTab } from './memory/MemoryArchiveWizardTab';
 import { AdminWorldDirector } from '../components/AdminWorldDirector';
 import { PrologueAdminPanel } from '../components/PrologueAdminPanel';
+import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES } from '../components/HeraldicEmblems';
+import { cleanPersonName } from '../context/schoolUtils';
 import {
   Settings,
   Users,
@@ -56,7 +58,11 @@ import {
   Store,
   Coins,
   Upload,
-  Wand2
+  Wand2,
+  Crown,
+  UserCheck,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 
 export const AdminCMSView = () => {
@@ -75,6 +81,10 @@ export const AdminCMSView = () => {
     togglePinNews,
     auditLogs,
     students,
+    staffRanking,
+    fortressGuardian,
+    updateFortressGuardian,
+    updateHouseLeaders,
     currentRole,
     currentUser,
     setAuthModalOpen,
@@ -116,12 +126,58 @@ export const AdminCMSView = () => {
 
   const { playWandSwoosh, playRuneChime, playCoinSound } = useSound();
 
-  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'store' | 'graphics' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
+  const [activeTab, setActiveTab] = useState('lessons'); // 'lessons' | 'store' | 'guardians' | 'graphics' | 'overview' | 'news' | 'candidates' | 'admins' | 'points' | 'logs' | 'subjects' | 'system'
   const [graphicsSubTab, setGraphicsSubTab] = useState('banners'); // 'banners' | 'blocks' | 'guide'
   const [selectedCatId, setSelectedCatId] = useState('edykty');
   const [selectedBlockId, setSelectedBlockId] = useState('identity');
   const [customBannerUrlInput, setCustomBannerUrlInput] = useState('');
   const [customBlockUrlInput, setCustomBlockUrlInput] = useState('');
+
+  // ==================== STRAŻNICY & OPIEKUNOWIE CMS STATE ====================
+  const [fgFormName, setFgFormName] = useState(fortressGuardian?.name || 'Valdemar Krag-Hansen');
+  const [fgFormHouse, setFgFormHouse] = useState(fortressGuardian?.house || 'ravnheim');
+  const [fgFormTitle, setFgFormTitle] = useState(fortressGuardian?.title || 'Strażnik Twierdzy Durmstrang');
+  const [fgFormNote, setFgFormNote] = useState(fortressGuardian?.note || 'Wybrany jednogłośnie przez Radę Mistrzów Cytadeli.');
+  const [fgSelectedStudentId, setFgSelectedStudentId] = useState('');
+
+  const [housesEditState, setHousesEditState] = useState({
+    reinhall: { headOfHouse: '', prefect: '' },
+    bjornhall: { headOfHouse: '', prefect: '' },
+    ravnheim: { headOfHouse: '', prefect: '' },
+    otergard: { headOfHouse: '', prefect: '' }
+  });
+
+  useEffect(() => {
+    if (fortressGuardian) {
+      setFgFormName(cleanPersonName(fortressGuardian.name || ''));
+      setFgFormHouse(fortressGuardian.house || 'ravnheim');
+      setFgFormTitle(fortressGuardian.title || 'Strażnik Twierdzy Durmstrang');
+      setFgFormNote(fortressGuardian.note || '');
+    }
+  }, [fortressGuardian]);
+
+  useEffect(() => {
+    if (houses) {
+      setHousesEditState({
+        reinhall: {
+          headOfHouse: cleanPersonName(houses.reinhall?.headOfHouse || 'Sigrid Hällström'),
+          prefect: cleanPersonName(houses.reinhall?.prefect || 'Magnus Blom')
+        },
+        bjornhall: {
+          headOfHouse: cleanPersonName(houses.bjornhall?.headOfHouse || 'Gunnar Vargson'),
+          prefect: cleanPersonName(houses.bjornhall?.prefect || 'Astrid Vargadottir')
+        },
+        ravnheim: {
+          headOfHouse: cleanPersonName(houses.ravnheim?.headOfHouse || 'Morana Vane'),
+          prefect: cleanPersonName(houses.ravnheim?.prefect || 'Valdemar Krag-Hansen')
+        },
+        otergard: {
+          headOfHouse: cleanPersonName(houses.otergard?.headOfHouse || 'Klaus Lindqvist'),
+          prefect: cleanPersonName(houses.otergard?.prefect || 'Sigrun Lindqvist')
+        }
+      });
+    }
+  }, [houses]);
 
   // ==================== STORE & MARKET CMS STATE ====================
   const [storeSearchQuery, setStoreSearchQuery] = useState('');
@@ -649,6 +705,30 @@ export const AdminCMSView = () => {
         </button>
 
         <button
+          onClick={() => { playWandSwoosh(); setActiveTab('guardians'); }}
+          style={{
+            padding: '0.65rem 1.2rem',
+            background: activeTab === 'guardians' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(56, 189, 248, 0.06)',
+            border: activeTab === 'guardians' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '4px',
+            color: activeTab === 'guardians' ? '#7dd3fc' : '#cbd5e1',
+            fontFamily: 'var(--font-heading)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <Shield size={14} color="#38bdf8" />
+          <span>Strażnicy & Opiekunowie</span>
+          <span style={{ background: '#38bdf8', color: '#090d14', fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+            ZAKONY
+          </span>
+        </button>
+
+        <button
           onClick={() => { playWandSwoosh(); setActiveTab('admins'); }}
           style={{
             padding: '0.65rem 1.2rem',
@@ -786,6 +866,520 @@ export const AdminCMSView = () => {
           TAB: 🗄️ BAZA DANYCH & INTERAKTYWNY EKSPLORATOR SQL (CRUD DLA DYREKCJI)
           ========================================================================= */}
       {activeTab === 'database' && <DatabaseExplorerPanel />}
+
+      {/* =========================================================================
+          TAB: 🛡️ STRAŻNICY I OPIEKUNOWIE ZAKONÓW ORAZ STRAŻNIK TWIERDZY
+          ========================================================================= */}
+      {activeTab === 'guardians' && (() => {
+        const staffCandidates = (users || []).filter(u => ['professor', 'teacher', 'admin', 'headmaster'].includes(u.role));
+        const studentCandidates = (users || []).filter(u => u.role === 'student' || (!['professor', 'teacher', 'admin', 'headmaster'].includes(u.role)));
+        const getHouseStudents = (houseKey) => studentCandidates.filter(u => (u.house || u.house_id || u.houseId || '').toLowerCase() === houseKey.toLowerCase());
+
+        const HOUSES_META = [
+          {
+            id: 'reinhall',
+            name: 'Reinhall',
+            sub: 'Zakon Renifera (Ordo Rangiferi)',
+            element: 'Krew i Wieczna Zmarzlina',
+            color: '#7a2632',
+            colorSecondary: '#a8384b',
+            border: 'rgba(122, 38, 50, 0.6)',
+            glow: 'rgba(122, 38, 50, 0.35)',
+            text: '#e8bfc6',
+            crest: '/crest_stag.jpg',
+            rune: 'ᚦ',
+            founder: 'Eirik Krwawy Róg'
+          },
+          {
+            id: 'bjornhall',
+            name: 'Björnhall',
+            sub: 'Zakon Niedźwiedzia (Ordo Ursi)',
+            element: 'Żelazo i Pęknięta Skala',
+            color: '#35536f',
+            colorSecondary: '#5b8aaf',
+            border: 'rgba(53, 83, 111, 0.6)',
+            glow: 'rgba(53, 83, 111, 0.35)',
+            text: '#c4d8e8',
+            crest: '/crest_bear.jpg',
+            rune: 'ᛉ',
+            founder: 'Torvald Żelaznoręki'
+          },
+          {
+            id: 'ravnheim',
+            name: 'Ravnheim',
+            sub: 'Zakon Kruka (Ordo Corvi)',
+            element: 'Cień i Astralna Noc',
+            color: '#42385f',
+            colorSecondary: '#7a6ea0',
+            border: 'rgba(66, 56, 95, 0.6)',
+            glow: 'rgba(66, 56, 95, 0.35)',
+            text: '#d0c8e2',
+            crest: '/crest_raven.jpg',
+            rune: 'ᚱ',
+            founder: 'Morana Cień-Krocząca'
+          },
+          {
+            id: 'otergard',
+            name: 'Otergard',
+            sub: 'Zakon Wydry (Ordo Lutrae)',
+            element: 'Lodowcowe Wody i Toksyny',
+            color: '#23615b',
+            colorSecondary: '#3aaa9f',
+            border: 'rgba(35, 97, 91, 0.6)',
+            glow: 'rgba(35, 97, 91, 0.35)',
+            text: '#b4e0da',
+            crest: '/crest_otter.jpg',
+            rune: 'ᛞ',
+            founder: 'Astrid Złotooka'
+          }
+        ];
+
+        const handleSaveFortressGuardian = async (e) => {
+          e.preventDefault();
+          if (!fgFormName.trim()) {
+            showNotification('Błąd', 'Podaj imię i nazwisko Strażnika Twierdzy.', 'error');
+            return;
+          }
+          playRuneChime();
+          await updateFortressGuardian({
+            name: fgFormName.trim(),
+            house: fgFormHouse,
+            title: fgFormTitle.trim() || 'Strażnik Twierdzy Durmstrang',
+            note: fgFormNote.trim() || 'Mianowany z mocy dekretu Rady Mistrzów Cytadeli.',
+            appointedAt: new Date().toISOString().split('T')[0]
+          });
+        };
+
+        const handleSaveSingleHouse = async (houseId) => {
+          playRuneChime();
+          const current = housesEditState[houseId] || {};
+          await updateHouseLeaders(houseId, {
+            headOfHouse: current.headOfHouse?.trim() || '',
+            prefect: current.prefect?.trim() || ''
+          });
+        };
+
+        const handleSaveAllHouses = async () => {
+          playRuneChime();
+          for (const h of HOUSES_META) {
+            const current = housesEditState[h.id] || {};
+            await updateHouseLeaders(h.id, {
+              headOfHouse: current.headOfHouse?.trim() || '',
+              prefect: current.prefect?.trim() || ''
+            });
+          }
+          showNotification('Zapisano Wszystkie Zakony', 'Zaktualizowano Opiekunów i Strażników dla wszystkich czterech Zakonów.', 'success');
+        };
+
+        const fgHouseMeta = HOUSES_META.find(h => h.id === fgFormHouse) || HOUSES_META[2];
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.45rem', color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <Shield size={24} color="#38bdf8" />
+                  Zarządzanie Strażnikami i Opiekunami Cytadeli
+                </h2>
+                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.86rem', color: '#94a3b8', maxWidth: '850px', lineHeight: 1.5 }}>
+                  W Twierdzy Magii Durmstrang <strong>nie ma prefektów</strong> – ich tradycyjnymi odpowiednikami są <strong>Strażnicy Zakonów</strong> oraz naczelny <strong>Strażnik Twierdzy</strong>. 
+                  Opiekunowie Zakonów powoływani są spośród Kadry Magicznej, a Strażnicy rekrutują się z grona Adeptów.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveAllHouses}
+                className="btn-durmstrang"
+                style={{ padding: '0.6rem 1.3rem', fontSize: '0.85rem', gap: '0.5rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}
+              >
+                <CheckCircle2 size={16} /> Zapisz Wszystkie Zakony
+              </button>
+            </div>
+
+            {/* =========================================================================
+                SEKCJA 1: 🏰 STRAŻNIK TWIERDZY (ODPOWIEDNIK PREFEKTA NACZELNEGO)
+                ========================================================================= */}
+            <div
+              className="gothic-card runic-corners"
+              style={{
+                padding: '2rem',
+                background: 'linear-gradient(135deg, rgba(16, 24, 39, 0.96) 0%, rgba(9, 14, 24, 0.98) 100%)',
+                border: '1px solid var(--gold-ancient)',
+                boxShadow: '0 12px 35px rgba(0,0,0,0.75)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(197, 159, 78, 0.25)', paddingBottom: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <Crown size={22} color="var(--gold-glow)" />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                      Mianowanie Strażnika Twierdzy (Główny Strażnik Cytadeli)
+                    </h3>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--gold-ancient)', marginTop: '0.15rem' }}>
+                      Odpowiednik Prefekta Naczelnego • Zwierzchnik wszystkich Strażników Zakonnych i Rzecznik Społeczności Uczniowskiej
+                    </div>
+                  </div>
+                </div>
+
+                <span style={{ fontSize: '0.72rem', background: 'rgba(197, 159, 78, 0.15)', color: 'var(--gold-glow)', padding: '0.2rem 0.6rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.3)', fontWeight: 700 }}>
+                  URZĄD NACZELNY
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 1fr)', gap: '2rem', alignItems: 'start' }}>
+                {/* Formularz Mianowania */}
+                <form onSubmit={handleSaveFortressGuardian} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
+                      Szybki Wybór z Bazy Adeptów (Uczniów):
+                    </label>
+                    <select
+                      value={fgSelectedStudentId}
+                      onChange={(e) => {
+                        const sId = e.target.value;
+                        setFgSelectedStudentId(sId);
+                        const matched = studentCandidates.find(u => u.id === sId);
+                        if (matched) {
+                          const fullName = `${matched.name || ''} ${matched.surname || ''}`.trim() || matched.username;
+                          setFgFormName(fullName);
+                          if (matched.house) setFgFormHouse(matched.house.toLowerCase());
+                        }
+                      }}
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.85rem' }}
+                    >
+                      <option value="">-- Wybierz ucznia lub wpisz ręcznie poniżej --</option>
+                      {studentCandidates.map(st => {
+                        const nameStr = `${st.name || ''} ${st.surname || ''}`.trim() || st.username;
+                        return (
+                          <option key={st.id} value={st.id}>
+                            {nameStr} ({st.house ? `Zakon ${st.house}` : 'Brak zakonu'} • {st.points || 0} pkt)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                        Imię i Nazwisko Strażnika Twierdzy *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={fgFormName}
+                        onChange={(e) => setFgFormName(e.target.value)}
+                        placeholder="np. Valdemar Krag-Hansen"
+                        className="gothic-input"
+                        style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.88rem', fontWeight: 700 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                        Zakon Macierzysty *
+                      </label>
+                      <select
+                        value={fgFormHouse}
+                        onChange={(e) => setFgFormHouse(e.target.value)}
+                        className="gothic-input"
+                        style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.85rem' }}
+                      >
+                        <option value="reinhall">🦌 Reinhall (Renifer)</option>
+                        <option value="bjornhall">🐻 Björnhall (Niedźwiedź)</option>
+                        <option value="ravnheim">🦅 Ravnheim (Kruk)</option>
+                        <option value="otergard">🦦 Otergard (Wydra)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                      Oficjalny Tytuł Honorowy:
+                    </label>
+                    <input
+                      type="text"
+                      value={fgFormTitle}
+                      onChange={(e) => setFgFormTitle(e.target.value)}
+                      placeholder="np. Strażnik Twierdzy Durmstrang"
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                      Dekret Mianowania / Uzasadnienie Nominacji:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={fgFormNote}
+                      onChange={(e) => setFgFormNote(e.target.value)}
+                      placeholder="Uzasadnienie wpisane do Wiecznej Kroniki..."
+                      className="gothic-input"
+                      style={{ width: '100%', padding: '0.55rem 0.8rem', fontSize: '0.82rem', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-durmstrang"
+                    style={{ padding: '0.65rem 1.2rem', fontSize: '0.88rem', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'center' }}
+                  >
+                    <ShieldCheck size={16} /> Mianuj i Zapisz Strażnika Twierdzy
+                  </button>
+                </form>
+
+                {/* Podgląd Karty Strażnika Twierdzy na Żywo */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Podgląd Karty Strażnika Twierdzy na Żywo:
+                  </div>
+
+                  <div
+                    style={{
+                      background: `linear-gradient(145deg, ${fgHouseMeta.color}22 0%, rgba(10, 14, 22, 0.95) 100%)`,
+                      border: `1px solid ${fgHouseMeta.colorSecondary}`,
+                      borderRadius: '10px',
+                      padding: '1.5rem',
+                      boxShadow: `0 10px 30px rgba(0,0,0,0.8), 0 0 25px ${fgHouseMeta.glow}`,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{ position: 'absolute', right: '-15px', top: '-15px', fontSize: '5rem', opacity: 0.08, fontFamily: 'serif', pointerEvents: 'none', color: fgHouseMeta.colorSecondary }}>
+                      {fgHouseMeta.rune}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <img
+                        src={fgHouseMeta.crest}
+                        alt="Herb Zakonu"
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '50%',
+                          border: `2px solid ${fgHouseMeta.colorSecondary}`,
+                          objectFit: 'cover',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.7)'
+                        }}
+                      />
+                      <div>
+                        <span style={{ fontSize: '0.68rem', background: 'rgba(197, 159, 78, 0.2)', color: 'var(--gold-glow)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          🛡️ STRAŻNIK TWIERDZY
+                        </span>
+                        <h4 style={{ margin: '0.35rem 0 0 0', fontSize: '1.25rem', color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                          {fgFormName || 'Valdemar Krag-Hansen'}
+                        </h4>
+                        <div style={{ fontSize: '0.78rem', color: fgHouseMeta.text, marginTop: '0.1rem' }}>
+                          {fgHouseMeta.sub}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(0, 0, 0, 0.4)', borderRadius: '6px', padding: '0.85rem', border: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        Tytuł: <strong style={{ color: '#ffffff' }}>{fgFormTitle || 'Strażnik Twierdzy Durmstrang'}</strong>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        Dekret: <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>„{fgFormNote || 'Mianowany z mocy dekretu Rady Mistrzów Cytadeli.'}”</span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--gold-ancient)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.4rem', marginTop: '0.2rem' }}>
+                        ᛞ Pieczęć Główna Twierdzy Magii Durmstrang ᛞ
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* =========================================================================
+                SEKCJA 2: ⚔️ OPIEKUNOWIE I STRAŻNICY CZTERECH ZAKONÓW
+                ========================================================================= */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Shield size={18} color="var(--gold-ancient)" />
+                    Władze Czterech Zakonów (Opiekun z Kadry & Strażnik z Uczniów)
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                    Wybierz Opiekuna spośród Kadry Profesorskiej oraz Strażnika Zakonu spośród zarejestrowanych Adeptów danego Zakonu.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '1.5rem' }}>
+                {HOUSES_META.map((h) => {
+                  const houseState = housesEditState[h.id] || { headOfHouse: '', prefect: '' };
+                  const houseStudents = getHouseStudents(h.id);
+
+                  return (
+                    <div
+                      key={h.id}
+                      className="gothic-card runic-corners"
+                      style={{
+                        padding: '1.5rem',
+                        background: `linear-gradient(160deg, ${h.color}18 0%, rgba(10, 14, 22, 0.95) 100%)`,
+                        border: `1px solid ${h.border}`,
+                        boxShadow: `0 8px 24px rgba(0,0,0,0.65)`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1.2rem'
+                      }}
+                    >
+                      {/* House Card Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${h.border}`, paddingBottom: '0.8rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <img
+                            src={h.crest}
+                            alt={h.name}
+                            style={{ width: '48px', height: '48px', borderRadius: '50%', border: `2px solid ${h.colorSecondary}`, objectFit: 'cover' }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '1.15rem', color: '#ffffff', fontWeight: 800, fontFamily: 'var(--font-heading)' }}>
+                              Zakon {h.name}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: h.text }}>
+                              {h.element}
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '1.4rem', fontFamily: 'serif', color: h.colorSecondary, fontWeight: 700 }}>
+                          {h.rune}
+                        </span>
+                      </div>
+
+                      {/* 1. OPIEKUN ZAKONU (KADRA) */}
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.9rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--gold-ancient)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            🧙‍♂️ Opiekun Zakonu (Kadra):
+                          </label>
+                          <span style={{ fontSize: '0.62rem', background: 'rgba(197, 159, 78, 0.15)', color: 'var(--gold-glow)', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                            KADRA
+                          </span>
+                        </div>
+
+                        {/* Staff Select Dropdown */}
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setHousesEditState(prev => ({
+                                ...prev,
+                                [h.id]: { ...prev[h.id], headOfHouse: cleanPersonName(e.target.value) }
+                              }));
+                            }
+                          }}
+                          className="gothic-input"
+                          style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.78rem' }}
+                        >
+                          <option value="">-- Wybierz z Kadry Naukowej --</option>
+                          {staffCandidates.map(st => {
+                            const nameOnly = cleanPersonName(`${st.name || ''} ${st.surname || ''}`.trim() || st.full_name || st.username);
+                            const deptOrRole = st.departmentName || st.title || (st.role === 'admin' || st.role === 'headmaster' ? 'Dyrekcja' : 'Profesor');
+                            return (
+                              <option key={st.id} value={nameOnly}>
+                                {nameOnly} ({deptOrRole})
+                              </option>
+                            );
+                          })}
+                        </select>
+
+                        {/* Manual / Current Head Input */}
+                        <input
+                          type="text"
+                          value={houseState.headOfHouse || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setHousesEditState(prev => ({
+                              ...prev,
+                              [h.id]: { ...prev[h.id], headOfHouse: val }
+                            }));
+                          }}
+                          placeholder="Imię i nazwisko (np. Sigrid Hällström)"
+                          className="gothic-input"
+                          style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.84rem', fontWeight: 600 }}
+                        />
+                      </div>
+
+                      {/* 2. STRAŻNIK ZAKONU (UCZNIOWIE) */}
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.9rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            🛡️ Strażnik Zakonu (Adept):
+                          </label>
+                          <span style={{ fontSize: '0.62rem', background: 'rgba(56, 189, 248, 0.15)', color: '#7dd3fc', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                            ADEPT
+                          </span>
+                        </div>
+
+                        {/* Student Select Dropdown */}
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setHousesEditState(prev => ({
+                                ...prev,
+                                [h.id]: { ...prev[h.id], prefect: cleanPersonName(e.target.value) }
+                              }));
+                            }
+                          }}
+                          className="gothic-input"
+                          style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.78rem' }}
+                        >
+                          <option value="">-- Wybierz Ucznia ({h.name}: {houseStudents.length}) --</option>
+                          {houseStudents.map(st => {
+                            const nameOnly = cleanPersonName(`${st.name || ''} ${st.surname || ''}`.trim() || st.full_name || st.username);
+                            return (
+                              <option key={st.id} value={nameOnly}>
+                                {nameOnly} ({st.points || 0} pkt)
+                              </option>
+                            );
+                          })}
+                          {houseStudents.length === 0 && (
+                            <option disabled value="">(Brak uczniów przypisanych do tego zakonu)</option>
+                          )}
+                        </select>
+
+                        {/* Manual / Current Prefect Input */}
+                        <input
+                          type="text"
+                          value={houseState.prefect || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setHousesEditState(prev => ({
+                              ...prev,
+                              [h.id]: { ...prev[h.id], prefect: val }
+                            }));
+                          }}
+                          placeholder="Imię i nazwisko (np. Magnus Blom)"
+                          className="gothic-input"
+                          style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.84rem', fontWeight: 600 }}
+                        />
+                      </div>
+
+                      {/* Save Button for this House */}
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSingleHouse(h.id)}
+                        className="btn-durmstrang"
+                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.82rem', justifyContent: 'center', gap: '0.4rem', marginTop: 'auto' }}
+                      >
+                        <Check size={14} /> Zapisz Zakon {h.name}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* =========================================================================
           TAB: 📖 DZIENNIKI LEKCJI & ZARZĄDZANIE

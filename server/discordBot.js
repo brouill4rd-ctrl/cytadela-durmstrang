@@ -244,6 +244,16 @@ function parseDailyPostTime(value = '07:00') {
 }
 
 function resolveClassroomChannel(entry, guild) {
+  // Bezpośrednie ID kanału z DB (priorytet nad fuzzy-matchem)
+  if (entry.subject_id) {
+    const subjectRow = db.prepare('SELECT discord_channel_id FROM subjects WHERE id = ?').get(entry.subject_id);
+    const directId = subjectRow?.discord_channel_id;
+    if (directId) {
+      const direct = guild.channels.cache.get(directId);
+      if (direct?.isTextBased?.()) return direct;
+    }
+  }
+
   const classroom = String(entry.classroom || '').trim();
   const explicitMention = /<#(\d+)>/.exec(classroom);
   if (explicitMention) return guild.channels.cache.get(explicitMention[1]) || null;
@@ -901,11 +911,19 @@ export class DurmstrangDiscordBot {
             // Użyj portalu ID (nie Discord ID) żeby uprawnienia działały poprawnie
             const portalUser = db.prepare('SELECT id FROM users WHERE discord_id = ?').get(interaction.user.id);
             const professorPortalId = portalUser?.id || interaction.user.id;
+            const profSubjectRow = professorPortalId
+              ? (db.prepare(`SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active' LIMIT 1`).get(professorPortalId)
+                 || db.prepare(`SELECT id as subject_id FROM subjects WHERE professor_id = ? LIMIT 1`).get(professorPortalId))
+              : null;
+            const resolvedSubjectId = profSubjectRow?.subject_id || 'inne';
+            const resolvedSubjectName = resolvedSubjectId !== 'inne'
+              ? (db.prepare('SELECT name FROM subjects WHERE id = ?').get(resolvedSubjectId)?.name || 'Wątek Discord')
+              : 'Wątek Discord';
             db.prepare(`
               INSERT INTO lessons (id, discord_thread_id, subject_id, subject_name, class_year, topic, description, professor_id, professor_name, date, status, total_points)
-              VALUES (?, ?, 'inne', 'Wątek Discord', 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)
+              VALUES (?, ?, ?, ?, 'Klasa I', ?, ?, ?, ?, ?, 'draft', 0)
             `).run(
-              lessonId, thread.id, channelName,
+              lessonId, thread.id, resolvedSubjectId, resolvedSubjectName, channelName,
               `Wyeksportowany wątek Discord: #${channelName}`,
               professorPortalId, professorName,
               new Date().toISOString().split('T')[0]
@@ -1000,14 +1018,18 @@ export class DurmstrangDiscordBot {
             } catch (_) {}
 
             if (!msg.author.bot) {
-              const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, msg.author.id);
-              if (!existingPart) {
-                try {
-                  db.prepare(`INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment) VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')`).run(
-                    `part-${Date.now()}-${msg.author.id}`, lesson.id, msg.author.id,
-                    msg.member?.displayName || msg.author.username, userHouse
-                  );
-                } catch (_) {}
+              const isProfessor = lesson.professor_id === msg.author.id ||
+                db.prepare('SELECT id FROM users WHERE id = ? AND discord_id = ?').get(lesson.professor_id, msg.author.id);
+              if (!isProfessor) {
+                const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, msg.author.id);
+                if (!existingPart) {
+                  try {
+                    db.prepare(`INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment) VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')`).run(
+                      `part-${Date.now()}-${msg.author.id}`, lesson.id, msg.author.id,
+                      msg.member?.displayName || msg.author.username, userHouse
+                    );
+                  } catch (_) {}
+                }
               }
             }
           }
@@ -1167,8 +1189,8 @@ export class DurmstrangDiscordBot {
               else { assignedRoleNames.push(verifiedMap.discord_role_name); }
             }
 
-            // 2. Rola Zakonu
-            if (user.house) {
+            // 2. Rola Zakonu (tylko uczniowie)
+            if (user.role === 'student' && user.house) {
               const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
               if (houseMap) {
                 const r = await getOrCreateRole(houseMap);
@@ -1187,14 +1209,14 @@ export class DurmstrangDiscordBot {
               }
             }
 
-            // 4. Rola Klasy
-            if (user.class_year) {
+            // 4. Rola Klasy (tylko uczniowie)
+            if (user.role === 'student' && user.class_year) {
               const cy = user.class_year.toLowerCase();
               let classKey = '';
-              if (cy.includes('1') || (cy.includes('i') && !cy.includes('ii') && !cy.includes('iii') && !cy.includes('iv'))) classKey = 'klasa_1';
-              else if (cy.includes('2') || (cy.includes('ii') && !cy.includes('iii'))) classKey = 'klasa_2';
-              else if (cy.includes('3') || cy.includes('iii')) classKey = 'klasa_3';
-              else if (cy.includes('4') || cy.includes('iv')) classKey = 'klasa_4';
+              if (cy.includes('1') || /klasa\s*i(?!i)/i.test(cy)) classKey = 'klasa_1';
+              else if (cy.includes('2') || /klasa\s*ii(?!i)/i.test(cy)) classKey = 'klasa_2';
+              else if (cy.includes('3') || /klasa\s*iii/i.test(cy)) classKey = 'klasa_3';
+              else if (cy.includes('4') || /klasa\s*iv/i.test(cy)) classKey = 'klasa_4';
 
               if (classKey) {
                 const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
@@ -1264,19 +1286,21 @@ export class DurmstrangDiscordBot {
             otergard: '🦦 Zakon Otergard (Wydra)'
           };
 
-          const roleDisplay = user.role === 'admin' ? '⚡ Rada Arcymistrzów' : user.role === 'professor' ? '🧙‍♂️ Profesor Katedry' : user.role === 'prefect' ? '🛡️ Prefekt' : '📜 Adept';
+          const roleDisplay = user.role === 'admin' ? '⚡ Rada Arcymistrzów' : user.role === 'professor' ? '🧙‍♂️ Profesor Katedry' : user.role === 'prefect' ? '🛡️ Strażnik Zakonu' : '📜 Adept';
+          const classOrKadra = user.role === 'student' ? (user.class_year || 'Klasa I') : 'Kadra Katedr';
+          const houseDisplay = user.role === 'student' ? (houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony') : 'Kadra (Poza Zakonami)';
 
           const successEmbed = new EmbedBuilder()
             .setTitle('🏰 TOŻSAMOŚĆ POTWIERDZONA — CYTADELA DURMSTRANG')
             .setDescription(`Witaj w murach Cytadeli, **${user.full_name}**! Twoje konto Discord zostało pomyślnie powiązane z Twoją kartą w Wiecznej Księdze Paktu.`)
             .addFields(
               { name: '👤 Adept / Czarodziej', value: `**${user.full_name}** (\`@${user.username}\`)`, inline: true },
-              { name: '🏛️ Zakon', value: houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony', inline: true },
-              { name: '📜 Status & Klasa', value: `${roleDisplay} • ${user.class_year || 'Kadra'}`, inline: true },
+              { name: '🏛️ Zakon', value: houseDisplay, inline: true },
+              { name: '📜 Status & Klasa', value: `${roleDisplay} • ${classOrKadra}`, inline: true },
               { name: '✨ Nadane Role Discord', value: assignedRoleNames.length > 0 ? assignedRoleNames.map(r => `• \`${r}\``).join('\n') : '• `Zweryfikowany Adept`' },
               { name: '💰 Skarbiec', value: `🪙 **${user.currency || 0}** Skirnirów | 🏆 **${user.points || 0}** Punktów`, inline: true }
             )
-            .setColor(houseColors[user.house?.toLowerCase()] || 0xC59F4E)
+            .setColor(user.role === 'student' ? (houseColors[user.house?.toLowerCase()] || 0xC59F4E) : 0xC59F4E)
             .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
             .setFooter({ text: 'Cytadela Durmstrang • Weryfikacja zakończona sukcesem' })
             .setTimestamp();
@@ -1326,7 +1350,7 @@ export class DurmstrangDiscordBot {
               const r = findRole(verifiedMap);
               if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
             }
-            if (user.house) {
+            if (user.role === 'student' && user.house) {
               const houseMap = mappings.find(m => m.category === 'house' && m.internal_key === user.house.toLowerCase());
               if (houseMap) {
                 const r = findRole(houseMap);
@@ -1338,6 +1362,22 @@ export class DurmstrangDiscordBot {
               if (roleMap) {
                 const r = findRole(roleMap);
                 if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+              }
+            }
+            if (user.role === 'student' && user.class_year) {
+              const cy = user.class_year.toLowerCase();
+              let classKey = '';
+              if (cy.includes('1') || /klasa\s*i(?!i)/i.test(cy)) classKey = 'klasa_1';
+              else if (cy.includes('2') || /klasa\s*ii(?!i)/i.test(cy)) classKey = 'klasa_2';
+              else if (cy.includes('3') || /klasa\s*iii/i.test(cy)) classKey = 'klasa_3';
+              else if (cy.includes('4') || /klasa\s*iv/i.test(cy)) classKey = 'klasa_4';
+
+              if (classKey) {
+                const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
+                if (classMap) {
+                  const r = findRole(classMap);
+                  if (r) { rolesToAdd.push(r.id); assignedRoleNames.push(r.name); }
+                }
               }
             }
 
@@ -1604,7 +1644,7 @@ export class DurmstrangDiscordBot {
       // Sprawdź czy sesja jest aktywna — po /lekcja zakoncz sesja jest usunięta z mapy
       if (!activeLessonSessions.has(threadId)) return;
 
-      const lesson = db.prepare("SELECT id FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
+      const lesson = db.prepare("SELECT id, professor_id FROM lessons WHERE discord_thread_id = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1").get(threadId);
       if (!lesson) return;
 
       // Wykryj dom — boty nie mają domów
@@ -1699,20 +1739,24 @@ export class DurmstrangDiscordBot {
         JSON.stringify(localAttachments)
       );
 
-      // Rejestracja uczestnika lekcji (jeśli ludzki autor)
+      // Rejestracja uczestnika lekcji (jeśli ludzki autor i nie jest prowadzącym)
       if (!message.author.bot) {
-        const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, message.author.id);
-        if (!existingPart) {
-          db.prepare(`
-            INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment)
-            VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')
-          `).run(
-            `part-${Date.now()}-${message.author.id}`,
-            lesson.id,
-            message.author.id,
-            message.member?.displayName || message.author.username,
-            userHouse
-          );
+        const isProfessor = lesson.professor_id === message.author.id ||
+          db.prepare('SELECT id FROM users WHERE id = ? AND discord_id = ?').get(lesson.professor_id, message.author.id);
+        if (!isProfessor) {
+          const existingPart = db.prepare('SELECT id FROM lesson_participants WHERE lesson_id = ? AND student_id = ?').get(lesson.id, message.author.id);
+          if (!existingPart) {
+            db.prepare(`
+              INSERT INTO lesson_participants (id, lesson_id, student_id, student_name, house, is_present, points_awarded, comment)
+              VALUES (?, ?, ?, ?, ?, 1, 10, 'Aktywny udział w wątku')
+            `).run(
+              `part-${Date.now()}-${message.author.id}`,
+              lesson.id,
+              message.author.id,
+              message.member?.displayName || message.author.username,
+              userHouse
+            );
+          }
         }
       }
     });
@@ -2024,6 +2068,61 @@ export class DurmstrangDiscordBot {
       console.log(`🏆 [Discord Bot] Wysłano ogłoszenie publikacji wyników: ${exam.title}`);
     } catch (err) {
       console.warn('Błąd wysyłania ogłoszenia wyników na Discordzie:', err.message);
+    }
+  }
+
+  async announceLessonPublished(lesson, subject) {
+    if (!this.client?.isReady() || !this.isReady) return;
+    const channelId = subject?.discord_channel_id || '';
+    if (!channelId) return;
+
+    try {
+      const channel = this.client.channels.cache.get(channelId);
+      if (!channel?.isTextBased?.() || typeof channel.send !== 'function') return;
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const lessonDate = lesson.date
+        ? new Date(lesson.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '—';
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📖 NOWY DZIENNIK • ${String(lesson.subject_name || '').toUpperCase()}`)
+        .setDescription(
+          `Profesor **${lesson.professor_name}** opublikował dziennik zajęć z **${lesson.subject_name}**.\n\n` +
+          `**„${lesson.topic}"**\n\n` +
+          `**Data:** ${lessonDate}\n` +
+          `**Rocznik:** ${lesson.class_year || 'Wszyscy'}\n` +
+          `**Uczestnicy:** ${lesson.participants_count || 0}\n` +
+          `**Punkty Zakonu:** ${lesson.total_points || 0} pkt`
+        )
+        .setColor(0x5865F2)
+        .setFooter({ text: 'Twierdza Magii Durmstrang • Dziennik Lekcji' })
+        .setTimestamp();
+
+      const buttons = [
+        new ButtonBuilder()
+          .setLabel('Otwórz Dziennik')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${frontendUrl}/#/lessons`)
+          .setEmoji('📖')
+      ];
+      if (lesson.discord_thread_url) {
+        buttons.push(
+          new ButtonBuilder()
+            .setLabel('Wątek Lekcji')
+            .setStyle(ButtonStyle.Link)
+            .setURL(lesson.discord_thread_url)
+            .setEmoji('💬')
+        );
+      }
+
+      await channel.send({
+        embeds: [embed],
+        components: [new ActionRowBuilder().addComponents(buttons)]
+      });
+      console.log(`📖 [Discord Bot] Ogłoszono lekcję: „${lesson.topic}" → #${channel.name}`);
+    } catch (err) {
+      console.warn('[Discord Bot] Błąd ogłoszenia lekcji:', err.message);
     }
   }
 

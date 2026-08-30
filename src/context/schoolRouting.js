@@ -117,6 +117,7 @@ export const ROUTE_ALIASES = {
   '/absence': 'absence-chamber',
   '/absence-chamber': 'absence-chamber',
   '/izba-usprawiedliwien': 'absence-chamber',
+  '/redaguj-dziennik': 'professor-journal-editor',
   '/izba-pamieci': 'memory',
   '/pamiec': 'memory',
   '/memory': 'memory',

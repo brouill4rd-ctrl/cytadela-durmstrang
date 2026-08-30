@@ -33,6 +33,14 @@ try {
   }
 } catch (_) {}
 
+// Runtime migration: add homework_id column to grade_categories if missing
+try {
+  const catCols = db.pragma('table_info(grade_categories)');
+  if (!catCols.find(c => c.name === 'homework_id')) {
+    db.exec("ALTER TABLE grade_categories ADD COLUMN homework_id TEXT DEFAULT NULL");
+  }
+} catch (_) {}
+
 function genId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -603,6 +611,20 @@ router.post('/', requireAuth, requireRole('professor', 'admin'), (req, res) => {
     );
 
     auditLog(professor.id, professor.fullName, professor.role, 'create_homework', id, '', `Utworzono zadanie: ${title}`);
+
+    // Auto-create grade category in the subject for this homework
+    if (subjectId) {
+      try {
+        const existingCat = db.prepare("SELECT id FROM grade_categories WHERE subject_id = ? AND homework_id = ?").get(subjectId, id);
+        if (!existingCat) {
+          const maxSort = db.prepare('SELECT MAX(sort_order) as m FROM grade_categories WHERE subject_id = ?').get(subjectId)?.m || 0;
+          db.prepare(`
+            INSERT INTO grade_categories (id, subject_id, name, weight, icon, sort_order, homework_id)
+            VALUES (?, ?, ?, 1.0, '📝', ?, ?)
+          `).run(`cat-hw-${id}`, subjectId, title.trim(), maxSort + 1, id);
+        }
+      } catch (_) {}
+    }
 
     // Notify only students in the target class
     try {

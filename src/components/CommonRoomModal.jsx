@@ -32,7 +32,7 @@ export const CommonRoomModal = ({ houseId, isOpen, onClose }) => {
     {
       id: 1,
       author: 'Einar Thorne',
-      role: 'Prefekt',
+      role: 'Strażnik Zakonu',
       text: 'Przypominam: zbiórka w lochach przed turniejem o 20:00. Pamiętajcie o eliksirach odporności.',
       date: 'Wczoraj, 21:40'
     },

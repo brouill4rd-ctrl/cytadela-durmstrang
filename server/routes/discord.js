@@ -43,8 +43,33 @@ const upload = multer({
 
 const router = express.Router();
 
+const getDiscordInviteUrl = () => {
+  const configuredUrl = (process.env.DISCORD_INVITE_URL || '').trim();
+  if (!configuredUrl) return null;
+
+  try {
+    const inviteUrl = new URL(configuredUrl);
+    const allowedHosts = new Set(['discord.gg', 'discord.com', 'www.discord.com']);
+    if (inviteUrl.protocol !== 'https:' || !allowedHosts.has(inviteUrl.hostname.toLowerCase())) return null;
+    return inviteUrl.toString();
+  } catch {
+    return null;
+  }
+};
+
 // Active in-memory session tracking for live threads
 let activeSessions = new Map();
+
+// Public recruitment gateway. The invitation remains server-configured so it can
+// be rotated without rebuilding the portal and is never duplicated in the UI.
+router.get('/invite', (_req, res) => {
+  const inviteUrl = getDiscordInviteUrl();
+  if (!inviteUrl) {
+    return res.status(503).send('Zaproszenie do Twierdzy nie zostało jeszcze skonfigurowane.');
+  }
+
+  return res.redirect(302, inviteUrl);
+});
 
 // GET /api/discord/status - Status bota i aktywnych sesji
 router.get('/status', requireAuth, requireRole('admin', 'professor'), (req, res) => {
@@ -533,14 +558,14 @@ export function resolveRolesForUser(user) {
     if (roleMap) matched.push(roleMap);
   }
 
-  // 4. Class Year
-  if (user.class_year || user.classYear) {
+  // 4. Class Year (only for students)
+  if (user.role === 'student' && (user.class_year || user.classYear)) {
     const cy = (user.class_year || user.classYear).toLowerCase();
     let classKey = '';
-    if (cy.includes('1') || cy.includes('i') && !cy.includes('ii') && !cy.includes('iii') && !cy.includes('iv')) classKey = 'klasa_1';
-    else if (cy.includes('2') || cy.includes('ii') && !cy.includes('iii')) classKey = 'klasa_2';
-    else if (cy.includes('3') || cy.includes('iii')) classKey = 'klasa_3';
-    else if (cy.includes('4') || cy.includes('iv')) classKey = 'klasa_4';
+    if (cy.includes('1') || /klasa\s*i(?!i)/i.test(cy)) classKey = 'klasa_1';
+    else if (cy.includes('2') || /klasa\s*ii(?!i)/i.test(cy)) classKey = 'klasa_2';
+    else if (cy.includes('3') || /klasa\s*iii/i.test(cy)) classKey = 'klasa_3';
+    else if (cy.includes('4') || /klasa\s*iv/i.test(cy)) classKey = 'klasa_4';
 
     if (classKey) {
       const classMap = mappings.find(m => m.category === 'class_year' && m.internal_key === classKey);
@@ -596,8 +621,8 @@ router.post('/verification/generate', requireAuth, (req, res) => {
       user.username,
       user.full_name,
       user.role,
-      user.house || '',
-      user.class_year || '',
+      user.role === 'student' ? (user.house || '') : '',
+      user.role === 'student' ? (user.class_year || '') : '',
       expiresAt
     );
 

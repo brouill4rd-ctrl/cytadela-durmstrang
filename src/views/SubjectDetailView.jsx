@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import api from '../api';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { RichTextRenderer } from '../components/RichTextRenderer';
 import { useSchool } from '../context/SchoolContext';
@@ -15,11 +16,12 @@ import {
 // Skala ocen HP
 // ===================================================================
 const HP_GRADES = [
-  { code: 'W', label: 'Wybitny', short: 'W', value: 5, color: '#eab308', bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.5)' },
-  { code: 'P', label: 'Powyżej Oczekiwań', short: 'P', value: 4, color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.5)' },
-  { code: 'Z', label: 'Zadowalający', short: 'Z', value: 3, color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.5)' },
-  { code: 'N', label: 'Nędzny', short: 'N', value: 2, color: '#f97316', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.5)' },
-  { code: 'T', label: 'Troll', short: 'T', value: 1, color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.5)' },
+  { code: 'W',  label: 'Wybitny',              value: 6, color: '#eab308', bg: 'rgba(234,179,8,0.15)',   border: 'rgba(234,179,8,0.5)' },
+  { code: 'PO', label: 'Powyżej Oczekiwań',    value: 5, color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.5)' },
+  { code: 'Z',  label: 'Zadowalający',         value: 4, color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.5)' },
+  { code: 'N',  label: 'Nędzny',              value: 3, color: '#f97316', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.5)' },
+  { code: 'O',  label: 'Okropny',             value: 2, color: '#ba36b0', bg: 'rgba(186,54,176,0.15)', border: 'rgba(186,54,176,0.5)' },
+  { code: 'T',  label: 'Troll',               value: 1, color: '#ef4444', bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.5)' },
 ];
 
 function getGradeInfo(code) {
@@ -263,12 +265,14 @@ export const SubjectDetailView = () => {
     houses,
     showNotification,
     setActiveLessonId,
-    setActiveLessonTab
+    setActiveLessonTab,
+    lessons
   } = useSchool();
 
   const [tab, setTab] = useState('overview');
   const [subject, setSubject] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   // Editing states
   const [editingSyllabus, setEditingSyllabus] = useState(false);
@@ -283,6 +287,17 @@ export const SubjectDetailView = () => {
   const [submittingGrade, setSubmittingGrade] = useState(false);
   const [gradeFilter, setGradeFilter] = useState({ house: '', category: '' });
 
+  // Batch grading state
+  const [showBatchForm, setShowBatchForm] = useState(false);
+  const [batchForm, setBatchForm] = useState({ selectedStudentIds: [], categoryId: '', grade: 'Z', title: '', comment: '', date: new Date().toISOString().split('T')[0] });
+  const [submittingBatch, setSubmittingBatch] = useState(false);
+
+  // Category management state
+  const [showCategoryPanel, setShowCategoryPanel] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', weight: 1.0, icon: '📝' });
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatData, setEditingCatData] = useState({});
+
   // Admin edit state
   const [editingInfo, setEditingInfo] = useState(false);
   const [infoForm, setInfoForm] = useState({});
@@ -291,6 +306,7 @@ export const SubjectDetailView = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setLoadError(false);
       const data = await getSubjectDetails(activeSubjectId);
       if (data) {
         setSubject(data);
@@ -301,16 +317,24 @@ export const SubjectDetailView = () => {
           code: data.code || '',
           icon: data.icon || '📚',
           classroom: data.classroom || '',
+          discordChannelId: data.discordChannelId || '',
           description: data.description || '',
           professorId: data.professorId || '',
           professorName: data.professorName || '',
           bannerGradient: data.bannerGradient || 'linear-gradient(135deg, #1c132e 0%, #0d0618 100%)',
         });
+      } else {
+        setLoadError(true);
       }
       setLoading(false);
     };
-    if (activeSubjectId) load();
-  }, [activeSubjectId]);
+    if (activeSubjectId) {
+      load();
+    } else {
+      setLoading(false);
+      setLoadError(true);
+    }
+  }, [activeSubjectId, lessons.length]);
 
   useEffect(() => {
     if (activeSubjectDetail) {
@@ -320,11 +344,26 @@ export const SubjectDetailView = () => {
     }
   }, [activeSubjectDetail]);
 
-  if (loading || !subject) {
+  if (loading) {
     return (
       <div className="view-container" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
         <div style={{ fontSize: '2.5rem', animation: 'spin 2s linear infinite', display: 'inline-block' }}>ᚱ</div>
         <p style={{ color: '#c5cdd9', marginTop: '1rem', fontFamily: 'var(--font-heading)' }}>Otwieranie ksiąg Katedry…</p>
+      </div>
+    );
+  }
+
+  if (loadError || !subject) {
+    return (
+      <div className="view-container" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+        <div style={{ fontSize: '2.5rem', display: 'inline-block' }}>ᛉ</div>
+        <p style={{ color: '#c5cdd9', marginTop: '1rem', fontFamily: 'var(--font-heading)' }}>Nie odnaleziono Katedry</p>
+        <button
+          onClick={() => setActiveView('academic')}
+          style={{ marginTop: '1.5rem', padding: '0.5rem 1.5rem', background: 'rgba(197,159,78,0.15)', border: '1px solid rgba(197,159,78,0.4)', borderRadius: '6px', color: '#c59f4e', fontFamily: 'var(--font-heading)', cursor: 'pointer' }}
+        >
+          ← Wróć do Kateder
+        </button>
       </div>
     );
   }
@@ -466,6 +505,60 @@ export const SubjectDetailView = () => {
     if (ok) setSubject(prev => ({ ...prev, grades: (prev.grades || []).filter(g => g.id !== gradeId) }));
   };
 
+  const handleBatchSubmit = async (e) => {
+    e.preventDefault();
+    if (batchForm.selectedStudentIds.length === 0 || !batchForm.grade || !batchForm.categoryId) {
+      showNotification('Brak danych', 'Wybierz adeptów, kategorię i ocenę.', 'warning');
+      return;
+    }
+    setSubmittingBatch(true);
+    const res = await api.batchAddGrades(subject.id, {
+      studentIds: batchForm.selectedStudentIds,
+      categoryId: batchForm.categoryId,
+      grade: batchForm.grade,
+      title: batchForm.title,
+      comment: batchForm.comment,
+      date: batchForm.date
+    });
+    if (res.ok && res.data?.grades) {
+      setSubject(prev => ({ ...prev, grades: [...res.data.grades, ...(prev.grades || [])] }));
+      showNotification('Zapisano', `Wystawiono ${res.data.count} ocen.`, 'success');
+      setBatchForm({ selectedStudentIds: [], categoryId: '', grade: 'Z', title: '', comment: '', date: new Date().toISOString().split('T')[0] });
+      setShowBatchForm(false);
+    }
+    setSubmittingBatch(false);
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategory.name.trim()) return;
+    const res = await api.addGradeCategory(subject.id, newCategory);
+    if (res.ok && res.data) {
+      setSubject(prev => ({ ...prev, categories: [...(prev.categories || []), res.data] }));
+      setNewCategory({ name: '', weight: 1.0, icon: '📝' });
+    }
+  };
+
+  const handleUpdateCategory = async (catId) => {
+    const res = await api.updateGradeCategory(subject.id, catId, editingCatData);
+    if (res.ok && res.data) {
+      setSubject(prev => ({ ...prev, categories: (prev.categories || []).map(c => c.id === catId ? res.data : c) }));
+      setEditingCatId(null);
+    }
+  };
+
+  const handleDeleteCategory = async (catId) => {
+    if (!window.confirm('Usunąć kategorię? Usunie też wszystkie oceny z tej kategorii.')) return;
+    const res = await api.deleteGradeCategory(subject.id, catId);
+    if (res.ok) {
+      setSubject(prev => ({
+        ...prev,
+        categories: (prev.categories || []).filter(c => c.id !== catId),
+        grades: (prev.grades || []).filter(g => g.categoryId !== catId)
+      }));
+    }
+  };
+
   const houseArr = Object.values(houses || {});
   const subjectBannerImage = getSubjectBannerImage(subject);
   const subjectTheme = getSubjectTheme(subject);
@@ -586,6 +679,17 @@ export const SubjectDetailView = () => {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#c5cdd9', fontSize: '0.85rem' }}>
                       <MapPin size={14} /> {subject.classroom || 'Sala nieprzypisana'}
                     </span>
+                    {subject.discordChannelId && (
+                      <a
+                        href={`https://discord.com/channels/@me/${subject.discordChannelId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Discord: <#${subject.discordChannelId}>`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#5865F2', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}
+                      >
+                        <MessageSquare size={13} /> Sala Discord
+                      </a>
+                    )}
                     <button
                       onClick={() => setActiveView('timetable')}
                       style={{
@@ -774,6 +878,17 @@ export const SubjectDetailView = () => {
                 onChange={e => setInfoForm(prev => ({ ...prev, professorName: e.target.value }))}
                 style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', boxSizing: 'border-box' }}
               />
+            </div>}
+            {isAdmin && <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-ancient)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sala Lekcyjna Discord (ID kanału)</label>
+              <input
+                value={infoForm.discordChannelId || ''}
+                onChange={e => setInfoForm(prev => ({ ...prev, discordChannelId: e.target.value.replace(/\D/g, '') }))}
+                placeholder="np. 1234567890123456789"
+                maxLength={19}
+                style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#fff', fontSize: '0.88rem', fontFamily: 'monospace', boxSizing: 'border-box' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>Snowflake ID kanału Discord (17–19 cyfr). Bot wysyła ogłoszenia na ten kanał po publikacji lekcji.</span>
             </div>}
 
             <div style={{ gridColumn: '1 / -1' }}>
@@ -1000,26 +1115,94 @@ export const SubjectDetailView = () => {
       ============================================================ */}
       {tab === 'grades' && (
         <div className="subject-tab-content subject-grades-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-          {/* Header + Dodaj ocenę */}
+          {/* Header + przyciski akcji */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h3 className="subject-tab-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
                 <Star size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
                 Księga Ocen HP — {subject.name}
               </h3>
-              <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: '0.2rem 0 0' }}>Skala: Troll (T) → Nędzny (N) → Zadowalający (Z) → Powyżej Oczekiwań (P) → Wybitny (W)</p>
+              <p style={{ color: '#9ca3af', fontSize: '0.78rem', margin: '0.2rem 0 0' }}>Skala: T → O → N → Z → PO → W</p>
             </div>
             {canGrade && (
-              <button onClick={() => setShowGradeForm(!showGradeForm)} className="btn-durmstrang" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.95rem' }}>
-                {showGradeForm ? <><X size={14} /> Anuluj</> : <><Plus size={14} /> Wystaw Ocenę</>}
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => { setShowCategoryPanel(p => !p); setShowGradeForm(false); setShowBatchForm(false); }}
+                  className="btn-durmstrang"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.9rem', fontSize: '0.82rem', background: showCategoryPanel ? 'rgba(197,159,78,0.2)' : 'transparent' }}
+                >
+                  <ClipboardList size={13} /> Kategorie
+                </button>
+                <button
+                  onClick={() => { setShowBatchForm(p => !p); setShowGradeForm(false); setShowCategoryPanel(false); }}
+                  className="btn-durmstrang"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.9rem', fontSize: '0.82rem', background: showBatchForm ? 'rgba(46,196,182,0.15)' : 'transparent', borderColor: showBatchForm ? '#2ec4b6' : undefined, color: showBatchForm ? '#2ec4b6' : undefined }}
+                >
+                  <Users size={13} /> Wystaw grupowo
+                </button>
+                <button
+                  onClick={() => { setShowGradeForm(p => !p); setShowBatchForm(false); setShowCategoryPanel(false); }}
+                  className="btn-durmstrang"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.95rem' }}
+                >
+                  {showGradeForm ? <><X size={14} /> Anuluj</> : <><Plus size={14} /> Wystaw Ocenę</>}
+                </button>
+              </div>
             )}
           </div>
 
-          {/* Formularz oceny */}
+          {/* Panel zarządzania kategoriami */}
+          {showCategoryPanel && canGrade && (
+            <div className="subject-arcane-panel" style={{ borderRadius: '10px', padding: '1.2rem', border: '1px solid rgba(197,159,78,0.3)' }}>
+              <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <ClipboardList size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.4rem' }} />
+                Kategorie Ocen — Wagi
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                {categories.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(0,0,0,0.3)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
+                    {editingCatId === c.id ? (
+                      <>
+                        <input value={editingCatData.icon ?? c.icon} onChange={e => setEditingCatData(p => ({ ...p, icon: e.target.value }))} style={{ width: '2.5rem', background: '#151922', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '4px', padding: '0.3rem', color: '#fff', textAlign: 'center', fontSize: '0.9rem' }} />
+                        <input value={editingCatData.name ?? c.name} onChange={e => setEditingCatData(p => ({ ...p, name: e.target.value }))} style={{ flex: 1, background: '#151922', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '4px', padding: '0.3rem 0.5rem', color: '#fff', fontSize: '0.85rem' }} />
+                        <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>Waga:</span>
+                        <input type="number" min="0.1" max="10" step="0.1" value={editingCatData.weight ?? c.weight} onChange={e => setEditingCatData(p => ({ ...p, weight: parseFloat(e.target.value) || 1.0 }))} style={{ width: '4rem', background: '#151922', border: '1px solid #2ec4b6', borderRadius: '4px', padding: '0.3rem', color: '#2ec4b6', fontSize: '0.85rem', textAlign: 'center' }} />
+                        <button onClick={() => handleUpdateCategory(c.id)} style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '4px', color: '#10b981', padding: '0.25rem 0.6rem', cursor: 'pointer', fontSize: '0.78rem' }}>✓</button>
+                        <button onClick={() => setEditingCatId(null)} style={{ background: 'transparent', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '0.25rem' }}><X size={12} /></button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '1rem' }}>{c.icon}</span>
+                        <span style={{ flex: 1, color: '#e2e8f0', fontSize: '0.85rem' }}>
+                          {c.name}
+                          {c.homeworkId && <span style={{ marginLeft: '0.4rem', fontSize: '0.68rem', color: '#818cf8', fontStyle: 'italic' }}>📝 PD</span>}
+                        </span>
+                        <span style={{ color: '#2ec4b6', fontSize: '0.82rem', fontWeight: 700 }}>×{(c.weight || 1).toFixed(1)}</span>
+                        <button onClick={() => { setEditingCatId(c.id); setEditingCatData({ name: c.name, weight: c.weight, icon: c.icon }); }} style={{ background: 'transparent', border: 'none', color: '#c59f4e', cursor: 'pointer', padding: '0.2rem' }} title="Edytuj"><Edit3 size={13} /></button>
+                        <button onClick={() => handleDeleteCategory(c.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', opacity: 0.6 }} title="Usuń"><Trash2 size={13} /></button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {categories.length === 0 && <p style={{ color: '#6b7280', fontSize: '0.82rem', textAlign: 'center', padding: '0.5rem' }}>Brak kategorii ocen.</p>}
+              </div>
+              <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.8rem' }}>
+                <span style={{ color: '#9ca3af', fontSize: '0.78rem', flexShrink: 0 }}>Nowa kategoria:</span>
+                <input value={newCategory.icon} onChange={e => setNewCategory(p => ({ ...p, icon: e.target.value }))} style={{ width: '2.8rem', background: '#151922', border: '1px solid rgba(197,159,78,0.25)', borderRadius: '4px', padding: '0.35rem', color: '#fff', textAlign: 'center', fontSize: '0.9rem' }} placeholder="📝" />
+                <input value={newCategory.name} onChange={e => setNewCategory(p => ({ ...p, name: e.target.value }))} style={{ flex: 1, minWidth: '120px', background: '#151922', border: '1px solid rgba(197,159,78,0.25)', borderRadius: '4px', padding: '0.35rem 0.6rem', color: '#fff', fontSize: '0.85rem' }} placeholder="Nazwa kategorii…" />
+                <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>Waga:</span>
+                <input type="number" min="0.1" max="10" step="0.1" value={newCategory.weight} onChange={e => setNewCategory(p => ({ ...p, weight: parseFloat(e.target.value) || 1.0 }))} style={{ width: '4.5rem', background: '#151922', border: '1px solid rgba(46,196,182,0.4)', borderRadius: '4px', padding: '0.35rem', color: '#2ec4b6', fontSize: '0.85rem', textAlign: 'center' }} />
+                <button type="submit" className="btn-durmstrang" style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', gap: '0.3rem' }}>
+                  <Plus size={12} /> Dodaj
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Formularz oceny — jeden adept */}
           {showGradeForm && canGrade && (
             <form className="subject-arcane-panel subject-grade-form" onSubmit={handleAddGrade} style={{ borderRadius: '10px', padding: '1.4rem' }}>
-              <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📋 Nowa Ocena HP</h4>
+              <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📋 Nowa Ocena HP — Jeden Adept</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '0.85rem' }}>
                 {/* Adept */}
                 <div>
@@ -1052,7 +1235,7 @@ export const SubjectDetailView = () => {
                   <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Kategoria</label>
                   <select value={gradeForm.categoryId} onChange={e => setGradeForm(prev => ({ ...prev, categoryId: e.target.value }))} style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(197,159,78,0.3)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem' }}>
                     <option value="">— Kategoria —</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}{c.homeworkId ? ' (PD)' : ''}</option>)}
                   </select>
                 </div>
                 {/* Ocena HP */}

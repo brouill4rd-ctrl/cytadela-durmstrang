@@ -24,6 +24,12 @@ import {
   Flame,
   Award
 } from 'lucide-react';
+import {
+  CANONICAL_WAND_WOODS,
+  CANONICAL_WAND_CORES,
+  CANONICAL_WAND_FLEXIBILITIES,
+  CANONICAL_WAND_LENGTHS
+} from '../data/canonicalWandData';
 
 const DEPARTMENTS_FALLBACK = [
   { id: 'czarna-magia', name: 'Czarna Magia', banner: 'czarna-magia' },
@@ -42,77 +48,11 @@ const DEPARTMENTS_FALLBACK = [
   { id: 'biala-magia', name: 'Biała Magia', banner: 'biala-magia' }
 ];
 
-const ORIGINS_LIST = [
-  '🇳🇴 Skandynawia — Północne Fiordy i Lodowce (Norwegia)',
-  '🇸🇪 Skandynawia — Góry Skandynawskie & Doliny (Szwecja)',
-  '🇩🇰 Skandynawia — Wybrzeże Cieśnin Bałtyckich (Dania)',
-  '🇮🇸 Islandia — Kraina Gejzerów, Lodu i Wulkanów',
-  '🇫🇮 Finlandia — Puszcze Krainy Tysiąca Jezior',
-  '🇬🇱 Grenlandia — Pustkowia Wiecznej Zmarzliny',
-  '🇫🇴 Wyspy Owcze — Wietrzne Klify Atlantyku',
-  '🌌 Laponia — Bezkresna Tundra pod Zorzami Polarnymi',
-  '🇧🇬 Półwysep Bałkański — Pasmo Rodopów i Traków (Bułgaria)',
-  '🇷🇴 Karpaty Północne — Zamczyska Siedmiogrodu (Rumunia)',
-  '🇵🇱 Polska — Starożytna Puszcza Białowieska & Tatry',
-  '🇩🇪 Schwarzwald — Północny Czarny Las (Niemcy)',
-  '🌐 Inna Kraina Magicznego Świata (Własna)'
-];
 
-const WAND_WOODS_LIST = [
-  { name: 'Cis Arktyczny', desc: 'Sprzyja magii cienia, długowieczności i twardym pojedynkom' },
-  { name: 'Czarny Heban', desc: 'Idealny do czarnej magii bojowej, transmutacji i potężnych klątw' },
-  { name: 'Sosna Tundrowa', desc: 'Odporna na arktyczne mrozy, wzmacnia czary obronne i tarcze' },
-  { name: 'Czarny Dąb', desc: 'Pradawne drzewo runiczne, niewzruszone i lojalne wobec odważnych' },
-  { name: 'Jarzębina Mrozu', desc: 'Niezrównana ochrona przed anomaliami i klątwami uroków' },
-  { name: 'Jesion Skandynawski', desc: 'Drzewo Yggdrasil, doskonałe do zaklęć żywiołów i zórz' },
-  { name: 'Brzoza Polarna', desc: 'Lekka, niezwykle czuła na subtelne prądy eteryczne i runy' },
-  { name: 'Modrzew Syberyjski', desc: 'Elastyczny lecz trwały, daje stabilność i wielką odwagę' },
-  { name: 'Wiąz Północny', desc: 'Tradycyjny wybór dawnych mistrzów run z Uppsale i Trondheim' },
-  { name: 'Głóg Cierniowy', desc: 'Niebezpieczny w rękach zdeterminowanych, mistrz ciętych uroków' },
-  { name: 'Olcha Lodowcowa', desc: 'Silnie rezonuje z magią wód, lodu i zjawisk atmosferycznych' },
-  { name: 'Klon Północny', desc: 'Sprzyja magii podróży, wielkim ambicjom i dyscyplinie' }
-];
 
-const WAND_CORES_LIST = [
-  { name: 'Włókno Serca Smoka Lodowego (Skadi)', desc: 'Potężna, natychmiastowa emanacja magii zórz i zimna' },
-  { name: 'Włos z Grzywy Wilka Lodowcowego (Fenrir)', desc: 'Niezrównany instynkt bojowy, lojalność i twardość' },
-  { name: 'Włos z Ogona Kelpie', desc: 'Nieokiełznana potęga morskich odmętów i fiordów' },
-  { name: 'Pióro Kruka Cienia (Hugin & Munin)', desc: 'Wybitna wrażliwość na nekromancję i odczyt run' },
-  { name: 'Włos Niedźwiedzia Mrozu (Jotunheim)', desc: 'Potężna siła fizyczna i tarcze nie do przebicia' },
-  { name: 'Kieł Żmii Lodowcowej (Jörmungandr)', desc: 'Przenikliwość i błyskawiczne, jadowite zaklęcia' },
-  { name: 'Włókno Rogu Białego Jelenia (Eikthyrnir)', desc: 'Szlachetność, ochrona, uzdrawianie i czyste intencje' },
-  { name: 'Łza Feniksa Polarnego', desc: 'Cudowna regeneracja i płomień w mroźnych zawiejach' },
-  { name: 'Ścięgno Morskiego Krakena', desc: 'Niewiarygodny nacisk i moc zaklęć wiążących' },
-  { name: 'Łuska Wiwerny Północnej', desc: 'Wyjątkowa stabilność rzucania zaklęć w każdych warunkach' },
-  { name: 'Pył z Meteorytu Runicznego', desc: 'Tajemnicza siła pradawnych gwiezdnych pieczęci' }
-];
 
-const WAND_LENGTHS = [
-  '9 i 1/2 cala', '10 cali', '10 i 3/4 cala', '11 i 1/2 cala',
-  '12 cali', '12 i 3/4 cala', '13 i 1/2 cala', '14 cali', '14 i 1/2 cala', '15 cali'
-];
 
-const WAND_FLEXIBILITIES = [
-  'Sztywna i Nieugięta',
-  'Solidna i Zrównoważona',
-  'Sprężysta i Dynamiczna',
-  'Giętka i Podatna',
-  'Twarda jak Zmarzlina',
-  'Elegancko Elastyczna',
-  'Błyskawicznie Śmigła'
-];
 
-const MAGIC_TALENTS_LIST = [
-  'Nekromancja & Wiązanie Cieni',
-  'Runiczna Magia Bojowa (Galdr)',
-  'Magia Lodu, Mrozu & Zórz Polarnych',
-  'Arktyczne Eliksiry & Toksykologia',
-  'Astromagia & Nawigacja Gwiezdna',
-  'Oklumencja & Mentalne Bariery Run',
-  'Starożytne Pieczęcie & Runiczne Rytuały',
-  'Szermierka Runiczna (Hólmganga)',
-  'Transmutacja Północna & Kształtowanie Lodu'
-];
 
 const CLASS_YEAR_OPTIONS = [
   { age: '11', classYear: 'Klasa I • Fundamenty Magii (Nowicjusz)' },
@@ -190,12 +130,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
   const [regAvatar, setRegAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
 
   // Student specific rich details
-  const [regAge, setRegAge] = useState('14');
-  const [regClassYear, setRegClassYear] = useState('Klasa II • Zaawansowana Magia (Adept)');
+  const [regAge, setRegAge] = useState('11');
+  const [regClassYear, setRegClassYear] = useState('Klasa I • Fundamenty Magii (Nowicjusz)');
   const [regGender, setRegGender] = useState('Kobieta');
-  const [regOrigin, setRegOrigin] = useState('🇳🇴 Skandynawia — Północne Fiordy i Lodowce (Norwegia)');
-  const [regCustomOrigin, setRegCustomOrigin] = useState('');
-  const [regMagicTalent, setRegMagicTalent] = useState('Nekromancja & Wiązanie Cieni');
+  const [regOrigin, setRegOrigin] = useState('');
 
   // Mandatory Interactive Ceremony in Registration (NO manual selection)
   const [regPreferredHouse, setRegPreferredHouse] = useState(null);
@@ -204,10 +142,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
   const [ceremonyAnswers, setCeremonyAnswers] = useState([]);
 
   // Wand
-  const [regWandWood, setRegWandWood] = useState('Cis Arktyczny');
-  const [regWandCore, setRegWandCore] = useState('Włókno Serca Smoka Lodowego (Skadi)');
+  const [regWandWood, setRegWandWood] = useState(CANONICAL_WAND_WOODS[0]?.name || 'Cis');
+  const [regWandCore, setRegWandCore] = useState(CANONICAL_WAND_CORES[0]?.name || 'Włos jednorożca');
   const [regWandLength, setRegWandLength] = useState('12 cali');
-  const [regWandFlex, setRegWandFlex] = useState('Sztywna i Nieugięta');
+  const [regWandFlex, setRegWandFlex] = useState(CANONICAL_WAND_FLEXIBILITIES[0]?.name || 'Solidna');
 
   // Spirit & Lore
   const [regPatronus, setRegPatronus] = useState('Wilk Polarny');
@@ -217,8 +155,6 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
   // Professor specific
   const [regDepartment, setRegDepartment] = useState('czarna-magia');
-  const [regOffice, setRegOffice] = useState('Wieża Nocnych Szeptów, Sala Cienia IV');
-  const [regSpecialization, setRegSpecialization] = useState('Nekromancja Północna, Wiązanie Cieni i Pieczęcie');
 
   const handleAgeChange = (e) => {
     const newAge = e.target.value;
@@ -286,7 +222,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
     playWandSwoosh();
 
     const selectedDeptObj = departmentsList.find(d => d.id === regDepartment);
-    const resolvedOrigin = regOrigin.includes('Własna') && regCustomOrigin.trim() ? regCustomOrigin.trim() : regOrigin;
+    const resolvedOrigin = regOrigin.trim() || 'Skandynawia';
     const fullWand = `${regWandWood}, rdzeń: ${regWandCore}, ${regWandLength}, ${regWandFlex}`;
 
     const finalHouse = regRole === 'student' ? (regPreferredHouse || 'ravnheim') : null;
@@ -299,21 +235,21 @@ export const AuthModal = ({ isOpen, onClose }) => {
       surname: regSurname.trim(),
       role: regRole,
       avatar: regAvatar.trim(),
-      age: regAge,
+      age: regRole === 'student' ? regAge : null,
       gender: regGender,
-      classYear: regClassYear,
+      classYear: regRole === 'student' ? regClassYear : null,
       origin: resolvedOrigin,
       house: finalHouse,
       wand: fullWand,
       patronus: regPatronus,
       companion: regCompanion,
       appearance: regAppearance.trim() || (regRole === 'student' ? 'Młody adept w szacie podróżnej z wełnianym kołnierzem.' : 'Wykładowca w szacie katedry.'),
-      backstory: regBackstory.trim() || (regRole === 'student' ? `Adept przybywający do Twierdzy Durmstrang. Zdolność wiodąca: ${regMagicTalent}. Zakon: ${finalHouse}.` : `Aplikacja na Katedrę: ${selectedDeptObj?.name || 'Katedra Magii'}.`),
+      backstory: regBackstory.trim() || (regRole === 'student' ? `Adept przybywający do Twierdzy Durmstrang. Zakon: ${finalHouse}.` : `Aplikacja na Katedrę: ${selectedDeptObj?.name || 'Katedra Magii'}.`),
       // Professor specific
       department: regDepartment,
       departmentName: selectedDeptObj ? selectedDeptObj.name : 'Katedra Magii',
-      office: regOffice,
-      specialization: regSpecialization,
+      office: '',
+      specialization: selectedDeptObj ? selectedDeptObj.name : 'Katedra Magii',
       taughtSubjectIds: [regDepartment]
     };
 
@@ -691,146 +627,21 @@ export const AuthModal = ({ isOpen, onClose }) => {
                 {/* Kraina Pochodzenia */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Kraina Pochodzenia / Ród Północy</label>
-                  <select value={regOrigin} onChange={(e) => setRegOrigin(e.target.value)} className="gothic-select">
-                    {ORIGINS_LIST.map(orig => (
-                      <option key={orig} value={orig}>{orig}</option>
-                    ))}
-                  </select>
-                  {regOrigin.includes('Własna') && (
-                    <input
-                      type="text"
-                      placeholder="Wpisz nazwę swojej krainy..."
-                      value={regCustomOrigin}
-                      onChange={(e) => setRegCustomOrigin(e.target.value)}
-                      className="gothic-input"
-                      style={{ marginTop: '0.4rem' }}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    placeholder="np. Norwegia, Fiordy Północy, Laponia, Islandia..."
+                    value={regOrigin}
+                    onChange={(e) => setRegOrigin(e.target.value)}
+                    className="gothic-input"
+                  />
                 </div>
               </div>
 
-              {/* 3. SEKCJA DLA ADEPTA: RÓŻDŻKA & ZAKON & DAR */}
-              {regRole === 'student' && (
-                <>
-                  {/* Różdżka Adepta (4 parametry) */}
-                  <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--gold-glow)', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Wand2 size={14} /> 3. Różdżka Adepta (Parametry Magiczne)
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr', gap: '0.9rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Drewno Różdżki</label>
-                        <select value={regWandWood} onChange={(e) => setRegWandWood(e.target.value)} className="gothic-select">
-                          {WAND_WOODS_LIST.map(w => (
-                            <option key={w.name} value={w.name}>{w.name} — {w.desc}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Rdzeń Magiczny</label>
-                        <select value={regWandCore} onChange={(e) => setRegWandCore(e.target.value)} className="gothic-select">
-                          {WAND_CORES_LIST.map(c => (
-                            <option key={c.name} value={c.name}>{c.name} — {c.desc}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Długość</label>
-                        <select value={regWandLength} onChange={(e) => setRegWandLength(e.target.value)} className="gothic-select">
-                          {WAND_LENGTHS.map(l => (
-                            <option key={l} value={l}>{l}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Giętkość</label>
-                        <select value={regWandFlex} onChange={(e) => setRegWandFlex(e.target.value)} className="gothic-select">
-                          {WAND_FLEXIBILITIES.map(f => (
-                            <option key={f} value={f}>{f}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Predyspozycja & Duchy Opiekuńcze */}
-                  <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--gold-glow)', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Compass size={14} /> 4. Predyspozycja & Duchy Opiekuńcze
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Główna Predyspozycja Magiczna (Dar)</label>
-                      <select value={regMagicTalent} onChange={(e) => setRegMagicTalent(e.target.value)} className="gothic-select">
-                        {MAGIC_TALENTS_LIST.map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Patronus & Chowaniec */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Duch Opiekuńczy (Patronus)</label>
-                        <input
-                          type="text"
-                          value={regPatronus}
-                          onChange={(e) => setRegPatronus(e.target.value)}
-                          placeholder="np. Wilk Polarny, Ryś..."
-                          className="gothic-input"
-                        />
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.35rem' }}>
-                          {PATRONUS_PRESETS.slice(0, 6).map(p => (
-                            <button
-                              type="button"
-                              key={p}
-                              onClick={() => setRegPatronus(p)}
-                              style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '3px', padding: '0.15rem 0.4rem', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer' }}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Magiczny Towarzysz (Zwierzę)</label>
-                        <input
-                          type="text"
-                          value={regCompanion}
-                          onChange={(e) => setRegCompanion(e.target.value)}
-                          placeholder="np. Puchacz Śnieżny..."
-                          className="gothic-input"
-                        />
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.35rem' }}>
-                          {COMPANION_PRESETS.slice(0, 6).map(c => (
-                            <button
-                              type="button"
-                              key={c}
-                              onClick={() => setRegCompanion(c)}
-                              style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '3px', padding: '0.15rem 0.4rem', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer' }}
-                            >
-                              {c}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* 3. SEKCJA DLA PROFESORA: KATEDRA & GABINET */}
+              {/* 3. SEKCJA DLA PROFESORA: KATEDRA */}
               {regRole === 'professor' && (
                 <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(168, 85, 247, 0.3)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                   <div style={{ fontSize: '0.82rem', color: '#d8b4fe', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <BookOpen size={14} /> 3. Wybór Katedry & Gabinetu
+                    <BookOpen size={14} /> 3. Wybór Katedry Magicznej
                   </div>
 
                   <div>
@@ -848,35 +659,116 @@ export const AuthModal = ({ isOpen, onClose }) => {
                       ))}
                     </select>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Gabinet w Cytadeli</label>
-                      <input
-                        type="text"
-                        value={regOffice}
-                        onChange={(e) => setRegOffice(e.target.value)}
-                        className="gothic-input"
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Specjalizacja Naukowa</label>
-                      <input
-                        type="text"
-                        value={regSpecialization}
-                        onChange={(e) => setRegSpecialization(e.target.value)}
-                        className="gothic-input"
-                      />
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* 4. SEKCJA: WIZERUNEK, WYGLĄD & HISTORIA */}
+              {/* Różdżka (4 parametry) */}
               <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ fontSize: '0.82rem', color: 'var(--gold-glow)', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ImageIcon size={14} /> {regRole === 'student' ? '5.' : '4.'} Wizerunek, Rys Fizyczny & Historia (Lore)
+                  <Wand2 size={14} /> {regRole === 'professor' ? '4. Różdżka Profesora' : '3. Różdżka Adepta'} (Parametry Magiczne)
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr', gap: '0.9rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Drewno Różdżki</label>
+                    <select value={regWandWood} onChange={(e) => setRegWandWood(e.target.value)} className="gothic-select">
+                      {CANONICAL_WAND_WOODS.map(w => (
+                        <option key={w.id} value={w.name}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Rdzeń Magiczny</label>
+                    <select value={regWandCore} onChange={(e) => setRegWandCore(e.target.value)} className="gothic-select">
+                      {CANONICAL_WAND_CORES.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Długość</label>
+                    <select value={regWandLength} onChange={(e) => setRegWandLength(e.target.value)} className="gothic-select">
+                      {CANONICAL_WAND_LENGTHS.map(l => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Giętkość</label>
+                    <select value={regWandFlex} onChange={(e) => setRegWandFlex(e.target.value)} className="gothic-select">
+                      {CANONICAL_WAND_FLEXIBILITIES.map(f => (
+                        <option key={f.id} value={f.name}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duchy Opiekuńcze */}
+              <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--gold-glow)', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Compass size={14} /> {regRole === 'professor' ? '5. Duchy Opiekuńcze' : '4. Duchy Opiekuńcze'}
+                </div>
+
+                {/* Patronus & Chowaniec */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Duch Opiekuńczy (Patronus)</label>
+                    <input
+                      type="text"
+                      value={regPatronus}
+                      onChange={(e) => setRegPatronus(e.target.value)}
+                      placeholder="np. Wilk Polarny, Ryś..."
+                      className="gothic-input"
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.35rem' }}>
+                      {PATRONUS_PRESETS.slice(0, 6).map(p => (
+                        <button
+                          type="button"
+                          key={p}
+                          onClick={() => setRegPatronus(p)}
+                          style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '3px', padding: '0.15rem 0.4rem', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer' }}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.25rem' }}>Magiczny Towarzysz (Zwierzę)</label>
+                    <input
+                      type="text"
+                      value={regCompanion}
+                      onChange={(e) => setRegCompanion(e.target.value)}
+                      placeholder="np. Puchacz Śnieżny..."
+                      className="gothic-input"
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.35rem' }}>
+                      {COMPANION_PRESETS.slice(0, 6).map(c => (
+                        <button
+                          type="button"
+                          key={c}
+                          onClick={() => setRegCompanion(c)}
+                          style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '3px', padding: '0.15rem 0.4rem', fontSize: '0.68rem', color: '#cbd5e1', cursor: 'pointer' }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKCJA: WIZERUNEK, WYGLĄD & HISTORIA */}
+              <div style={{ background: 'rgba(8, 12, 18, 0.7)', padding: '1.1rem 1.3rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--gold-glow)', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ImageIcon size={14} /> {regRole === 'professor' ? '6.' : '5.'} Wizerunek, Rys Fizyczny & Historia (Lore)
                 </div>
 
                 {/* Awatary galeria */}
