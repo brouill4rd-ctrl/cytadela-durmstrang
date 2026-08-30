@@ -1086,7 +1086,7 @@ router.post('/:id/draft', requireAuth, (req, res) => {
 });
 
 // POST /api/homework/:id/submit — Seal and submit homework (Student)
-router.post('/:id/submit', requireAuth, (req, res) => {
+router.post('/:id/submit', requireAuth, requireRole('student'), (req, res) => {
   try {
     const { id } = req.params;
     const { content = '', attachments = [], links = [] } = req.body;

@@ -1968,12 +1968,30 @@ export class DurmstrangDiscordBot {
           ' o ' + new Date(homework.dueDate).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
         : '—';
 
+      const stripHtml = (html) => {
+        if (!html) return '';
+        return html
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n')
+          .replace(/<\/li>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+      };
+
+      const plainDesc = homework.description ? stripHtml(homework.description) : '';
+
       const embed = new EmbedBuilder()
         .setTitle(`📜 NOWA PRACA DOMOWA • ${(homework.subjectName || homework.subjectId || '').toUpperCase()}`)
         .setDescription(
           `Profesor **${homework.professorName}** wystawił nową pracę z Katedry **${homework.subjectName || homework.subjectId}**.\n\n` +
           `**„${homework.title}"**\n\n` +
-          (homework.description ? `*${homework.description.slice(0, 200)}${homework.description.length > 200 ? '...' : ''}*\n\n` : '') +
+          (plainDesc ? `*${plainDesc.slice(0, 200)}${plainDesc.length > 200 ? '...' : ''}*\n\n` : '') +
           `**Klasa:** ${homework.classYear || 'Wszystkie klasy'}\n` +
           `**Typ:** ${typeLabel}\n` +
           `**Termin oddania:** ${dueDate}\n` +

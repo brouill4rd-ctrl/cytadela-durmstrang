@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES } from './HeraldicEmblems';
+import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES, normalizeHouseKey } from './HeraldicEmblems';
 import { cleanPersonName } from '../context/schoolUtils';
 import { DiscordRecruitmentBanner } from './DiscordRecruitmentBanner';
 import {
@@ -125,36 +125,6 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
           „Nie każda magia powinna zostać poznana.”
         </p>
 
-        {fortressGuardian?.name && (
-          <div
-            onClick={() => { playWandSwoosh(); setActiveView('houses'); }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              background: 'linear-gradient(135deg, rgba(20, 26, 38, 0.9) 0%, rgba(10, 14, 22, 0.95) 100%)',
-              border: '1px solid var(--gold-ancient)',
-              borderRadius: '20px',
-              padding: '0.35rem 1.1rem',
-              marginTop: '0.9rem',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.6), 0 0 15px rgba(197, 159, 78, 0.2)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            title="Kliknij, aby otworzyć widok Zakonów i Strażnika Twierdzy"
-          >
-            <Shield size={14} color="var(--gold-glow)" />
-            <span style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>
-              Strażnik Twierdzy:
-            </span>
-            <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>
-              {fortressGuardian.name}
-            </strong>
-            <span style={{ fontSize: '0.7rem', color: 'var(--gold-glow)', background: 'rgba(197, 159, 78, 0.18)', padding: '0.08rem 0.45rem', borderRadius: '10px', fontWeight: 700 }}>
-              {fortressGuardian.house ? fortressGuardian.house.toUpperCase() : 'CYTADELA'}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* ===== TABLICA ZAKONÓW ===== */}
@@ -166,6 +136,60 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
             <span className="orders-board__eyebrow">ᛞ · Puchar Północy · ᛞ</span>
             <h2 id="orders-board-title">Tablica Zakonów</h2>
             <div className="orders-board__runes" aria-hidden="true">ᚦ ᛉ ᚱ ᛞ · ᛁ ᛋ ᛟ · ᚾ ᛟ ᚱ ᚦ</div>
+            {fortressGuardian?.name && (() => {
+              const fgKey = normalizeHouseKey(fortressGuardian.house || 'ravnheim');
+              const fgRunic = HOUSE_RUNIC_DATA[fgKey] || HOUSE_RUNIC_DATA.ravnheim;
+              return (
+                <button
+                  type="button"
+                  onClick={() => { playWandSwoosh(); setActiveView('houses'); }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    background: `linear-gradient(135deg, ${fgRunic.primaryColor}55 0%, rgba(8, 11, 16, 0.85) 100%)`,
+                    border: `1px solid ${fgRunic.secondaryColor}`,
+                    borderRadius: '3px',
+                    padding: '0.4rem 1rem',
+                    marginTop: '0.6rem',
+                    boxShadow: `0 3px 14px rgba(0,0,0,0.7), 0 0 16px ${fgRunic.glowColor}`,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Kliknij, aby otworzyć profil Strażnika Twierdzy"
+                >
+                  <span style={{ fontFamily: 'serif', fontSize: '0.95rem', color: fgRunic.secondaryColor, lineHeight: 1, flexShrink: 0 }}>
+                    {fgRunic.rune}
+                  </span>
+                  <span style={{ width: '1px', height: '16px', background: `${fgRunic.secondaryColor}66`, flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.63rem', color: fgRunic.secondaryColor, textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 800, fontFamily: 'var(--font-heading)', whiteSpace: 'nowrap' }}>
+                    Strażnik Twierdzy
+                  </span>
+                  <span style={{ width: '1px', height: '16px', background: `${fgRunic.secondaryColor}66`, flexShrink: 0 }} />
+                  <strong style={{ fontSize: '0.86rem', color: '#ffffff', letterSpacing: '0.02em', whiteSpace: 'nowrap', fontWeight: 700 }}>
+                    {fortressGuardian.name}
+                  </strong>
+                  <span style={{
+                    fontSize: '0.63rem',
+                    color: fgRunic.secondaryColor,
+                    background: `${fgRunic.primaryColor}77`,
+                    padding: '0.1rem 0.45rem',
+                    border: `1px solid ${fgRunic.secondaryColor}77`,
+                    borderRadius: '2px',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-heading)',
+                    letterSpacing: '0.08em',
+                    flexShrink: 0
+                  }}>
+                    {fortressGuardian.house ? fortressGuardian.house.toUpperCase() : 'CYTADELA'}
+                  </span>
+                  <span style={{ fontFamily: 'serif', fontSize: '0.95rem', color: fgRunic.secondaryColor, lineHeight: 1, flexShrink: 0 }}>
+                    {fgRunic.rune}
+                  </span>
+                </button>
+              );
+            })()}
           </div>
 
           <div className="orders-board__actions">

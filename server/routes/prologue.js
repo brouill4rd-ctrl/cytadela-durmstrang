@@ -3,7 +3,7 @@ import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getWorldState } from '../worldState.js';
 import { credit as creditSkirnir } from '../services/skirnirService.js';
-import { getAcceptanceClause, getLetterSalutation, getAppointmentClause, getTeacherSalutation } from '../utils/polishGender.js';
+import { getAcceptanceClause, getLetterSalutation, getAppointmentClause, getTeacherSalutation, getPanDative, toDepartmentGenitive } from '../utils/polishGender.js';
 
 const router = Router();
 const stages = ['LETTER_PENDING', 'LETTER_OPENED', 'PREPARATION', 'PORT', 'SHIP', 'FJORD', 'BORDER_CONTROL', 'GREAT_HALL', 'ARRIVED', 'COMPLETED'];
@@ -109,9 +109,11 @@ function publicStateTeacher(user, row) {
     letter: {
       salutation: getTeacherSalutation(user.gender, user.surname),
       appointmentClause: getAppointmentClause(user.gender),
+      panDative: getPanDative(user.gender),
       schoolYear: 'XIX Rok Szkolny',
       roleLabel: user.role === 'professor' ? 'Profesora' : 'Mistrza Wykładowcy',
       department: user.department_name || user.department || 'Katedra Magii',
+      departmentGenitive: toDepartmentGenitive(user.department_name || user.department || 'Katedra Magii'),
       signatoryName, signatoryTitle, signatoryPng
     }
   };

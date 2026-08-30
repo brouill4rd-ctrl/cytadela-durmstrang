@@ -239,6 +239,15 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
               </button>
 
               <button
+                onClick={() => handleNav('absence-chamber')}
+                className="btn-durmstrang-secondary"
+                style={{ width: '100%', padding: '0.4rem', fontSize: '0.74rem', justifyContent: 'center', gap: '0.4rem' }}
+              >
+                <ClipboardCheck size={13} />
+                <span>USPRAWIEDLIWIENIA</span>
+              </button>
+
+              <button
                 onClick={logoutUser}
                 style={{
                   background: 'transparent',

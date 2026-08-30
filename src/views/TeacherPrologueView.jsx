@@ -249,7 +249,7 @@ export const TeacherPrologueView = ({ onComplete }) => {
               Rada Arcymistrzów Twierdzy Magii Durmstrang, działając w imieniu Paktu 1294 i tradycji Cytadeli,
               niniejszym informuje, że <strong>{character.fullName}</strong>{' '}
               {letter.appointmentClause} na stanowisko <strong>{letter.roleLabel}</strong>{' '}
-              w <strong>{letter.department}</strong>.
+              <strong>{letter.departmentGenitive || letter.department}</strong>.
             </p>
             <p className="pl-parchment-body">
               Objęcie obowiązków nastąpi z chwilą przekroczenia Bramy Cytadeli. Prosimy o stawienie się
@@ -257,7 +257,7 @@ export const TeacherPrologueView = ({ onComplete }) => {
               wymagana przy Północnej Bramie.
             </p>
             <p className="pl-parchment-body">
-              Cytadela powierza Panu/Pani adeptów i tradycję. Durmstrang kształtuje nie tylko umysły,
+              Cytadela powierza {letter.panDative} adeptów i tradycję. Durmstrang kształtuje nie tylko umysły,
               lecz charaktery. Spodziewamy się, że Wasza Osoba spełni to powołanie zgodnie z Paktem.
             </p>
 

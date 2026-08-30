@@ -25,7 +25,9 @@ function toDirectoryUser(row) {
     title: user.title,
     avatar: user.avatar,
     departmentName: user.departmentName,
-    classYear: user.classYear
+    classYear: user.classYear,
+    points: user.points,
+    level: user.level
   };
 }
 

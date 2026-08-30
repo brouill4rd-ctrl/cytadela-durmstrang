@@ -148,6 +148,16 @@ export const ExamCreatorView = () => {
 
   // Save or Publish
   const handleSaveExam = async (status = 'draft') => {
+    if (!examForm.sessionId) {
+      showNotification('Wybierz sesję egzaminacyjną (krok 1). Jeśli lista jest pusta, administrator musi najpierw utworzyć sesję.', 'error');
+      setCurrentStep(1);
+      return;
+    }
+    if (!examForm.title || !examForm.title.trim()) {
+      showNotification('Podaj tytuł egzaminu (krok 1).', 'error');
+      setCurrentStep(1);
+      return;
+    }
     setLoading(true);
     const payload = {
       ...examForm,
@@ -235,11 +245,20 @@ export const ExamCreatorView = () => {
               <select
                 className="gothic-input"
                 value={examForm.sessionId}
-                onChange={e => setExamForm(p => ({ ...p, sessionId: e.target.value }))}>
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.schoolYear})</option>
-                ))}
+                onChange={e => setExamForm(p => ({ ...p, sessionId: e.target.value }))}
+                style={!examForm.sessionId ? { borderColor: 'var(--color-crimson, #dc2626)' } : {}}>
+                {sessions.length === 0
+                  ? <option value="">— Brak sesji (administrator musi je utworzyć) —</option>
+                  : sessions.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.schoolYear})</option>
+                    ))
+                }
               </select>
+              {sessions.length === 0 && (
+                <div style={{ fontSize: '0.7rem', color: '#f87171', marginTop: '0.3rem' }}>
+                  Brak sesji egzaminacyjnych. Poproś administratora o ich utworzenie przed publikacją egzaminu.
+                </div>
+              )}
             </div>
 
             <div>

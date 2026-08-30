@@ -53,3 +53,31 @@ export function getTeacherSalutation(gender, surname = '') {
   if (g === 'neutral') return `Szanowna Osobo${suffix}`;
   return `Szanowny Profesorze${suffix}`;
 }
+
+export function getPanDative(gender) {
+  const g = resolvePolishGender(gender);
+  if (g === 'feminine') return 'Pani';
+  if (g === 'neutral') return 'Osobie';
+  return 'Panu';
+}
+
+const DEPARTMENT_GENITIVE_MAP = {
+  'Czarna Magia': 'Czarnej Magii',
+  'Czarna Magia & Klątwy': 'Czarnej Magii i Klątw',
+  'Czarna Magia Północna': 'Czarnej Magii Północnej',
+  'Eliksiry': 'Eliksirów',
+  'Zaklęcia': 'Zaklęć',
+  'Transmutacja': 'Transmutacji',
+  'Historia Magii': 'Historii Magii',
+  'Wróżbiarstwo': 'Wróżbiarstwa',
+  'Astronomia': 'Astronomii',
+  'Nekromancja': 'Nekromancji',
+  'Runy': 'Run',
+  'Studia Runiczne': 'Studiów Runicznych',
+  'Obrona przed Czarną Magią': 'Obrony przed Czarną Magią',
+  'Katedra Magii': 'Katedry Magii',
+};
+
+export function toDepartmentGenitive(name) {
+  return DEPARTMENT_GENITIVE_MAP[name] || name;
+}
