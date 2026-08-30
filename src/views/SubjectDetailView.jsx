@@ -1264,6 +1264,79 @@ export const SubjectDetailView = () => {
             </form>
           )}
 
+          {/* Formularz masowego wystawiania ocen */}
+          {showBatchForm && canGrade && (
+            <form className="subject-arcane-panel" onSubmit={handleBatchSubmit} style={{ borderRadius: '10px', padding: '1.4rem', border: '1px solid rgba(46,196,182,0.3)' }}>
+              <h4 style={{ color: '#2ec4b6', fontFamily: 'var(--font-heading)', margin: '0 0 1rem', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={15} /> Wystaw Ocenę Grupowo
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Kategoria</label>
+                  <select value={batchForm.categoryId} onChange={e => setBatchForm(p => ({ ...p, categoryId: e.target.value }))} style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(46,196,182,0.35)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem' }}>
+                    <option value="">— Kategoria —</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}{c.homeworkId ? ' (PD)' : ''}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Ocena HP (ta sama dla wszystkich)</label>
+                  <select value={batchForm.grade} onChange={e => setBatchForm(p => ({ ...p, grade: e.target.value }))} style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(46,196,182,0.35)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem' }}>
+                    {HP_GRADES.map(g => <option key={g.code} value={g.code}>{g.code} — {g.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Tytuł</label>
+                  <input value={batchForm.title} onChange={e => setBatchForm(p => ({ ...p, title: e.target.value }))} placeholder="np. Sprawdzian — Rozdział III" style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(46,196,182,0.25)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Data</label>
+                  <input type="date" value={batchForm.date} onChange={e => setBatchForm(p => ({ ...p, date: e.target.value }))} style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(46,196,182,0.25)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem' }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold-ancient)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Komentarz (opcjonalny)</label>
+                  <input value={batchForm.comment} onChange={e => setBatchForm(p => ({ ...p, comment: e.target.value }))} placeholder="Wspólny komentarz do ocen…" style={{ width: '100%', background: 'rgba(10,14,22,0.8)', border: '1px solid rgba(46,196,182,0.25)', borderRadius: '6px', padding: '0.45rem 0.7rem', color: '#fff', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--gold-ancient)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Adepci ({batchForm.selectedStudentIds.length} wybranych)
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button type="button" onClick={() => setBatchForm(p => ({ ...p, selectedStudentIds: students.map(s => s.id) }))} style={{ background: 'rgba(46,196,182,0.1)', border: '1px solid rgba(46,196,182,0.3)', borderRadius: '4px', color: '#2ec4b6', padding: '0.2rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem' }}>Zaznacz wszystkich</button>
+                    <button type="button" onClick={() => setBatchForm(p => ({ ...p, selectedStudentIds: [] }))} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#6b7280', padding: '0.2rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem' }}>Wyczyść</button>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.35rem', maxHeight: '240px', overflowY: 'auto', padding: '0.5rem', background: 'rgba(0,0,0,0.25)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  {students.map(s => {
+                    const selected = batchForm.selectedStudentIds.includes(s.id);
+                    const h = Object.values(houses || {}).find(hh => hh.id === s.house);
+                    return (
+                      <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', padding: '0.3rem 0.5rem', borderRadius: '4px', background: selected ? 'rgba(46,196,182,0.1)' : 'transparent', border: `1px solid ${selected ? 'rgba(46,196,182,0.35)' : 'transparent'}`, transition: 'all 0.15s' }}>
+                        <input type="checkbox" checked={selected} onChange={e => {
+                          setBatchForm(p => ({
+                            ...p,
+                            selectedStudentIds: e.target.checked ? [...p.selectedStudentIds, s.id] : p.selectedStudentIds.filter(id => id !== s.id)
+                          }));
+                        }} style={{ accentColor: '#2ec4b6' }} />
+                        <span style={{ fontSize: '0.82rem', color: selected ? '#e2e8f0' : '#9ca3af' }}>{s.fullName}</span>
+                        {h && <span style={{ fontSize: '0.72rem', color: h.colors?.secondary || '#c59f4e', marginLeft: 'auto' }}>{h.crestIcon}</span>}
+                      </label>
+                    );
+                  })}
+                  {students.length === 0 && <p style={{ color: '#6b7280', fontSize: '0.82rem', gridColumn: '1/-1', textAlign: 'center', padding: '0.5rem' }}>Brak zatwierdzonych adeptów.</p>}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button type="submit" disabled={submittingBatch || batchForm.selectedStudentIds.length === 0} className="btn-durmstrang" style={{ padding: '0.55rem 1.5rem', fontSize: '0.9rem', gap: '0.4rem', background: 'rgba(46,196,182,0.2)', borderColor: '#2ec4b6', color: '#2ec4b6' }}>
+                  {submittingBatch ? <><Clock size={14} /> Zapisuję…</> : <><CheckCircle2 size={14} /> Wpisz {batchForm.selectedStudentIds.length} ocen do Ksiąg</>}
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Filtry */}
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Filtruj:</span>

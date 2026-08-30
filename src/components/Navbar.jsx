@@ -141,7 +141,7 @@ export const Navbar = () => {
           }}
         >
           <img
-            src="/tmd_herb.png"
+            src="/tmd_herb.webp"
             alt="Herb Twierdzy Magii Durmstrang"
             style={{
               width: '36px',

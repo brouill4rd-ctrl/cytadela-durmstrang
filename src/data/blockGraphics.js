@@ -6,7 +6,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛟ',
     defaultIcon: 'Shield',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok-karta_tozsamosci.png',
+    bgImage: '/bloki/blok-karta_tozsamosci.webp',
     description: 'Nagłówek profilu adepta, logowania i statusu'
   },
   {
@@ -16,7 +16,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛏ',
     defaultIcon: 'Zap',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok-gry_aktywnosci.png',
+    bgImage: '/bloki/blok-gry_aktywnosci.webp',
     description: 'Nagłówek sekcji minigier, wyroczni i pojedynków'
   },
   {
@@ -26,7 +26,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛉ',
     defaultIcon: 'Sparkles',
     color: '#a4c8e1',
-    bgImage: '/bloki/blok-inkwizycja_dekrety.png',
+    bgImage: '/bloki/blok-inkwizycja_dekrety.webp',
     description: 'Nagłówek panelu podań i rekrutacji do Cytadeli'
   },
   {
@@ -36,7 +36,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛇ',
     defaultIcon: 'BookOpen',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok-plan_lekcji.png',
+    bgImage: '/bloki/blok-plan_lekcji.webp',
     description: 'Nagłówek dziennego rozkładu katedr i zajęć'
   },
   {
@@ -66,7 +66,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛟ',
     defaultIcon: 'Calendar',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok_wydarzenia.png',
+    bgImage: '/bloki/blok_wydarzenia.webp',
     description: 'Nagłówek turniejów, świąt przesilenia i zlotów'
   },
   {
@@ -76,7 +76,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚢ',
     defaultIcon: 'Compass',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok-sale_komnaty.png',
+    bgImage: '/bloki/blok-sale_komnaty.webp',
     description: 'Nagłówek skrótów do komnat i wież Durmstrang'
   },
   {
@@ -86,7 +86,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛏ',
     defaultIcon: 'Flame',
     color: '#ff5c5c',
-    bgImage: '/bloki/blok_liga-bojowa.jpg',
+    bgImage: '/bloki/blok_liga-bojowa.webp',
     description: 'Nagłówek pojedynków na pylonach lodowych'
   },
   {
@@ -96,7 +96,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚱ',
     defaultIcon: 'Mail',
     color: '#b18cfe',
-    bgImage: '/bloki/blok-poczta_krukow.png',
+    bgImage: '/bloki/blok-poczta_krukow.webp',
     description: 'Nagłówek korespondencji i wieści z Północy'
   },
   {
@@ -106,7 +106,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚱ',
     defaultIcon: 'Compass',
     color: '#a4c8e1',
-    bgImage: '/bloki/blok-eksploracja.png',
+    bgImage: '/bloki/blok-eksploracja.webp',
     description: 'Nagłówek sekcji mapy, rynku i komnat w lewym pasku'
   },
   {
@@ -116,7 +116,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛖ',
     defaultIcon: 'Crown',
     color: 'var(--gold-glow)',
-    bgImage: '/bloki/blok_wladze_twierdzy.png',
+    bgImage: '/bloki/blok_wladze_twierdzy.webp',
     description: 'Nagłówek panelu dyrekcji, mistrzów i opiekunów'
   },
   {
@@ -126,7 +126,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚠ',
     defaultIcon: 'Trophy',
     color: '#a4c8e1',
-    bgImage: '/bloki/zelazne-pioro.png',
+    bgImage: '/bloki/zelazne-pioro.webp',
     description: 'Nagłówek tablicy sławy i punktacji indywidualnej'
   },
   {
@@ -136,7 +136,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛗ',
     defaultIcon: 'Users',
     color: 'var(--gold-ancient)',
-    bgImage: '/bloki/blok_spis-kont.png',
+    bgImage: '/bloki/blok_spis-kont.webp',
     description: 'Nagłówek spisu uczniów, nauczycieli i statystyk Zakonów'
   },
   {
@@ -146,7 +146,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚲ',
     defaultIcon: 'ShoppingBag',
     color: '#f59e0b',
-    bgImage: '/bloki/blok-twierdza_magii.jpg',
+    bgImage: '/bloki/blok-twierdza_magii.webp',
     description: 'Nagłówek rynku wyprawek, artefaktów i zwojów'
   },
   {
@@ -166,7 +166,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚦ',
     defaultIcon: 'Scroll',
     color: '#8b5cf6',
-    bgImage: '/bloki/blok-kroniki_bestariusz.png',
+    bgImage: '/bloki/blok-kroniki_bestariusz.webp',
     description: 'Nagłówek manuskryptów, bestii i historii'
   },
   {
@@ -176,7 +176,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᚨ',
     defaultIcon: 'BookOpen',
     color: '#ec4899',
-    bgImage: '/bloki/blok_grymuar.png',
+    bgImage: '/bloki/blok_grymuar.webp',
     description: 'Nagłówek księgi czarów, inkantacji i formuł'
   }
 ];

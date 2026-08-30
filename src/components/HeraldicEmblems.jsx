@@ -377,10 +377,10 @@ export const normalizeHouseKey = (key) => {
 };
 
 export const HOUSE_CREST_IMAGES = {
-  reinhall: '/herby_zakony/reinhall-herb2.png',
-  bjornhall: '/herby_zakony/bjornhall-herb2.png',
-  ravnheim: '/herby_zakony/ravnheim-herb2.png',
-  otergard: '/herby_zakony/otergard-herb2.png'
+  reinhall: '/herby_zakony/reinhall-herb2.webp',
+  bjornhall: '/herby_zakony/bjornhall-herb2.webp',
+  ravnheim: '/herby_zakony/ravnheim-herb2.webp',
+  otergard: '/herby_zakony/otergard-herb2.webp'
 };
 
 export const HOUSE_RUNIC_DATA = {

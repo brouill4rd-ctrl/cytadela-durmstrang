@@ -26,10 +26,10 @@ import {
 } from 'lucide-react';
 
 const HOUSE_BANNER_IMAGES = {
-  reinhall: '/banery_zakony/reinhall-baner.png',
-  bjornhall: '/banery_zakony/bjornhall-baner.png',
-  ravnheim: '/banery_zakony/baner-ravnheim.png',
-  otergard: '/banery_zakony/otergard-baner.png'
+  reinhall: '/banery_zakony/reinhall-baner.webp',
+  bjornhall: '/banery_zakony/bjornhall-baner.webp',
+  ravnheim: '/banery_zakony/baner-ravnheim.webp',
+  otergard: '/banery_zakony/otergard-baner.webp'
 };
 
 const POINT_SOURCE_LABELS = {

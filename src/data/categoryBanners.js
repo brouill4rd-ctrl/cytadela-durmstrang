@@ -7,7 +7,7 @@ export const CATEGORY_BANNERS = [
     description: 'Katedra Eliksirów, destylacja wywarów i alchemia mroźna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 28, 48, 0.95) 0%, rgba(4, 8, 14, 0.98) 100%)',
     bgType: 'potions',
-    bgImage: '/edykty/eliksiry.png'
+    bgImage: '/edykty/eliksiry.webp'
   },
   {
     id: 'edykty',
@@ -17,7 +17,7 @@ export const CATEGORY_BANNERS = [
     description: 'Oficjalne dekrety, inauguracje i zarządzenia Rady Mistrzów',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(38, 28, 12, 0.95) 0%, rgba(6, 6, 8, 0.98) 100%)',
     bgType: 'citadel',
-    bgImage: '/bloki/blok-inkwizycja_dekrety.png'
+    bgImage: '/bloki/blok-inkwizycja_dekrety.webp'
   },
   {
     id: 'czarna-magia',
@@ -27,7 +27,7 @@ export const CATEGORY_BANNERS = [
     description: 'Klątwy, pętanie cieni, nekromancja i rytuały północy',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(28, 14, 46, 0.95) 0%, rgba(4, 3, 8, 0.98) 100%)',
     bgType: 'shadow',
-    bgImage: '/edykty/cm.jpg'
+    bgImage: '/edykty/cm.webp'
   },
   {
     id: 'liga-bojowa',
@@ -37,7 +37,7 @@ export const CATEGORY_BANNERS = [
     description: 'Pojedynki na lodzie, turnieje szermierki i magia defensywna',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(44, 14, 14, 0.95) 0%, rgba(8, 3, 3, 0.98) 100%)',
     bgType: 'duel',
-    bgImage: '/bloki/blok_liga-bojowa.jpg'
+    bgImage: '/bloki/blok_liga-bojowa.webp'
   },
   {
     id: 'starozytne-runy',
@@ -47,7 +47,7 @@ export const CATEGORY_BANNERS = [
     description: 'Wykucie formuł runicznych (Galdr), inskrypcje i monolity',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(10, 36, 34, 0.95) 0%, rgba(3, 8, 8, 0.98) 100%)',
     bgType: 'runes',
-    bgImage: '/edykty/runy.jpg'
+    bgImage: '/edykty/runy.webp'
   },
   {
     id: 'astronomia',
@@ -85,7 +85,7 @@ export const CATEGORY_BANNERS = [
     description: 'Krioflora, korzenie mandragory polarnej i szklarnie',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 34, 22, 0.95) 0%, rgba(3, 8, 5, 0.98) 100%)',
     bgType: 'herbs',
-    bgImage: '/edykty/zielarstwo.jpg'
+    bgImage: '/edykty/zielarstwo.webp'
   },
   {
     id: 'biala-magia',
@@ -95,7 +95,7 @@ export const CATEGORY_BANNERS = [
     description: 'Leczenie ran magicznych, pieczętowanie aury i manipulacja światłem zorzy',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(20, 30, 46, 0.95) 0%, rgba(4, 6, 12, 0.98) 100%)',
     bgType: 'light',
-    bgImage: '/edykty/biala_magia.png'
+    bgImage: '/edykty/biala_magia.webp'
   },
   {
     id: 'zaklecia',
@@ -135,7 +135,7 @@ export const CATEGORY_BANNERS = [
     description: 'Neutralizacja klątw, obrona przed istotami cmentarnymi i demonami mrozu',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(36, 18, 6, 0.95) 0%, rgba(8, 4, 2, 0.98) 100%)',
     bgType: 'defense',
-    bgImage: '/edykty/opcm.jpg'
+    bgImage: '/edykty/opcm.webp'
   },
   {
     id: 'historia-magii',
@@ -165,7 +165,7 @@ export const CATEGORY_BANNERS = [
     description: 'Matematyczne podstawy zaklęć, wagi liczb 3, 9 i 24 w mitologii nordyckiej',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(8, 30, 28, 0.95) 0%, rgba(2, 7, 6, 0.98) 100%)',
     bgType: 'numerology',
-    bgImage: '/edykty/numerologia.jpg'
+    bgImage: '/edykty/numerologia.webp'
   },
   {
     id: 'latanie',
@@ -175,7 +175,7 @@ export const CATEGORY_BANNERS = [
     description: 'Manewry w huraganowym wietrze, loty formacyjne i nawigacja wśród fiordów',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(14, 22, 34, 0.95) 0%, rgba(3, 5, 8, 0.98) 100%)',
     bgType: 'flying',
-    bgImage: '/edykty/latanie-na-miotle.png'
+    bgImage: '/edykty/latanie-na-miotle.webp'
   },
   {
     id: 'smokologia',
@@ -185,7 +185,7 @@ export const CATEGORY_BANNERS = [
     description: 'Studium smoków skandynawskich i rosyjskich: tresura i komunikacja',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(40, 12, 8, 0.95) 0%, rgba(8, 3, 2, 0.98) 100%)',
     bgType: 'dragons',
-    bgImage: '/edykty/smokologia.png'
+    bgImage: '/edykty/smokologia.webp'
   },
   {
     id: 'rytualistyka',
@@ -195,7 +195,7 @@ export const CATEGORY_BANNERS = [
     description: 'Wieloosobowe rytuały magiczne: blóty, seiðr i galdr w warunkach ekstremalnych',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(20, 8, 34, 0.95) 0%, rgba(4, 2, 8, 0.98) 100%)',
     bgType: 'ritual',
-    bgImage: '/edykty/rytualistyka.jpg'
+    bgImage: '/edykty/rytualistyka.webp'
   },
   {
     id: 'psychologia-magiczna',
@@ -205,7 +205,7 @@ export const CATEGORY_BANNERS = [
     description: 'Legilimencja, Oklumencja, obrona przed manipulacją i mentalne forty',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(22, 14, 36, 0.95) 0%, rgba(5, 3, 8, 0.98) 100%)',
     bgType: 'psychology',
-    bgImage: '/edykty/psychologia_magiczna.avif'
+    bgImage: '/edykty/psychologia_magiczna.webp'
   },
   {
     id: 'mity-polnocy',
@@ -215,7 +215,7 @@ export const CATEGORY_BANNERS = [
     description: 'Nordycka mitologia jako realny zapis historii magicznej — od wojen Asów po Ragnarök',
     bgGradient: 'radial-gradient(circle at 50% 60%, rgba(18, 10, 28, 0.95) 0%, rgba(4, 2, 6, 0.98) 100%)',
     bgType: 'myths',
-    bgImage: '/edykty/mity_polnocy.jpg'
+    bgImage: '/edykty/mity_polnocy.webp'
   }
 ];
 

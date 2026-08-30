@@ -13,7 +13,7 @@ const DELIVERY_LOCK_MINUTES = 10;
 export const EMAIL_RETRY_COOLDOWN_SECONDS = 60;
 
 const DELIVERY_ASSETS = Object.freeze({
-  herb: path.join(PUBLIC_DIR, 'tmd_herb.png'),
+  herb: path.join(PUBLIC_DIR, 'tmd_herb.webp'),
   signature: path.join(PUBLIC_DIR, 'podpisy', 'dyrekcja', 'at_czarny.png')
 });
 
@@ -122,7 +122,7 @@ function claimDelivery(database, userId, emailType, { retry = false } = {}) {
 function createTemplateData(user, emailType, runtimeConfig, { preview = false } = {}) {
   const appUrl = validateAbsoluteUrl(runtimeConfig.appUrl, 'APP_URL', { allowLocalhost: preview || runtimeConfig.transportMode === 'json' });
   const common = {
-    herbSrc: preview ? `${appUrl}/tmd_herb.png` : 'cid:durmstrang-herb',
+    herbSrc: preview ? `${appUrl}/tmd_herb.webp` : 'cid:durmstrang-herb',
     signatureSrc: preview ? `${appUrl}/podpisy/dyrekcja/at_czarny.png` : 'cid:durmstrang-council-signature'
   };
 
@@ -211,7 +211,7 @@ export async function deliverTransactionalEmail({
       html: rendered.html,
       messageId: `<${claim.row.id}@${messageDomain}>`,
       attachments: [
-        { filename: 'herb-twierdzy-durmstrang.png', path: DELIVERY_ASSETS.herb, cid: 'durmstrang-herb' },
+        { filename: 'herb-twierdzy-durmstrang.webp', path: DELIVERY_ASSETS.herb, cid: 'durmstrang-herb' },
         { filename: 'podpis-rady-arcymistrzow.png', path: DELIVERY_ASSETS.signature, cid: 'durmstrang-council-signature' }
       ]
     });

@@ -43,7 +43,7 @@ export const MaraudersMapCanvas = ({
   // Load the High-Fantasy Illustrated Cartographic Map Image
   useEffect(() => {
     const img = new Image();
-    img.src = '/durmstrang_fantasy_map.jpg';
+    img.src = '/durmstrang_fantasy_map.webp';
     img.onload = () => {
       mapImageRef.current = img;
       setImageLoaded(true);

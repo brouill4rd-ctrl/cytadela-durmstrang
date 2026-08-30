@@ -49,10 +49,10 @@ import {
 } from 'lucide-react';
 
 const PROFILE_BANNER_IMAGES = {
-  reinhall: '/banery_zakony/reinhall-baner.png',
-  bjornhall: '/banery_zakony/bjornhall-baner.png',
-  ravnheim: '/banery_zakony/baner-ravnheim.png',
-  otergard: '/banery_zakony/otergard-baner.png'
+  reinhall: '/banery_zakony/reinhall-baner.webp',
+  bjornhall: '/banery_zakony/bjornhall-baner.webp',
+  ravnheim: '/banery_zakony/baner-ravnheim.webp',
+  otergard: '/banery_zakony/otergard-baner.webp'
 };
 
 const STAFF_PROFILE_ROLES = new Set([
@@ -168,8 +168,8 @@ export const ProfileView = () => {
   const rawHouseKey = String(activeUser.house || activeUser.houseId || activeUser.house_id || '').toLowerCase();
   const profileHouseKey = Object.keys(PROFILE_BANNER_IMAGES).find(key => rawHouseKey.includes(key));
   const profileBannerImage = isStaffProfile
-    ? '/banery_zakony/baner-kadra.png'
-    : PROFILE_BANNER_IMAGES[profileHouseKey] || '/durmstrang_welcome_banner.jpg';
+    ? '/banery_zakony/baner-kadra.webp'
+    : PROFILE_BANNER_IMAGES[profileHouseKey] || '/durmstrang_welcome_banner.webp';
 
   const openActivity = (setter, chime = false) => {
     chime ? playRuneChime() : playWandSwoosh();

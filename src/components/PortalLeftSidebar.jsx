@@ -605,7 +605,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           className="menuBlockHeaderImage"
           onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
           style={{
-            backgroundImage: `linear-gradient(rgba(20, 5, 5, 0.65), rgba(8, 12, 18, 0.85)), url("/tmd_herb.png")`,
+            backgroundImage: `linear-gradient(rgba(20, 5, 5, 0.65), rgba(8, 12, 18, 0.85)), url("/tmd_herb.webp")`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',

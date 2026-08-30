@@ -43,7 +43,7 @@
 .tgm-header-bg {
   position: absolute;
   inset: 0;
-  background: url('/turniej-szermierki/arena-pucharu-polnocy.png') center/cover no-repeat;
+  background: url('/turniej-szermierki/arena-pucharu-polnocy.webp') center/cover no-repeat;
   filter: brightness(0.35);
   pointer-events: none;
 }
@@ -183,7 +183,7 @@
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background-image: url('/turniej-szermierki/portrety-przeciwnikow.png');
+  background-image: url('/turniej-szermierki/portrety-przeciwnikow.webp');
   background-size: 500% 100%;
   background-repeat: no-repeat;
   border: 2px solid transparent;
@@ -204,7 +204,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-image: url('/turniej-szermierki/portrety-przeciwnikow.png');
+  background-image: url('/turniej-szermierki/portrety-przeciwnikow.webp');
   background-size: 500% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -216,7 +216,7 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background-image: url('/turniej-szermierki/portrety-przeciwnikow.png');
+  background-image: url('/turniej-szermierki/portrety-przeciwnikow.webp');
   background-size: 500% 100%;
   background-repeat: no-repeat;
   border: 2px solid var(--gold-ancient, #c59f4e);
@@ -543,7 +543,7 @@
 .tgm-banner-bg {
   position: absolute;
   inset: 0;
-  background: url('/turniej-szermierki/arena-pucharu-polnocy.png') center/cover no-repeat;
+  background: url('/turniej-szermierki/arena-pucharu-polnocy.webp') center/cover no-repeat;
   filter: brightness(0.18);
   pointer-events: none;
 }

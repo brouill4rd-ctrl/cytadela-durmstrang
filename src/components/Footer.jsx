@@ -58,7 +58,7 @@ export const Footer = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.9rem' }}>
             <img
-              src="/tmd_herb.png"
+              src="/tmd_herb.webp"
               alt="Herb Twierdzy Magii Durmstrang"
               style={{
                 width: '46px',

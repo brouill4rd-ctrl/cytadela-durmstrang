@@ -3029,7 +3029,8 @@ export function dbGradeCategoryToFrontend(row) {
     name: row.name,
     weight: row.weight ?? 1.0,
     icon: row.icon || '📝',
-    sortOrder: row.sort_order || 0
+    sortOrder: row.sort_order || 0,
+    homeworkId: row.homework_id || null
   };
 }
 
@@ -4855,7 +4856,7 @@ ZADANIE: Opisz krok po kroku, jak powinien zareagować adept, aby bezpiecznie ug
     'q-seed-09', 'czarna-magia', 'qcat-cm-praktyka', 'single_choice',
     'Rozpoznaj przedstawiony artefakt obronny ze Skarbca Twierdzy Durmstrang:',
     'Na rycinie widnieje Wieczna Pieczęć Cytadeli Durmstrang wykuta w czarnym żelazie.',
-    'easy', JSON.stringify(['klasa2', 'ilustracja']), '/durmstang_hero.jpg', 'image', '',
+    'easy', JSON.stringify(['klasa2', 'ilustracja']), '/durmstang_hero.webp', 'image', '',
     '[]', '[]'
   );
   insertOpt.run('qo-09-1', 'q-seed-09', 'Pieczęć Twierdzy Durmstrang', 1, '', 0);

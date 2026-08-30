@@ -103,7 +103,7 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
         <div className="hero-school-emblem">
           <div className="hero-emblem-aura" aria-hidden="true" />
           <img
-            src="/tmd_herb.png"
+            src="/tmd_herb.webp"
             alt="Herb Twierdzy Magii Durmstrang"
             className="hero-emblem-img"
             width="105"

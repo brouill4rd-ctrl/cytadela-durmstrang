@@ -368,7 +368,7 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
                 userSelect: 'none'
               }}
             >
-              <img src="/tmd_herb.png" alt="Herb Watermark" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
+              <img src="/tmd_herb.webp" alt="Herb Watermark" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
             </div>
 
             {/* Passport Header Bar */}
@@ -381,7 +381,7 @@ export const StudentPassportModal = ({ isOpen, onClose }) => {
                   DURMSTRANG • PASSPORT & ID DOSSIER
                 </h2>
               </div>
-              <img src="/tmd_herb.png" alt="Logo" style={{ width: '38px', height: '38px', objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(197, 159, 78, 0.5))' }} />
+              <img src="/tmd_herb.webp" alt="Logo" style={{ width: '38px', height: '38px', objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(197, 159, 78, 0.5))' }} />
             </div>
 
             {/* Main ID Layout: Left Avatar Photo Frame, Right Details, Far-Right Seal */}
