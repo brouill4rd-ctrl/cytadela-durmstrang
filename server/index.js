@@ -49,12 +49,16 @@ import runicDuelsRoutes from './routes/runicDuels.js';
 import fishingRoutes from './routes/fishing.js';
 import bestiaryRoutes from './routes/bestiary.js';
 import wandFencingRoutes from './routes/wandFencing.js';
+import mapRoutes from './routes/map.js';
+import questEngineRoutes from './routes/questEngine.js';
 import { discordBot } from './discordBot.js';
 import { initPointsService, recalculateAllUserPoints, backfillSchoolYear } from './services/pointsService.js';
 import { initSkirnirService, recalculateAllBalances } from './services/skirnirService.js';
 import { initDungeonEscapeService } from './services/dungeonEscapeService.js';
 import { initRunicDuelService } from './services/runicDuelService.js';
 import { initBestiaryService } from './services/bestiaryService.js';
+import { initQuestService, loadQuestDefinitions } from './services/questService.js';
+import { QUEST_DEFINITIONS } from './seed/questDefinitions.js';
 import { isCorsOriginAllowed, parseCorsOrigins } from './config/security.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
@@ -66,6 +70,8 @@ initSkirnirService(db);
 initDungeonEscapeService(db);
 initRunicDuelService(db);
 initBestiaryService(db);
+initQuestService(db);
+loadQuestDefinitions(db, QUEST_DEFINITIONS);
 
 // Sync caches with ledger (source of truth)
 backfillSchoolYear();
@@ -173,6 +179,8 @@ app.use('/api/runic-duels', runicDuelsRoutes);
 app.use('/api/fishing', fishingRoutes);
 app.use('/api/bestiary', bestiaryRoutes);
 app.use('/api/minigames/wand-fencing', wandFencingRoutes);
+app.use('/api/map', mapRoutes);
+app.use('/api/quest-engine', questEngineRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

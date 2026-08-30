@@ -59,11 +59,12 @@ function WindBar({ intensity }) {
 }
 
 // ─── CitadelAstrolabe (floating button + report) ──────────────────────────────
-export function CitadelAstrolabe() {
+export function CitadelAstrolabe({ hidden = false }) {
   const { worldState: w, presentationMode, setPresentationMode, refresh } = useWorldState();
   const { currentUser } = useSchool();
   const [open, setOpen]       = useState(false);
   const [director, setDirector] = useState(false);
+  if (hidden) return null;
 
   const timeDisplay = w.seasonalCycle !== 'NORMAL' ? w.seasonalCycle : w.timeOfDay;
   const threatHigh  = w.threatLevel === 'IV' || w.threatLevel === 'V';

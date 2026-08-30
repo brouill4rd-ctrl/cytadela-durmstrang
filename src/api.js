@@ -77,6 +77,30 @@ export const api = {
   getFortressGuardian: () => apiFetch('/houses/fortress-guardian'),
   updateFortressGuardian: (data) => apiFetch('/houses/fortress-guardian', { method: 'PUT', body: JSON.stringify(data) }),
   getLocations: () => apiFetch('/locations'),
+  // Map system
+  getMapLayers: () => apiFetch('/map/layers'),
+  getMapState: (layerId) => apiFetch(`/map/${encodeURIComponent(layerId)}/state`),
+  discoverLocation: (locationId) => apiFetch('/map/discover', { method: 'POST', body: JSON.stringify({ locationId }) }),
+  trackLocation: (locationId) => apiFetch('/map/track', { method: 'POST', body: JSON.stringify({ locationId }) }),
+  untrackLocation: () => apiFetch('/map/track', { method: 'DELETE' }),
+  // Quest Engine
+  getQuestJournal: () => apiFetch('/quest-engine/journal'),
+  getLocationQuests: (locationId) => apiFetch(`/quest-engine/location/${encodeURIComponent(locationId)}`),
+  getQuestState: (questId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/state`),
+  startQuest: (questId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/start`, { method: 'POST' }),
+  submitQuestAction: (questId, actionId) => apiFetch(`/quest-engine/${encodeURIComponent(questId)}/action`, {
+    method: 'POST', body: JSON.stringify({ actionId })
+  }),
+  trackQuest: (questId) => apiFetch('/quest-engine/track', { method: 'POST', body: JSON.stringify({ questId }) }),
+  untrackQuest: () => apiFetch('/quest-engine/track', { method: 'DELETE' }),
+  // Map admin
+  getAdminMarkers: (layerId) => apiFetch(`/map/admin/markers${layerId ? `?layerId=${encodeURIComponent(layerId)}` : ''}`),
+  createMarker: (data) => apiFetch('/map/admin/markers', { method: 'POST', body: JSON.stringify(data) }),
+  updateMarker: (id, data) => apiFetch(`/map/admin/markers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteMarker: (id) => apiFetch(`/map/admin/markers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  getAdminLayers: () => apiFetch('/map/admin/layers'),
+  createLayer: (data) => apiFetch('/map/admin/layers', { method: 'POST', body: JSON.stringify(data) }),
+  updateLayer: (id, data) => apiFetch(`/map/admin/layers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
   getRunesCatalog: () => apiFetch('/workshop/runes'),
   getRuneFormulas: () => apiFetch('/workshop/rune-formulas'),
   getCeremonyQuestions: () => apiFetch('/ceremony/questions'),

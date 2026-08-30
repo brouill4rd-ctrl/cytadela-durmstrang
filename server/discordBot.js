@@ -9,7 +9,8 @@
  * 5. Generowanie interaktywnego podsumowania na Discordzie z linkiem do panelu profesora
  */
 
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ChannelType } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { getQuestState, submitAction, submitNarrative, approveNarrative, rejectNarrative } from './services/questService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,6 +21,12 @@ import { normalizeSubjectId, normalizeClassYear } from './utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'lessons');
+
+const ARXYMISTRZOW_ROLE_ID = '1540710122005733376';
+const TMD_GUILD_ID = '1540707857656193104';
+
+const DIFFICULTY_COLOR = { 'Łatwy': 0x22c55e, 'Średni': 0xf59e0b, 'Trudny': 0xf87171, 'Legendarny': 0xa78bfa };
+
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -707,8 +714,26 @@ export class DurmstrangDiscordBot {
             await interaction.reply({ embeds: [rulesEmbed], ephemeral: true });
             return;
           }
+
+          // Przyciski questowe
+          const questHandled = await this._handleQuestButton(interaction).catch(err => {
+            console.warn('[Quest Button Error]', err.message);
+            return false;
+          });
+          if (questHandled) return;
+
         } catch (err) {
           console.warn('[Discord Button Error]', err.message);
+        }
+        return;
+      }
+
+      // Obsługa modali questowych
+      if (interaction.isModalSubmit()) {
+        try {
+          await this._handleQuestModalSubmit(interaction);
+        } catch (err) {
+          console.warn('[Quest Modal Error]', err.message);
         }
         return;
       }
@@ -2171,6 +2196,497 @@ export class DurmstrangDiscordBot {
       .setTimestamp();
     const sent = await target.send({ embeds:[embed] });
     return { messageId:sent.id, channelId:target.id, channelName:target.name };
+  }
+
+  // ─── Questy Discord ────────────────────────────────────────────────────────
+
+  _buildQuestSceneEmbed(questState, questId) {
+    const stage = questState.stage;
+    const diffColor = DIFFICULTY_COLOR[questState.difficulty] || 0x9ca3af;
+
+    const embed = new EmbedBuilder()
+      .setColor(diffColor)
+      .setAuthor({ name: `${questState.category || 'Quest'} · ${questState.difficulty || '—'}` })
+      .setTitle(questState.title || 'Quest');
+
+    if (questState.totalStages > 1 && stage) {
+      embed.setFooter({ text: `Etap ${stage.index + 1} z ${questState.totalStages} · ${stage.title || ''}` });
+    }
+
+    if (stage?.narrative) {
+      embed.setDescription(stage.narrative.slice(0, 4096));
+    }
+
+    if (stage?.objective && stage.type !== 'narrative') {
+      embed.addFields({ name: 'Cel', value: stage.objective, inline: false });
+    }
+
+    if (stage?.type === 'narrative' && stage?.prompt) {
+      embed.addFields({ name: 'Twoje zadanie', value: stage.prompt, inline: false });
+    }
+
+    return embed;
+  }
+
+  _buildQuestActionButtons(questState, questId, userId) {
+    const stage = questState.stage;
+    if (!stage) return [];
+
+    if (stage.type === 'narrative') {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`qnarr_${questId.slice(0, 20)}_${userId}`)
+          .setLabel('Napisz interpretację')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('✍️')
+      );
+      return [row];
+    }
+
+    if (stage.type === 'visit_location') {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`qact_${questId.slice(0, 20)}_${userId}_arrived`)
+          .setLabel('Dotarłem do celu')
+          .setStyle(ButtonStyle.Success)
+          .setEmoji('✅')
+      );
+      return [row];
+    }
+
+    if (stage.actions?.length > 0) {
+      const buttons = stage.actions.slice(0, 4).map(action =>
+        new ButtonBuilder()
+          .setCustomId(`qact_${questId.slice(0, 20)}_${userId}_${action.id.slice(0, 10)}`)
+          .setLabel(action.label.slice(0, 80))
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⚔️')
+      );
+      return [new ActionRowBuilder().addComponents(buttons)];
+    }
+
+    return [];
+  }
+
+  async _getOrCreateQuestThread(discordId, questId, questState = {}) {
+    const guild = await this.client.guilds.fetch(TMD_GUILD_ID).catch(() => null);
+    if (!guild) throw new Error('Nie znaleziono serwera TMD.');
+
+    const playChannelId = process.env.DISCORD_QUEST_PLAY_CHANNEL_ID;
+    if (!playChannelId) throw new Error('Brak DISCORD_QUEST_PLAY_CHANNEL_ID w konfiguracji.');
+
+    const parentChannel = await guild.channels.fetch(playChannelId).catch(() => null);
+    if (!parentChannel?.threads?.create) {
+      throw new Error('Kanał questów nie obsługuje publicznych wątków.');
+    }
+
+    const saved = db.prepare(`
+      SELECT thread_id, parent_channel_id
+      FROM quest_discord_threads
+      WHERE quest_id=? AND discord_user_id=?
+    `).get(questId, discordId);
+
+    if (saved?.thread_id && saved.parent_channel_id === playChannelId) {
+      let existingThread = await guild.channels.fetch(saved.thread_id).catch(() => null);
+      if (existingThread?.isThread()) {
+        if (existingThread.archived) {
+          existingThread = await existingThread.setArchived(false, 'Kontynuacja questa').catch(() => null);
+        }
+        if (existingThread?.isThread() && !existingThread.archived) {
+          await existingThread.members.add(discordId).catch(() => {});
+          db.prepare(`
+            UPDATE quest_discord_threads
+            SET status='active', updated_at=datetime('now')
+            WHERE quest_id=? AND discord_user_id=?
+          `).run(questId, discordId);
+          return existingThread;
+        }
+      }
+    }
+
+    const member = await guild.members.fetch(discordId).catch(() => null);
+    const discordUser = member?.user || await this.client.users.fetch(discordId).catch(() => null);
+    const playerName = member?.displayName || discordUser?.username || `adept-${discordId.slice(-6)}`;
+    const questTitle = questState.title || questId;
+    const threadName = `⚔️ ${questTitle} — ${playerName}`.slice(0, 100);
+
+    const thread = await parentChannel.threads.create({
+      name: threadName,
+      autoArchiveDuration: 1440,
+      type: ChannelType.PublicThread,
+      reason: `Quest ${questId} dla ${discordId}`,
+    });
+
+    await thread.members.add(discordId).catch(() => {});
+    db.prepare(`
+      INSERT INTO quest_discord_threads
+        (quest_id, discord_user_id, thread_id, parent_channel_id, status, updated_at)
+      VALUES (?, ?, ?, ?, 'active', datetime('now'))
+      ON CONFLICT(quest_id, discord_user_id) DO UPDATE SET
+        thread_id=excluded.thread_id,
+        parent_channel_id=excluded.parent_channel_id,
+        status='active',
+        updated_at=datetime('now')
+    `).run(questId, discordId, thread.id, playChannelId);
+
+    return thread;
+  }
+
+  async sendQuestSceneToThread(discordId, questId, questState) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const thread = await this._getOrCreateQuestThread(discordId, questId, questState);
+      const embed = this._buildQuestSceneEmbed(questState, questId);
+      const components = this._buildQuestActionButtons(questState, questId, discordId);
+
+      await thread.send({
+        content: `<@${discordId}>`,
+        embeds: [embed],
+        components,
+        allowedMentions: { users: [discordId] },
+      });
+    } catch (err) {
+      console.warn('[Quest Thread Error]', err.message);
+    }
+  }
+
+  async sendQuestCompleteToThread(discordId, questId, questTitle, rewards) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const thread = await this._getOrCreateQuestThread(discordId, questId, { title: questTitle });
+      const rewardLines = [
+        rewards?.points > 0 && `⚡ ${rewards.points} punktów`,
+        rewards?.xp > 0 && `✨ ${rewards.xp} XP`,
+        rewards?.skirniry > 0 && `🪙 ${rewards.skirniry} Skirnirów`,
+        rewards?.item && `🎁 ${rewards.item}`,
+      ].filter(Boolean);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x22c55e)
+        .setTitle('✅ Quest ukończony!')
+        .setDescription(`**${questTitle}** — zadanie zakończone sukcesem.`)
+        .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Silnik Questów' });
+
+      if (rewardLines.length > 0) {
+        embed.addFields({ name: 'Nagrody', value: rewardLines.join('\n'), inline: false });
+      }
+
+      await thread.send({
+        content: `<@${discordId}>`,
+        embeds: [embed],
+        allowedMentions: { users: [discordId] },
+      });
+      db.prepare(`
+        UPDATE quest_discord_threads
+        SET status='completed', updated_at=datetime('now')
+        WHERE quest_id=? AND discord_user_id=?
+      `).run(questId, discordId);
+      await thread.setArchived(true, 'Quest ukończony').catch(() => {});
+    } catch (err) {
+      console.warn('[Quest Complete Thread Error]', err.message);
+    }
+  }
+
+  async sendQuestRejectionToThread(discordId, questId) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const quest = db.prepare('SELECT title FROM quest_definitions WHERE id=?').get(questId);
+      const thread = await this._getOrCreateQuestThread(discordId, questId, { title: quest?.title || questId });
+      const embed = new EmbedBuilder()
+        .setColor(0xef4444)
+        .setTitle('❌ Odpowiedź odrzucona')
+        .setDescription('Twoja interpretacja nie spełniła wymagań. Spróbuj ponownie w tym wątku — możesz napisać nową odpowiedź.')
+        .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Silnik Questów' });
+
+      const state = db.prepare('SELECT id FROM users WHERE discord_id=?').get(discordId);
+      const questState = state ? getQuestState(questId, state.id, db) : null;
+      const components = questState ? this._buildQuestActionButtons(questState, questId, discordId) : [];
+      await thread.send({
+        content: `<@${discordId}>`,
+        embeds: [embed],
+        components,
+        allowedMentions: { users: [discordId] },
+      });
+    } catch (err) {
+      console.warn('[Quest Rejection Thread Error]', err.message);
+    }
+  }
+
+  async sendNarrativeReviewToArxy(reviewId, questId, questTitle, stageTitle, prompt, responseText, playerDiscordId, playerName) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const guild = await this.client.guilds.fetch(TMD_GUILD_ID).catch(() => null);
+      if (!guild) return;
+
+      // Znajdź kanał review — szukaj po nazwie lub env var
+      const reviewChannelId = process.env.DISCORD_QUEST_REVIEW_CHANNEL_ID;
+      let channel = reviewChannelId
+        ? await guild.channels.fetch(reviewChannelId).catch(() => null)
+        : null;
+
+      if (!channel) {
+        const keywords = ['quest-recenz', 'questy-recenz', 'recenzje', 'arxy-review', 'arxymistrzowie', 'arxy'];
+        channel = guild.channels.cache.find(ch =>
+          ch.isTextBased() && keywords.some(kw => ch.name.toLowerCase().includes(kw))
+        );
+      }
+
+      if (!channel) {
+        const staffKeywords = ['rada', 'staff', 'administracja', 'arxy'];
+        channel = guild.channels.cache.find(ch =>
+          ch.isTextBased() && staffKeywords.some(kw => ch.name.toLowerCase().includes(kw))
+        );
+      }
+
+      if (!channel) {
+        console.warn('[Quest Narrative Review] Nie znaleziono kanału recenzji. Ustaw DISCORD_QUEST_REVIEW_CHANNEL_ID w .env.');
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0xf59e0b)
+        .setTitle(`📜 Recenzja narracji — ${questTitle}`)
+        .setDescription(
+          `<@&${ARXYMISTRZOW_ROLE_ID}> — nowa odpowiedź do zatwierdzenia.\n\n` +
+          `**Adept:** ${playerName || `<@${playerDiscordId}>`}\n` +
+          `**Etap:** ${stageTitle || '—'}`
+        )
+        .addFields(
+          { name: 'Zadanie (prompt)', value: (prompt || '—').slice(0, 1024), inline: false },
+          { name: 'Odpowiedź gracza', value: responseText.slice(0, 1024), inline: false }
+        )
+        .setFooter({ text: `Review ID: ${reviewId.slice(0, 8)}… · Quest: ${questId}` })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`qaprv_${reviewId.slice(0, 36)}`)
+          .setLabel('Zatwierdź')
+          .setStyle(ButtonStyle.Success)
+          .setEmoji('✅'),
+        new ButtonBuilder()
+          .setCustomId(`qrejt_${reviewId.slice(0, 36)}`)
+          .setLabel('Odrzuć')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('❌')
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+    } catch (err) {
+      console.warn('[Quest Narrative Review Error]', err.message);
+    }
+  }
+
+  // ─── Obsługa interakcji questowych ────────────────────────────────────────
+
+  async _handleQuestButton(interaction) {
+    const { customId } = interaction;
+
+    // Przycisk akcji: qact_{questId}_{discordUserId}_{actionId}
+    if (customId.startsWith('qact_')) {
+      const parts = customId.split('_');
+      // qact | questIdSlug | discordUserId | ...actionIdParts
+      if (parts.length < 4) return false;
+      const questIdSlug = parts[1];
+      const ownerDiscordId = parts[2];
+      const actionId = parts.slice(3).join('_');
+
+      // Publiczny wątek jest widoczny dla innych — przyciski obsługuje tylko właściciel questa.
+      if (!interaction.user.id.startsWith(ownerDiscordId)) {
+        await interaction.reply({ content: '⛔ Ten quest należy do innego adepta.', ephemeral: true });
+        return true;
+      }
+
+      // Znajdź użytkownika po discord_id
+      const user = db.prepare('SELECT id, discord_id, full_name FROM users WHERE discord_id=?').get(interaction.user.id);
+      if (!user) {
+        await interaction.reply({ content: '⚠️ Twoje konto Discord nie jest powiązane z portalem. Użyj `/weryfikuj`.', ephemeral: true });
+        return true;
+      }
+
+      // Znajdź questId (pełne) na podstawie slug
+      const questDef = db.prepare("SELECT id FROM quest_definitions WHERE id LIKE ? AND is_active=1 LIMIT 1").get(`${questIdSlug}%`);
+      if (!questDef) {
+        await interaction.reply({ content: '⚠️ Quest nie istnieje lub wygasł.', ephemeral: true });
+        return true;
+      }
+
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      try {
+        const result = submitAction(questDef.id, user.id, actionId, db);
+        if (result.completed) {
+          await interaction.editReply({ content: `✅ Quest ukończony!` });
+          await this.sendQuestCompleteToThread(interaction.user.id, questDef.id, result.state?.title || questDef.id, result.rewards);
+        } else {
+          await interaction.editReply({ content: '⚡ Następna scena pojawiła się w tym wątku.' });
+          await this.sendQuestSceneToThread(interaction.user.id, questDef.id, result.state);
+        }
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
+    // Przycisk narracji: qnarr_{questIdSlug}_{userId8}
+    if (customId.startsWith('qnarr_')) {
+      const parts = customId.split('_');
+      if (parts.length < 3) return false;
+      const questIdSlug = parts[1];
+      const ownerDiscordId = parts[2];
+
+      if (!interaction.user.id.startsWith(ownerDiscordId)) {
+        await interaction.reply({ content: '⛔ Ten quest należy do innego adepta.', ephemeral: true });
+        return true;
+      }
+
+      const questDef = db.prepare("SELECT id, title FROM quest_definitions WHERE id LIKE ? AND is_active=1 LIMIT 1").get(`${questIdSlug}%`);
+      if (!questDef) {
+        await interaction.reply({ content: '⚠️ Quest nie istnieje.', ephemeral: true });
+        return true;
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`qn_${questDef.id.slice(0, 30)}`)
+        .setTitle(questDef.title.slice(0, 45));
+
+      const textInput = new TextInputBuilder()
+        .setCustomId('narrative_text')
+        .setLabel('Twoja odpowiedź (pisz w klimacie postaci)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMinLength(30)
+        .setMaxLength(2000)
+        .setRequired(true)
+        .setPlaceholder('Opisz co twoja postać czuje, widzi lub robi...');
+
+      modal.addComponents(new ActionRowBuilder().addComponents(textInput));
+      await interaction.showModal(modal);
+      return true;
+    }
+
+    // Przycisk zatwierdzenia: qaprv_{reviewId}
+    if (customId.startsWith('qaprv_')) {
+      const reviewId = customId.slice(6);
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      // Sprawdź rolę arxymistrza
+      const member = interaction.member;
+      const hasRole = member?.roles?.cache?.has(ARXYMISTRZOW_ROLE_ID);
+      if (!hasRole) {
+        await interaction.editReply({ content: '⛔ Tylko Arxymistrzowie mogą zatwierdzać odpowiedzi.' });
+        return true;
+      }
+
+      try {
+        const result = approveNarrative(reviewId, interaction.user.id, db);
+        // Wyślij dalszy ciąg do publicznego wątku gracza
+        const playerUser = db.prepare('SELECT discord_id, full_name FROM users WHERE id=?').get(result.userId);
+        if (playerUser?.discord_id) {
+          if (result.completed) {
+            await this.sendQuestCompleteToThread(playerUser.discord_id, result.questId, result.state?.title || result.questId, result.rewards);
+          } else {
+            await this.sendQuestSceneToThread(playerUser.discord_id, result.questId, result.state);
+          }
+        }
+
+        // Zaktualizuj embed recenzji
+        try {
+          const originalEmbed = interaction.message.embeds[0];
+          const updatedEmbed = EmbedBuilder.from(originalEmbed)
+            .setColor(0x22c55e)
+            .setTitle(`✅ ZATWIERDZONE — ${originalEmbed.title?.replace('📜 Recenzja narracji — ', '') || ''}`);
+          await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+        } catch (_) {}
+
+        await interaction.editReply({ content: `✅ Zatwierdzone! ${result.completed ? 'Quest ukończony.' : 'Gracz przeszedł do kolejnej sceny.'}` });
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
+    // Przycisk odrzucenia: qrejt_{reviewId}
+    if (customId.startsWith('qrejt_')) {
+      const reviewId = customId.slice(6);
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const member = interaction.member;
+      const hasRole = member?.roles?.cache?.has(ARXYMISTRZOW_ROLE_ID);
+      if (!hasRole) {
+        await interaction.editReply({ content: '⛔ Tylko Arxymistrzowie mogą odrzucać odpowiedzi.' });
+        return true;
+      }
+
+      try {
+        const result = rejectNarrative(reviewId, interaction.user.id, db);
+        const playerUser = db.prepare('SELECT discord_id, full_name FROM users WHERE id=?').get(result.userId);
+        if (playerUser?.discord_id) {
+          await this.sendQuestRejectionToThread(playerUser.discord_id, result.questId);
+        }
+
+        try {
+          const originalEmbed = interaction.message.embeds[0];
+          const updatedEmbed = EmbedBuilder.from(originalEmbed)
+            .setColor(0xef4444)
+            .setTitle(`❌ ODRZUCONE — ${originalEmbed.title?.replace('📜 Recenzja narracji — ', '') || ''}`);
+          await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+        } catch (_) {}
+
+        await interaction.editReply({ content: '❌ Odpowiedź odrzucona. Gracz może spróbować ponownie.' });
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  async _handleQuestModalSubmit(interaction) {
+    if (!interaction.customId.startsWith('qn_')) return false;
+
+    const questIdSlug = interaction.customId.slice(3);
+    const responseText = interaction.fields.getTextInputValue('narrative_text') || '';
+
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+    const user = db.prepare('SELECT id, full_name FROM users WHERE discord_id=?').get(interaction.user.id);
+    if (!user) {
+      await interaction.editReply({ content: '⚠️ Konto nie jest powiązane z portalem. Użyj `/weryfikuj`.' });
+      return true;
+    }
+
+    const questDef = db.prepare("SELECT * FROM quest_definitions WHERE id LIKE ? AND is_active=1 LIMIT 1").get(`${questIdSlug}%`);
+    if (!questDef) {
+      await interaction.editReply({ content: '⚠️ Quest nie istnieje.' });
+      return true;
+    }
+
+    try {
+      const progress = db.prepare('SELECT current_stage, state_json FROM user_quest_progress WHERE user_id=? AND quest_id=?').get(user.id, questDef.id);
+      let stages = [];
+      try { stages = JSON.parse(questDef.stages_json || '[]'); } catch (_) {}
+      const currentStage = stages[progress?.current_stage ?? 0];
+
+      const result = submitNarrative(questDef.id, user.id, responseText, db);
+
+      await this.sendNarrativeReviewToArxy(
+        result.reviewId,
+        questDef.id,
+        questDef.title,
+        currentStage?.title || '—',
+        currentStage?.prompt || '—',
+        responseText,
+        interaction.user.id,
+        user.full_name || interaction.user.username
+      );
+
+      await interaction.editReply({
+        content: '✅ Odpowiedź wysłana! Arxymistrzowie zatwierdzą ją wkrótce — wynik pojawi się w tym wątku.'
+      });
+    } catch (err) {
+      await interaction.editReply({ content: `❌ ${err.message}` });
+    }
+    return true;
   }
 
   stop() {

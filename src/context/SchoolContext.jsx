@@ -3541,6 +3541,7 @@ Dyrektor Cytadeli Durmstrang`
         activeView,
         setActiveView,
         navigateTo,
+        backendAvailable,
         activeHouseTab,
         setActiveHouseTab,
         activeSubjectId,

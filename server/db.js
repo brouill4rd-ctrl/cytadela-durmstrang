@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { SEED_LOCATIONS } from './seed/locationsData.js';
+import { WORLD_SEED_LOCATIONS } from './seed/worldLocationsData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'durmstrang.db');
@@ -1700,6 +1701,70 @@ db.exec(`
   );
 `);
 
+// ===================== MAPA ŚWIATA — NOWE TABELE =====================
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS map_layers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    parent_id TEXT REFERENCES map_layers(id),
+    image_path TEXT DEFAULT '',
+    default_zoom REAL DEFAULT 0.7,
+    default_x REAL DEFAULT 0,
+    default_y REAL DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS user_map_discoveries (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    discovered_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, location_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS user_map_tracking (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    location_id TEXT REFERENCES locations(id) ON DELETE SET NULL,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+// Migracja: nowe kolumny w tabeli locations
+{
+  const locCols = db.pragma('table_info(locations)').map(c => c.name);
+  const toAdd = [
+    ['layer_id',                  "TEXT DEFAULT 'fortress'"],
+    ['marker_type',               "TEXT DEFAULT 'location'"],
+    ['visibility',                "TEXT DEFAULT 'visible'"],
+    ['state',                     "TEXT DEFAULT 'available'"],
+    ['unlock_condition',          "TEXT DEFAULT ''"],
+    ['linked_activity_type',      "TEXT DEFAULT ''"],
+    ['linked_activity_id',        "TEXT DEFAULT ''"],
+    ['quest_chain_id',            "TEXT DEFAULT ''"],
+    ['available_from',            "TEXT DEFAULT ''"],
+    ['available_until',           "TEXT DEFAULT ''"],
+    ['discovery_reward_xp',       'INTEGER DEFAULT 0'],
+    ['discovery_reward_skirniry', 'INTEGER DEFAULT 0'],
+    ['min_level',                 'INTEGER DEFAULT 0'],
+    ['required_order',            "TEXT DEFAULT ''"],
+    ['description_short',         "TEXT DEFAULT ''"],
+  ];
+  for (const [col, def] of toAdd) {
+    if (!locCols.includes(col)) {
+      try {
+        db.exec(`ALTER TABLE locations ADD COLUMN ${col} ${def};`);
+        console.log(`[DB] Migration: dodano kolumnę ${col} do locations`);
+      } catch (e) {
+        console.warn(`[DB] Migration locations.${col}:`, e.message);
+      }
+    }
+  }
+}
+
 // ===================== MIGRATIONS — IZBA PRZYJĘĆ ====================
 
 try {
@@ -2597,11 +2662,73 @@ Zajęcia odbywają się zgodnie z harmonogramem Katedry Dydaktycznej.`;
   const locationsCount = db.prepare('SELECT COUNT(*) as c FROM locations').get().c;
   if (locationsCount === 0) {
     console.log('[DB] Seeding locations...');
-    const ins = db.prepare('INSERT INTO locations (id, name, nordic_name, floor, x, y, icon, house, type, region, image, short_desc, full_lore, npcs, actions, secret_clue, quests, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    const ins = db.prepare('INSERT INTO locations (id, name, nordic_name, floor, x, y, icon, house, type, region, image, short_desc, full_lore, npcs, actions, secret_clue, quests, sort_order, layer_id, marker_type, visibility, state) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     for (const loc of SEED_LOCATIONS) {
-      ins.run(loc.id, loc.name, loc.nordic_name, loc.floor, loc.x, loc.y, loc.icon, loc.house, loc.type, loc.region, loc.image, loc.short_desc, loc.full_lore, loc.npcs, loc.actions, loc.secret_clue, loc.quests, loc.sort_order);
+      ins.run(loc.id, loc.name, loc.nordic_name, loc.floor, loc.x, loc.y, loc.icon, loc.house, loc.type, loc.region, loc.image, loc.short_desc, loc.full_lore, loc.npcs, loc.actions, loc.secret_clue, loc.quests, loc.sort_order, 'fortress', 'location', 'visible', 'available');
     }
     console.log(`[DB] Seeded ${SEED_LOCATIONS.length} locations.`);
+  } else {
+    // Upewnij się że istniejące lokacje mają layer_id = 'fortress'
+    db.prepare(`UPDATE locations SET layer_id = 'fortress' WHERE layer_id IS NULL OR layer_id = ''`).run();
+  }
+}
+
+// Seed warstw mapy
+{
+  const layerCount = db.prepare('SELECT COUNT(*) as c FROM map_layers').get().c;
+  if (layerCount === 0) {
+    console.log('[DB] Seeding map layers...');
+    const insLayer = db.prepare(`INSERT INTO map_layers (id, name, slug, parent_id, image_path, default_zoom, default_x, default_y, sort_order) VALUES (?,?,?,?,?,?,?,?,?)`);
+    insLayer.run('world', 'Mapa Północy', 'world', null, '/world_map.webp', 0.7, 0, 0, 0);
+    insLayer.run('fortress', 'Twierdza Durmstrang', 'fortress', 'world', '/durmstrang_fortress_map.webp', 0.75, 0, 0, 1);
+    console.log('[DB] Seeded 2 map layers.');
+  }
+}
+
+// Seed lokacji mapy świata
+{
+  // INSERT OR IGNORE — bezpieczne re-seedowanie bez nadpisywania istniejących rekordów
+  {
+    console.log('[DB] Syncing world map locations (INSERT OR IGNORE)...');
+    const insWorld = db.prepare(`
+      INSERT OR IGNORE INTO locations
+        (id, name, nordic_name, floor, x, y, icon, house, type, region, image,
+         short_desc, full_lore, npcs, actions, secret_clue, quests, sort_order,
+         layer_id, marker_type, visibility, state, description_short,
+         discovery_reward_xp, discovery_reward_skirniry, linked_activity_type)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `);
+    const upsertWorld = db.prepare(`
+      UPDATE locations SET
+        quests = ?, full_lore = ?, npcs = ?, actions = ?,
+        description_short = ?, discovery_reward_xp = ?, discovery_reward_skirniry = ?
+      WHERE id = ? AND (quests = '[]' OR quests IS NULL)
+    `);
+    let inserted = 0, updated = 0;
+    for (let i = 0; i < WORLD_SEED_LOCATIONS.length; i++) {
+      const loc = WORLD_SEED_LOCATIONS[i];
+      const result = insWorld.run(
+        loc.id, loc.name, loc.nordic_name, 0, loc.x, loc.y, loc.icon,
+        null, loc.type, loc.region, '', loc.short_desc || '', loc.full_lore || '',
+        loc.npcs || '[]', loc.actions || '[]', '', loc.quests || '[]', i,
+        'world', loc.marker_type || 'location', loc.visibility || 'visible',
+        loc.state || 'available', loc.description_short || '',
+        loc.discovery_reward_xp || 10, loc.discovery_reward_skirniry || 5,
+        loc.linked_activity_type || ''
+      );
+      if (result.changes > 0) {
+        inserted++;
+      } else {
+        // Backfill quest data do istniejących rekordów które mają puste questy
+        const upd = upsertWorld.run(
+          loc.quests || '[]', loc.full_lore || '', loc.npcs || '[]', loc.actions || '[]',
+          loc.description_short || '', loc.discovery_reward_xp || 10, loc.discovery_reward_skirniry || 5,
+          loc.id
+        );
+        if (upd.changes > 0) updated++;
+      }
+    }
+    console.log(`[DB] World locations: ${inserted} inserted, ${updated} updated (quest backfill).`);
   }
 }
 
@@ -4154,9 +4281,9 @@ export function dbHouseToFrontend(row) {
   };
 }
 
-export function dbLocationToFrontend(row) {
+export function dbLocationToFrontend(row, opts = {}) {
   if (!row) return null;
-  return {
+  const base = {
     id: row.id,
     name: row.name,
     nordicName: row.nordic_name,
@@ -4173,8 +4300,29 @@ export function dbLocationToFrontend(row) {
     npcs: JSON.parse(row.npcs || '[]'),
     actions: JSON.parse(row.actions || '[]'),
     secretClue: row.secret_clue,
-    quests: JSON.parse(row.quests || '[]')
+    quests: JSON.parse(row.quests || '[]'),
+    // Nowe pola systemu mapy
+    layerId: row.layer_id || 'fortress',
+    markerType: row.marker_type || 'location',
+    visibility: row.visibility || 'visible',
+    state: row.state || 'available',
+    unlockCondition: row.unlock_condition || '',
+    linkedActivityType: row.linked_activity_type || '',
+    linkedActivityId: row.linked_activity_id || '',
+    questChainId: row.quest_chain_id || '',
+    availableFrom: row.available_from || '',
+    availableUntil: row.available_until || '',
+    discoveryRewardXp: row.discovery_reward_xp || 0,
+    discoveryRewardSkirniry: row.discovery_reward_skirniry || 0,
+    minLevel: row.min_level || 0,
+    requiredOrder: row.required_order || '',
+    descriptionShort: row.description_short || '',
   };
+  // W trybie publicznym ukrywamy szczegóły nieodkrytych lokacji
+  if (opts.redactHidden && row.visibility === 'hidden') {
+    return { id: base.id, x: base.x, y: base.y, layerId: base.layerId, visibility: 'hidden', userState: 'undiscovered' };
+  }
+  return base;
 }
 
 export function dbRuneCatalogToFrontend(row) {
@@ -6661,4 +6809,48 @@ db.exec(`
     ON shooting_range_runs(user_id, date_warsaw);
 `);
 
+// ===================== MIGRACJA: SILNIK QUESTÓW =====================
+// Tabele tworzone przez initQuestService — tutaj tylko quest_id w tracking
+
+try {
+  const trackCols = db.pragma('table_info(user_map_tracking)').map(c => c.name);
+  if (!trackCols.includes('quest_id')) {
+    db.exec('ALTER TABLE user_map_tracking ADD COLUMN quest_id TEXT DEFAULT NULL;');
+    console.log('[DB] Migration: dodano quest_id do user_map_tracking');
+  }
+} catch (e) {
+  console.warn('[DB] Migration user_map_tracking.quest_id:', e.message);
+}
+
+// ===================== MIGRACJA: EKSPEDYCJE NA MAPIE =====================
+// Podpina 3 ekspedycje do właściwych lokacji (idempotentne — sprawdza przed zapisem)
+{
+  const expeditionLinks = [
+    { id: 'wl-fiord',      type: 'expedition', activityId: 'drakkar_graveyard' },
+    { id: 'wl-jotunskogg', type: 'expedition', activityId: 'shadow_forest' },
+    { id: 'wl-frostfang',  type: 'expedition', activityId: 'jotun_caves' },
+  ];
+  for (const link of expeditionLinks) {
+    const loc = db.prepare("SELECT linked_activity_type FROM locations WHERE id = ?").get(link.id);
+    if (loc && (!loc.linked_activity_type || loc.linked_activity_type === '')) {
+      db.prepare("UPDATE locations SET linked_activity_type = ?, linked_activity_id = ? WHERE id = ?")
+        .run(link.type, link.activityId, link.id);
+      console.log(`[DB] Migration: podpięto ekspedycję ${link.activityId} do lokacji ${link.id}`);
+    }
+  }
+}
+
+// ===================== MIGRACJA: ZAMARZNIĘTY OGRÓD — WARUNEK ODBLOKOWANIA =====================
+// Ustaw warunek odblokowania lokacji przez ukończenie łańcucha Jötunskógu
+{
+  const ogrod = db.prepare("SELECT id, unlock_condition FROM locations WHERE id = 'wl-hidden-ogrod'").get();
+  if (ogrod && (!ogrod.unlock_condition || ogrod.unlock_condition === '')) {
+    const condition = JSON.stringify({ type: 'quest_completed', id: 'jot-q4-krag' });
+    db.prepare("UPDATE locations SET unlock_condition = ?, state = 'locked', visibility = 'hidden' WHERE id = 'wl-hidden-ogrod'")
+      .run(condition);
+    console.log('[DB] Migration: ustawiono warunek odblokowania Zamarzniętego Ogrodu');
+  }
+}
+
 export default db;
+

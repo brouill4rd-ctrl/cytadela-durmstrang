@@ -1,344 +1,385 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
-import { MaraudersMapCanvas } from '../components/MaraudersMapCanvas';
-import { MarauderQuestModal } from '../components/MarauderQuestModal';
-import { SecretRune } from '../components/SecretRune';
-import {
-  Compass,
-  Sparkles,
-  Layers,
-  Footprints,
-  Lock,
-  Unlock,
-  Eye,
-  Award,
-  Search,
-  Zap,
-  Flame,
-  Radio,
-  BookOpen
-} from 'lucide-react';
+import api from '../api';
+
+import { MapViewport } from '../components/map/MapViewport';
+import { MapMarker } from '../components/map/MapMarker';
+import { MapInfoPanel } from '../components/map/MapInfoPanel';
+import { MapFilters } from '../components/map/MapFilters';
+import { MapControls } from '../components/map/MapControls';
+import { MapLayerSelector } from '../components/map/MapLayerSelector';
+import { MapQuestTracker } from '../components/map/MapQuestTracker';
+import { QuestModal } from '../components/map/QuestModal';
+
+import { ExpeditionsModal } from '../components/ExpeditionsModal';
+import { IceFishingModal } from '../components/IceFishingModal';
+import { OracleModal } from '../components/OracleModal';
+import { TargetPracticeModal } from '../components/TargetPracticeModal';
+import { DungeonEscapeModal } from '../components/DungeonEscapeModal';
+import { HnefataflModal } from '../components/HnefataflModal';
+import { RunicDuelModal } from '../components/RunicDuelModal';
+import { BestiaryModal } from '../components/BestiaryModal';
+
+const FORTRESS_FLOORS = [
+  { level: 2,  name: 'Wieże (2)',       shortLabel: 'W2' },
+  { level: 1,  name: 'Piętro (1)',      shortLabel: 'P1' },
+  { level: 0,  name: 'Parter (0)',      shortLabel: 'P0' },
+  { level: -1, name: 'Lochy (-1)',      shortLabel: 'L-1' },
+];
+
+const ACTIVITY_MODAL_MAP = {
+  expedition:     ExpeditionsModal,
+  fishing:        IceFishingModal,
+  oracle:         OracleModal,
+  shooting_range: TargetPracticeModal,
+  dungeon_escape: DungeonEscapeModal,
+  hnefatafl:      HnefataflModal,
+  runic_duel:     RunicDuelModal,
+  bestiary:       BestiaryModal,
+};
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setMobile(window.innerWidth < 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return mobile;
+}
 
 export const MapView = () => {
-  const { locations, houses, awardHousePoints, currentUser } = useSchool();
-  const { playWandSwoosh, playRuneChime, playGateThud } = useSound();
+  const { currentUser, addNotification, backendAvailable } = useSchool();
+  const { playWandSwoosh, playRuneChime } = useSound();
+  const isMobile = useIsMobile();
+  const viewportRef = useRef(null);
 
-  // Marauder's Map State
-  const [isRevealed, setIsRevealed] = useState(true);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [filterHouse, setFilterHouse] = useState('all');
-  const [currentLevel, setCurrentLevel] = useState(0); // -1: Lochy, 0: Parter, 1: Piętro, 2: Wieże
-  const [secretPassageUnlocked, setSecretPassageUnlocked] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [layers, setLayers] = useState([]);
+  const [activeLayerId, setActiveLayerId] = useState('world');
+  const [mapState, setMapState] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Ceremonial Oath Handlers
-  const handleRevealMap = () => {
-    playGateThud();
-    playRuneChime();
-    playWandSwoosh();
-    setIsRevealed(true);
-  };
+  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [currentFloor, setCurrentFloor] = useState(0);
+  const [activeModal, setActiveModal] = useState(null); // { type, marker }
+  const [activeQuest, setActiveQuest] = useState(null); // { questId, autoStart }
 
-  const handleConcealMap = () => {
-    playWandSwoosh();
-    setIsRevealed(false);
-    setSelectedLocation(null);
-  };
+  // ── Load layers ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!backendAvailable) return;
+    api.getMapLayers().then(res => {
+      const list = res?.data ?? res;
+      if (Array.isArray(list)) {
+        setLayers(list);
+        const worldLayer = list.find(l => l.slug === 'world');
+        setActiveLayerId(worldLayer ? worldLayer.id : list[0]?.id || 'world');
+      }
+    }).catch(() => {});
+  }, [backendAvailable]);
 
-  const handleUnlockSecret = () => {
-    if (secretPassageUnlocked) return;
-    playGateThud();
-    playRuneChime();
-    setSecretPassageUnlocked(true);
-    if (currentUser?.house_id) {
-      awardHousePoints(currentUser.house_id, 25, 'Odkrycie Runicznego Sekretnego Korytarza Pradawnych w Mapie Twierdzy');
+  // ── Load map state ─────────────────────────────────────────────────────────
+  const loadMapState = useCallback(async (layerId) => {
+    if (!backendAvailable || !layerId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.getMapState(layerId);
+      const payload = res?.data ?? res;
+      if (payload?.markers) {
+        setMapState(payload);
+      } else {
+        setError('Nie udało się załadować mapy. Sprawdź połączenie z serwerem.');
+      }
+      setSelectedMarkerId(null);
+    } catch (e) {
+      setError('Nie udało się załadować mapy. Sprawdź połączenie z serwerem.');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [backendAvailable]);
 
-  const levelConfigs = [
-    { level: -1, name: 'Kondygnacja -1: Lochy & Podziemny Skarbiec', desc: 'Podziemne krypty wykute w lodzie, podziemne kanały drakkarów oraz alchemiczne katakumby.' },
-    { level: 0, name: 'Kondygnacja 0: Parter & Dziedziniec Wilków', desc: 'Wielka Sala Hrafnhöll, Brama Bazaltowa, plac ćwiczeń szermierki i sale ceremonialne.' },
-    { level: 1, name: 'Kondygnacja 1: Skrzydło Zakonów & Biblioteka', desc: 'Dormitoria Zakonów, Archiwum Runicznych Ksiąg i pracownie szamańskie.' },
-    { level: 2, name: 'Kondygnacja 2: Ptaszarnia Kruków & Obserwatorium', desc: 'Najwyższe iglice Skandów, Krucza Poczta, lunety astronomiczne i widok na zorzę.' }
-  ];
+  useEffect(() => {
+    loadMapState(activeLayerId);
+  }, [activeLayerId, loadMapState]);
 
-  const currentLevelInfo = levelConfigs.find((l) => l.level === currentLevel) || levelConfigs[1];
+  // ── Derived state ──────────────────────────────────────────────────────────
+  const activeLayer = useMemo(
+    () => layers.find(l => l.id === activeLayerId),
+    [layers, activeLayerId]
+  );
 
-  const filteredLocations = (locations || []).filter((l) => {
-    const matchesHouse =
-      filterHouse === 'all' ||
-      l.house === filterHouse ||
-      (filterHouse === 'neutral' && !l.house);
-    const matchesSearch =
-      !searchQuery ||
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.nordicName?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesHouse && matchesSearch;
-  });
+  const markers = useMemo(() => {
+    if (!mapState?.markers) return [];
+    let list = mapState.markers;
 
+    // Filtr po piętrze (tylko dla mapy twierdzy)
+    if (activeLayerId === 'fortress') {
+      list = list.filter(m => (m.floor ?? 0) === currentFloor);
+    }
+
+    // Filtr po typie
+    if (activeFilter !== 'all') {
+      list = list.filter(m => m.markerType === activeFilter);
+    }
+
+    return list;
+  }, [mapState?.markers, activeFilter, currentFloor, activeLayerId]);
+
+  const selectedMarker = useMemo(
+    () => markers.find(m => m.id === selectedMarkerId) ?? null,
+    [markers, selectedMarkerId]
+  );
+
+  const trackedMarker = useMemo(
+    () => mapState?.markers?.find(m => m.id === mapState?.trackedLocationId) ?? null,
+    [mapState]
+  );
+
+  const trackedQuestId = mapState?.trackedQuestId ?? null;
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleLayerChange = useCallback((layerId) => {
+    playWandSwoosh?.();
+    setActiveLayerId(layerId);
+    setSelectedMarkerId(null);
+    setActiveFilter('all');
+  }, [playWandSwoosh]);
+
+  const handleMarkerClick = useCallback((marker) => {
+    playRuneChime?.();
+    setSelectedMarkerId(prev => prev === marker.id ? null : marker.id);
+
+    // Automatyczne odkrycie gdy marker jest available
+    if (marker.userState === 'available' && !marker.isDiscovered && backendAvailable) {
+      api.discoverLocation(marker.id).then(res => {
+        const result = res?.data ?? res;
+        if (result?.discovered) {
+          playRuneChime?.();
+          addNotification(
+            `✨ Odkryto lokację: ${result.locationName}${result.rewards?.xp ? ` · +${result.rewards.xp} XP` : ''}${result.rewards?.skirniry ? ` · +${result.rewards.skirniry} SKR` : ''}`,
+            'success'
+          );
+          loadMapState(activeLayerId);
+        }
+      }).catch(() => {});
+    }
+  }, [playRuneChime, addNotification, backendAvailable, activeLayerId, loadMapState]);
+
+  const handleTrack = useCallback((locationId) => {
+    if (!backendAvailable) return;
+    const fn = locationId ? api.trackLocation(locationId) : api.untrackLocation();
+    fn.then(() => {
+      setMapState(prev => prev ? { ...prev, trackedLocationId: locationId || null, trackedQuestId: locationId ? prev.trackedQuestId : null } : prev);
+    }).catch(() => {});
+  }, [backendAvailable]);
+
+  const handleOpenQuest = useCallback((questId, autoStart = false) => {
+    setActiveQuest({ questId, autoStart });
+  }, []);
+
+  const handleQuestComplete = useCallback(({ questId, rewards, title }) => {
+    loadMapState(activeLayerId);
+    addNotification(
+      `✨ Quest ukończony: ${title}${rewards?.points ? ` · +${rewards.points} pkt` : ''}${rewards?.xp ? ` · +${rewards.xp} XP` : ''}${rewards?.skirniry ? ` · +${rewards.skirniry} SKR` : ''}`,
+      'success'
+    );
+  }, [activeLayerId, loadMapState, addNotification]);
+
+  const handleStartActivity = useCallback((marker) => {
+    // Wejście do innej mapy
+    if (marker.markerType === 'entrance') {
+      const targetSlug = marker.linkedActivityId || marker.id.replace('wl-', '');
+      const targetLayer = layers.find(l => l.slug === targetSlug || l.id === targetSlug);
+      if (targetLayer) {
+        playWandSwoosh?.();
+        setActiveLayerId(targetLayer.id);
+        setSelectedMarkerId(null);
+        return;
+      }
+    }
+    // Aktywność
+    if (marker.linkedActivityType && marker.linkedActivityType !== 'none') {
+      setActiveModal({ type: marker.linkedActivityType, marker });
+    }
+  }, [layers, playWandSwoosh]);
+
+  const handleModalClose = useCallback((result) => {
+    setActiveModal(null);
+    if (result?.completed) {
+      loadMapState(activeLayerId);
+      if (result.xp || result.skirniry || result.points) {
+        addNotification(
+          `⚡ Aktywność ukończona · ${[result.points && `+${result.points} pkt`, result.xp && `+${result.xp} XP`, result.skirniry && `+${result.skirniry} SKR`].filter(Boolean).join(' · ')}`,
+          'success'
+        );
+      }
+    }
+  }, [activeLayerId, loadMapState, addNotification]);
+
+  const handleFocusTracker = useCallback((marker) => {
+    setSelectedMarkerId(marker.id);
+    // Przesuń widok na marker
+    viewportRef.current?.panTo?.(marker.x, marker.y);
+  }, []);
+
+  // ── Image src ──────────────────────────────────────────────────────────────
+  const imageSrc = activeLayer?.image_path || '/world_map.webp';
+  const initialZoom = activeLayer?.default_zoom || 0.7;
+
+  // ── Active modal component ─────────────────────────────────────────────────
+  const ActiveModal = activeModal ? ACTIVITY_MODAL_MAP[activeModal.type] : null;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
-      {/* Header with Title & Marauder Spell Status */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ color: 'var(--gold-ancient)', fontSize: '0.85rem', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-              Eksploracja Twierdzy • Żywa Mapa Pergaminowa
-            </span>
-            <span
-              style={{
-                background: isRevealed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: isRevealed ? '#4ade80' : '#f87171',
-                border: `1px solid ${isRevealed ? '#22c55e' : '#ef4444'}`,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '4px',
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                fontFamily: 'var(--font-heading)'
-              }}
-            >
-              {isRevealed ? '⚡ Runiczny Tusz Aktywny' : '🔒 Pergamin Ukryty'}
-            </span>
-          </div>
-          <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginTop: '0.3rem', marginBottom: '0.4rem' }}>
-            Architektura & Posterunki Północy
-          </h1>
-          <p style={{ color: '#9ca3af', maxWidth: '720px', fontSize: '0.96rem' }}>
-            Dotknij różdżką pergaminu, śledź ślady patroli w czasie rzeczywistym i podejmuj interaktywne side questy w kanałach bota RPG.
-          </p>
-        </div>
+    <>
+      {/* CSS globalny dla animacji markerów */}
+      <style>{`
+        @keyframes mapPulse {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50%       { transform: scale(1.25); opacity: 0.2; }
+        }
+      `}</style>
 
-        {/* Action Oath Buttons */}
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-          {isRevealed ? (
-            <button
-              onClick={handleConcealMap}
-              className="gothic-btn"
-              style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                borderColor: '#ef4444',
-                color: '#fca5a5',
-                fontSize: '0.82rem',
-                padding: '0.5rem 1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem'
-              }}
-            >
-              <Lock size={14} /> Koniec psot! (Zwiń Mapę)
-            </button>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: '#030508',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        {/* Layer selector */}
+        <MapLayerSelector
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onChange={handleLayerChange}
+        />
+
+        {/* Filters */}
+        <MapFilters
+          activeFilter={activeFilter}
+          onChange={setActiveFilter}
+          discoveredCount={mapState?.discoveredCount || 0}
+          totalDiscoverable={mapState?.totalDiscoverable || 0}
+        />
+
+        {/* Map area */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {error ? (
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              color: '#f87171', fontSize: '0.9rem', textAlign: 'center',
+              padding: '2rem',
+            }}>
+              <div>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>ᛏ</div>
+                {error}
+              </div>
+            </div>
           ) : (
-            <button
-              onClick={handleRevealMap}
-              className="gothic-btn"
-              style={{
-                background: 'linear-gradient(135deg, #c59f4e 0%, #8c6d3b 100%)',
-                color: '#000000',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                padding: '0.6rem 1.2rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 0 20px rgba(197, 159, 78, 0.4)'
-              }}
+            <MapViewport
+              ref={viewportRef}
+              imageSrc={imageSrc}
+              initialZoom={initialZoom}
+              onBackgroundClick={() => setSelectedMarkerId(null)}
             >
-              <Sparkles size={16} /> „Uroczyście przysięgam, że knuję coś niedobrego...”
-            </button>
+              {/* Markers layer */}
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                {markers.map(marker => (
+                  <MapMarker
+                    key={marker.id}
+                    marker={marker}
+                    isSelected={selectedMarkerId === marker.id}
+                    onClick={() => handleMarkerClick(marker)}
+                  />
+                ))}
+              </div>
+            </MapViewport>
+          )}
+
+          {/* Quest tracker widget */}
+          <MapQuestTracker
+            trackedMarker={trackedMarker}
+            trackedQuestId={trackedQuestId}
+            onUntrack={() => handleTrack(null)}
+            onFocus={handleFocusTracker}
+            onOpenQuest={handleOpenQuest}
+          />
+
+          {/* Info panel */}
+          <MapInfoPanel
+            marker={selectedMarker}
+            onClose={() => setSelectedMarkerId(null)}
+            onTrack={handleTrack}
+            onStartActivity={handleStartActivity}
+            onOpenQuest={handleOpenQuest}
+            trackedLocationId={mapState?.trackedLocationId}
+            isMobile={isMobile}
+          />
+
+          {/* Zoom + floor controls */}
+          <MapControls
+            onZoomIn={() => viewportRef.current?.zoomIn?.()}
+            onZoomOut={() => viewportRef.current?.zoomOut?.()}
+            onReset={() => viewportRef.current?.reset?.()}
+            currentFloor={currentFloor}
+            floors={activeLayerId === 'fortress' ? FORTRESS_FLOORS : null}
+            onFloorChange={setCurrentFloor}
+          />
+
+          {/* Loading overlay */}
+          {loading && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(3,5,8,0.85)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(197,159,78,0.7)', fontFamily: 'var(--font-heading)',
+              letterSpacing: '0.2em', fontSize: '0.85rem',
+              zIndex: 20,
+            }}>
+              ᚱ ŁADOWANIE ᚱ
+            </div>
+          )}
+
+          {/* No backend fallback */}
+          {!backendAvailable && !loading && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#6b7280', fontSize: '0.9rem', textAlign: 'center',
+              padding: '2rem', pointerEvents: 'none',
+            }}>
+              <div>
+                <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', opacity: 0.5 }}>🗺️</div>
+                <div>Mapa wymaga połączenia z serwerem.</div>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {!isRevealed ? (
-        /* Blank Sealed Parchment State */
-        <div
-          className="gothic-card runic-corners"
-          style={{
-            height: '480px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            background: 'radial-gradient(ellipse at center, #f4ecd8 0%, #d8c39e 100%)',
-            border: '3px solid #8c6d3b',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 50px rgba(58, 30, 18, 0.4)',
-            padding: '2rem'
-          }}
-        >
-          <div style={{ color: '#4a2810', fontSize: '3rem', marginBottom: '1rem' }}>📜</div>
-          <h2 style={{ color: '#3a1e12', fontFamily: 'var(--font-heading)', fontSize: '1.8rem', marginBottom: '0.5rem' }}>
-            Pusty Pergamin Cytadeli Durmstrang
-          </h2>
-          <p style={{ color: '#5c3a21', maxWidth: '500px', fontSize: '0.95rem', fontStyle: 'italic', marginBottom: '1.8rem' }}>
-            Na pożółkłej karcie nie widać ani śladu atramentu... Wypowiedz formułę adepcką, aby obudzić magiczne ślady twierdzy.
-          </p>
-          <button
-            onClick={handleRevealMap}
-            className="gothic-btn"
-            style={{
-              background: '#3a1e12',
-              borderColor: '#241208',
-              color: '#ffe599',
-              padding: '0.8rem 1.6rem',
-              fontSize: '0.95rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              boxShadow: '0 4px 15px rgba(58, 30, 18, 0.4)'
-            }}
-          >
-            <Sparkles size={18} /> Uroczyście przysięgam, że knuję coś niedobrego...
-          </button>
-        </div>
-      ) : (
-        /* Full Revealed Marauder Canvas Interface */
-        <>
-          {/* Level Switcher & Search & House Filters */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '0.8rem',
-              background: 'rgba(12, 16, 24, 0.85)',
-              borderLeft: '4px solid var(--gold-ancient)',
-              padding: '0.8rem 1.2rem',
-              borderRadius: '6px',
-              border: '1px solid rgba(197, 159, 78, 0.2)'
-            }}
-          >
-            {/* Floors */}
-            <div style={{ display: 'flex', gap: '0.3rem', background: 'rgba(15, 20, 28, 0.8)', padding: '0.25rem', borderRadius: '6px', border: '1px solid rgba(197, 159, 78, 0.25)' }}>
-              {levelConfigs.map((lvl) => (
-                <button
-                  key={lvl.level}
-                  onClick={() => {
-                    playWandSwoosh();
-                    setCurrentLevel(lvl.level);
-                  }}
-                  style={{
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: currentLevel === lvl.level ? 'var(--gold-ancient)' : 'transparent',
-                    color: currentLevel === lvl.level ? '#000000' : '#d1d5db',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-heading)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {lvl.level === -1 ? 'Lochy (-1)' : lvl.level === 0 ? 'Parter (0)' : lvl.level === 1 ? 'Piętro (1)' : 'Wieże (2)'}
-                </button>
-              ))}
-            </div>
-
-            {/* Quick Search */}
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(15, 20, 30, 0.8)', border: '1px solid rgba(197, 159, 78, 0.3)', borderRadius: '4px', padding: '0.2rem 0.6rem', width: '220px' }}>
-              <Search size={14} color="#9ca3af" />
-              <input
-                type="text"
-                placeholder="Szukaj lokacji..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: '#ffffff',
-                  fontSize: '0.8rem',
-                  marginLeft: '0.4rem',
-                  width: '100%'
-                }}
-              />
-            </div>
-
-            {/* House Filters */}
-            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-              {['all', 'renifer', 'niedzwiedz', 'kruk', 'wydra'].map((h) => (
-                <button
-                  key={h}
-                  onClick={() => setFilterHouse(h)}
-                  style={{
-                    padding: '0.35rem 0.65rem',
-                    borderRadius: '4px',
-                    border: filterHouse === h ? '1px solid var(--gold-ancient)' : '1px solid rgba(255,255,255,0.1)',
-                    background: filterHouse === h ? 'rgba(197, 159, 78, 0.2)' : 'rgba(12, 15, 22, 0.7)',
-                    color: filterHouse === h ? '#ffe8aa' : '#9ca3af',
-                    fontSize: '0.74rem',
-                    fontFamily: 'var(--font-heading)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {h === 'all' ? 'Wszystkie' : h === 'renifer' ? 'ᚦ Reinhall' : h === 'niedzwiedz' ? 'ᛉ Björnhall' : h === 'kruk' ? 'ᚱ Ravnheim' : 'ᛞ Otergard'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Level Info Banner */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.8rem', background: 'rgba(18, 24, 36, 0.6)', borderRadius: '4px', fontSize: '0.82rem', color: '#94a3b8' }}>
-            <span>🏛️ <strong style={{ color: '#ffffff' }}>{currentLevelInfo.name}</strong> — {currentLevelInfo.desc}</span>
-            <span style={{ color: 'var(--gold-ancient)', fontSize: '0.75rem' }}>Kliknij dowolny węzeł na mapie, by otworzyć Side Questy</span>
-          </div>
-
-          {/* Core Interactive HTML5 Canvas Map Engine */}
-          <MaraudersMapCanvas
-            locations={filteredLocations}
-            currentLevel={currentLevel}
-            filterHouse={filterHouse}
-            onSelectLocation={(loc) => {
-              playWandSwoosh();
-              setSelectedLocation(loc);
-            }}
-            selectedLocationId={selectedLocation?.id}
-            houses={houses}
-            isRevealed={isRevealed}
-          />
-
-          {/* Secret Runic Passage Button */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            <div
-              onClick={handleUnlockSecret}
-              title="Tajemnicza wypukła runa w murze..."
-              style={{
-                cursor: 'pointer',
-                padding: '0.5rem 1rem',
-                background: secretPassageUnlocked ? 'rgba(34, 197, 94, 0.15)' : 'rgba(197, 159, 78, 0.12)',
-                border: `1px dashed ${secretPassageUnlocked ? '#22c55e' : 'var(--gold-ancient)'}`,
-                borderRadius: '6px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: secretPassageUnlocked ? '#4ade80' : '#ffe599',
-                fontSize: '0.82rem',
-                fontFamily: 'var(--font-heading)'
-              }}
-            >
-              {secretPassageUnlocked ? <Unlock size={15} /> : <Lock size={15} />}
-              {secretPassageUnlocked ? 'Sekretne Przejście Otwarte (+25 pkt dla Zakonu)' : 'ᛏ Runa w Bazaltowym Murze (Dotknij Różdżką)'}
-            </div>
-
-            <div style={{ color: '#9ca3af', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Footprints size={14} color="var(--gold-ancient)" />
-              <span>Patrole przemieszczają się zgodnie z procedurą straży Twierdzy</span>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Selected Location Quest & Discord Bot Modal */}
-      {selectedLocation && (
-        <MarauderQuestModal
-          location={selectedLocation}
-          isOpen={Boolean(selectedLocation)}
-          onClose={() => setSelectedLocation(null)}
+      {/* Activity modal */}
+      {ActiveModal && (
+        <ActiveModal
+          isOpen={true}
+          onClose={handleModalClose}
+          marker={activeModal?.marker}
         />
       )}
-    </div>
+
+      {/* Quest engine modal */}
+      <QuestModal
+        questId={activeQuest?.questId}
+        isOpen={activeQuest !== null}
+        autoStart={activeQuest?.autoStart ?? false}
+        onClose={() => setActiveQuest(null)}
+        onQuestComplete={handleQuestComplete}
+      />
+    </>
   );
 };

@@ -150,6 +150,14 @@ export const App = () => {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [playRuneChime]);
 
+  // Escape zamyka mapę
+  useEffect(() => {
+    if (activeView !== 'map') return;
+    const handler = (e) => { if (e.key === 'Escape') setActiveView('home'); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeView, setActiveView]);
+
   // Sound on notification
   useEffect(() => {
     if (notification) {
@@ -283,7 +291,7 @@ export const App = () => {
           return Math.min(1, base * moonBonus);
         })()}
       />
-      <CitadelAstrolabe />
+      <CitadelAstrolabe hidden={activeView === 'map'} />
 
       {/* Global Notification Toast — kept above the Magiczna Północ indicator */}
       {notification && (
@@ -355,23 +363,68 @@ export const App = () => {
         {/* =========================================================================
             3. MAIN 3-COLUMN PORTAL GRID (LEFT MENU, CENTER VIEW, RIGHT MENU)
             ========================================================================= */}
-        <div className="portal-main-grid">
-          {/* Left Column Sidebar */}
-          <PortalLeftSidebar onOpenCreationModal={() => openAuthModal('register')} />
-
-          {/* Center Column (Active View / Scrolls) */}
-          <main style={{ minWidth: 0 }}>
+        {activeView === 'map' ? (
+          /* Mapa — pełny viewport, przykrywa navbar i stopkę */
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 200,
+            background: '#030508',
+          }}>
             {renderActiveView()}
-          </main>
+            <button
+              onClick={() => setActiveView('home')}
+              title="Opuść mapę (Escape)"
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '16px',
+                zIndex: 201,
+                background: 'rgba(7,10,16,0.88)',
+                border: '1px solid rgba(197,159,78,0.5)',
+                borderRadius: '6px',
+                color: 'var(--gold-ancient)',
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.75rem',
+                letterSpacing: '0.12em',
+                padding: '6px 14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(197,159,78,0.15)';
+                e.currentTarget.style.borderColor = 'var(--gold-ancient)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(7,10,16,0.88)';
+                e.currentTarget.style.borderColor = 'rgba(197,159,78,0.5)';
+              }}
+            >
+              ✕ OPUŚĆ MAPĘ
+            </button>
+          </div>
+        ) : (
+          <div className="portal-main-grid">
+            {/* Left Column Sidebar */}
+            <PortalLeftSidebar onOpenCreationModal={() => openAuthModal('register')} />
 
-          {/* Right Column Sidebar */}
-          <PortalRightSidebar
-            auroraEnabled={auroraEnabled}
-            setAuroraEnabled={setAuroraEnabled}
-            torchEnabled={torchEnabled}
-            setTorchEnabled={setTorchEnabled}
-          />
-        </div>
+            {/* Center Column (Active View / Scrolls) */}
+            <main style={{ minWidth: 0 }}>
+              {renderActiveView()}
+            </main>
+
+            {/* Right Column Sidebar */}
+            <PortalRightSidebar
+              auroraEnabled={auroraEnabled}
+              setAuroraEnabled={setAuroraEnabled}
+              torchEnabled={torchEnabled}
+              setTorchEnabled={setTorchEnabled}
+            />
+          </div>
+        )}
 
         {/* Character Creation Modal */}
         <CharacterCreationModal
@@ -409,7 +462,7 @@ export const App = () => {
           onClose={() => setCommandPaletteOpen(false)}
         />
 
-        <AdeptBelt hidden={prologueRequired !== false} />
+        <AdeptBelt hidden={prologueRequired !== false || activeView === 'map'} />
 
         {/* Floating Quick Arcane Compass Trigger Button */}
         <button
