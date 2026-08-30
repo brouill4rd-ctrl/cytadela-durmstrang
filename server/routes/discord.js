@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import db, { dbLessonToFrontend, dbMessageToFrontend, dbParticipantToFrontend, dbRoleMappingToFrontend, dbVerificationToFrontend, dbUserToFrontend, isProfessorOfSubject } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { discordBot, sendWelcomeToGuild } from '../discordBot.js';
+import { discordBot, neridaDiscordBot, questDiscordBot, sendWelcomeToGuild } from '../discordBot.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'lessons');
@@ -87,6 +87,8 @@ router.get('/status', requireAuth, requireRole('admin', 'professor'), (req, res)
 
     res.json({
       botActive: !!botConfig.is_active,
+      questBotConnected: questDiscordBot.isReady,
+      neridaConnected: neridaDiscordBot.isReady,
       guildId: botConfig.guild_id,
       lessonsChannelId: botConfig.lessons_channel_id,
       welcomeChannelId: botConfig.welcome_channel_id || '',
@@ -134,7 +136,7 @@ router.post('/config', requireAuth, requireRole('admin'), (req, res) => {
 router.post('/test-welcome', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     if (!discordBot?.client || !discordBot.isReady) {
-      return res.status(503).json({ error: 'Bot Discord nie jest aktualnie połączony z serwerem.' });
+      return res.status(503).json({ error: 'Nerida nie jest aktualnie połączona z serwerem Discord.' });
     }
 
     const { channelId } = req.body;

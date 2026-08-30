@@ -57,6 +57,20 @@ export function initQuestService(db) {
       UNIQUE(user_id, location_id, action_index)
     );
 
+    CREATE TABLE IF NOT EXISTS location_narrative_reviews (
+      id TEXT PRIMARY KEY,
+      location_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      action_index INTEGER NOT NULL,
+      action_label TEXT NOT NULL,
+      discord_thread_id TEXT NOT NULL,
+      response_text TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      reviewer_discord_id TEXT,
+      reviewed_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS quest_definitions (
       id TEXT PRIMARY KEY,
       version INTEGER NOT NULL DEFAULT 1,

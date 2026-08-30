@@ -18,7 +18,8 @@ import https from 'https';
 import http from 'http';
 import db from './db.js';
 import { normalizeSubjectId, normalizeClassYear } from './utils.js';
-import { executeLocationAction } from './services/locationActionService.js';
+import { executeLocationAction, submitLocationNarrative, approveLocationNarrative, rejectLocationNarrative } from './services/locationActionService.js';
+import { buildLocationActionDefinition } from './seed/locationActionDefinitions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'lessons');
@@ -443,9 +444,16 @@ export function buildRecruitmentNotificationPayload(application = {}) {
 }
 
 export class DurmstrangDiscordBot {
-  constructor() {
-    this.token = process.env.DISCORD_BOT_TOKEN || '';
-    this.clientId = process.env.DISCORD_CLIENT_ID || '';
+  constructor({ role = 'utility', name = 'Discord Bot' } = {}) {
+    this.role = role;
+    this.name = name;
+    const isQuestBot = role === 'quest';
+    this.token = isQuestBot
+      ? (process.env.DISCORD_BOT_TOKEN || '')
+      : (process.env.NERIDA_DISCORD_BOT_TOKEN || process.env.DISCORD_NERIDA_BOT_TOKEN || '');
+    this.clientId = isQuestBot
+      ? (process.env.DISCORD_CLIENT_ID || '')
+      : (process.env.NERIDA_DISCORD_CLIENT_ID || process.env.DISCORD_NERIDA_CLIENT_ID || '');
     this.client = null;
     this.isReady = false;
     this.timetableScheduler = null;
@@ -454,6 +462,7 @@ export class DurmstrangDiscordBot {
 
   // Definicje komend Slash
   getSlashCommands() {
+    if (this.role === 'quest') return [];
     return [
       new SlashCommandBuilder()
         .setName('powitaj')
@@ -580,47 +589,50 @@ export class DurmstrangDiscordBot {
   async initialize() {
     // 1. Sprawdź konfigurację w bazie SQLite lub zmiennych środowiskowych
     const config = db.prepare('SELECT * FROM discord_bot_config LIMIT 1').get();
-    if (config && config.bot_token && config.bot_token !== 'BOT_TOKEN_DISCORD_DURMSTRANG_SECRET') {
+    if (this.role === 'quest' && config && config.bot_token && config.bot_token !== 'BOT_TOKEN_DISCORD_DURMSTRANG_SECRET') {
       this.token = config.bot_token;
       this.clientId = config.client_id;
     }
 
     if (!this.token || this.token === 'BOT_TOKEN_DISCORD_DURMSTRANG_SECRET') {
       console.log('------------------------------------------------------------------');
-      console.log('🤖 [Discord Bot] Status: TRYB HYBRYDOWY / API SYMULATOR (Gotowy do pracy)');
+      console.log(`🤖 [${this.name}] Status: NIEPODŁĄCZONY / API SYMULATOR`);
       console.log('💡 Aby podłączyć bota bezpośrednio do swojego serwera Discord:');
-      console.log('   Ustaw DISCORD_BOT_TOKEN i DISCORD_CLIENT_ID w .env lub w Panelu Admina.');
+      console.log(this.role === 'quest'
+        ? '   Ustaw DISCORD_BOT_TOKEN i DISCORD_CLIENT_ID w .env lub w Panelu Admina.'
+        : '   Ustaw NERIDA_DISCORD_BOT_TOKEN i NERIDA_DISCORD_CLIENT_ID w .env.');
       console.log('   Symulator sesji w aplikacji działa natywnie bez zewnętrznego bota!');
       console.log('------------------------------------------------------------------');
       return;
     }
 
     try {
-      this.client = new Client({
-        intents: [
-          GatewayIntentBits.Guilds,
-          GatewayIntentBits.GuildMessages,
-          GatewayIntentBits.MessageContent,
-          GatewayIntentBits.GuildMessageReactions,
-          GatewayIntentBits.GuildMembers
-        ]
-      });
+      const intents = this.role === 'quest'
+        ? [GatewayIntentBits.Guilds]
+        : [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+            GatewayIntentBits.GuildMessageReactions,
+            GatewayIntentBits.GuildMembers
+          ];
+      this.client = new Client({ intents });
 
       this.registerEventHandlers();
       await this.client.login(this.token);
       this.isReady = true;
-      console.log(`🏰 [Discord Bot] Pomyślnie zalogowano jako: ${this.client.user.tag}`);
-      this.startDailyTimetableScheduler();
+      console.log(`🏰 [${this.name}] Pomyślnie zalogowano jako: ${this.client.user.tag}`);
+      if (this.role === 'utility') this.startDailyTimetableScheduler();
 
       // Rejestracja Slash Commands w Discord API
       if (this.clientId) {
         const rest = new REST({ version: '10' }).setToken(this.token);
         const commandsJson = this.getSlashCommands().map(c => c.toJSON());
         await rest.put(Routes.applicationCommands(this.clientId), { body: commandsJson });
-        console.log('⚡ [Discord Bot] Zarejestrowano slash commands (/lekcja, /quiz, /pytanie, /zaklecie, /losowanie).');
+        console.log(`⚡ [${this.name}] Zarejestrowano ${commandsJson.length} komend slash.`);
       }
     } catch (err) {
-      console.error('❌ [Discord Bot] Błąd logowania bota Discord:', err.message);
+      console.error(`❌ [${this.name}] Błąd logowania bota Discord:`, err.message);
     }
   }
 
@@ -637,6 +649,14 @@ export class DurmstrangDiscordBot {
       // Obsługa interaktywnych przycisków w powitaniu
       if (interaction.isButton()) {
         try {
+          if (this.role === 'quest') {
+            await this._handleQuestButton(interaction).catch(err => {
+              console.warn('[Quest Button Error]', err.message);
+              return false;
+            });
+            return;
+          }
+
           const { customId } = interaction;
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -716,13 +736,6 @@ export class DurmstrangDiscordBot {
             return;
           }
 
-          // Przyciski questowe
-          const questHandled = await this._handleQuestButton(interaction).catch(err => {
-            console.warn('[Quest Button Error]', err.message);
-            return false;
-          });
-          if (questHandled) return;
-
         } catch (err) {
           console.warn('[Discord Button Error]', err.message);
         }
@@ -731,6 +744,7 @@ export class DurmstrangDiscordBot {
 
       // Obsługa modali questowych
       if (interaction.isModalSubmit()) {
+        if (this.role !== 'quest') return;
         try {
           await this._handleQuestModalSubmit(interaction);
         } catch (err) {
@@ -740,6 +754,7 @@ export class DurmstrangDiscordBot {
       }
 
       if (!interaction.isChatInputCommand()) return;
+      if (this.role !== 'utility') return;
 
       try {
         const { commandName } = interaction;
@@ -1662,6 +1677,7 @@ export class DurmstrangDiscordBot {
     };
 
     this.client.on('messageCreate', async (message) => {
+      if (this.role !== 'utility') return;
       // Ignoruj tylko własnego bota Durmstranga, pozwalając na archiwizację botów takich jak Fibi APL. i kart zaklęć
       if (message.author.id === this.client.user?.id) return;
 
@@ -1789,6 +1805,7 @@ export class DurmstrangDiscordBot {
 
     // 3. Automatyczne powitanie nowych członków na serwerze Discord
     this.client.on('guildMemberAdd', async (member) => {
+      if (this.role !== 'utility') return;
       try {
         console.log(`❄️ [Discord Bot] Nowy adept przybył na serwer: ${member.user.tag} (${member.id})`);
         await sendWelcomeToGuild(member.guild, member);
@@ -2632,6 +2649,65 @@ export class DurmstrangDiscordBot {
     }
   }
 
+  async sendLocationNarrativeReview(reviewId, locationName, actionLabel, responseText, playerDiscordId, playerName) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const guild = await this.client.guilds.fetch(TMD_GUILD_ID).catch(() => null);
+      if (!guild) return;
+
+      const reviewChannelId = process.env.DISCORD_QUEST_REVIEW_CHANNEL_ID;
+      let channel = reviewChannelId
+        ? await guild.channels.fetch(reviewChannelId).catch(() => null)
+        : null;
+
+      if (!channel) {
+        const keywords = ['quest-recenz', 'questy-recenz', 'recenzje', 'arxy-review', 'arxymistrzowie', 'arxy'];
+        channel = guild.channels.cache.find(ch =>
+          ch.isTextBased() && keywords.some(kw => ch.name.toLowerCase().includes(kw))
+        );
+      }
+      if (!channel) {
+        const staffKeywords = ['rada', 'staff', 'administracja', 'arxy'];
+        channel = guild.channels.cache.find(ch =>
+          ch.isTextBased() && staffKeywords.some(kw => ch.name.toLowerCase().includes(kw))
+        );
+      }
+      if (!channel) {
+        console.warn('[Location Narrative Review] Nie znaleziono kanału recenzji. Ustaw DISCORD_QUEST_REVIEW_CHANNEL_ID w .env.');
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0xc59f4e)
+        .setTitle(`⚔️ Recenzja działania — ${locationName}`)
+        .setDescription(
+          `<@&${ARXYMISTRZOW_ROLE_ID}> — nowe działanie lokacji do zatwierdzenia.\n\n` +
+          `**Adept:** ${playerName || `<@${playerDiscordId}>`}\n` +
+          `**Działanie:** ${actionLabel}`
+        )
+        .addFields({ name: 'Opis gracza', value: responseText.slice(0, 1024), inline: false })
+        .setFooter({ text: `Review ID: ${reviewId.slice(0, 8)}… · Lokacja: ${locationName}` })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`laprv_${reviewId.slice(0, 36)}`)
+          .setLabel('Zatwierdź')
+          .setStyle(ButtonStyle.Success)
+          .setEmoji('✅'),
+        new ButtonBuilder()
+          .setCustomId(`lrejt_${reviewId.slice(0, 36)}`)
+          .setLabel('Odrzuć')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('❌')
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+    } catch (err) {
+      console.warn('[Location Narrative Review Error]', err.message);
+    }
+  }
+
   // ─── Obsługa interakcji questowych ────────────────────────────────────────
 
   async _handleQuestButton(interaction) {
@@ -2656,41 +2732,35 @@ export class DurmstrangDiscordBot {
         return true;
       }
 
-      let outcome;
+      // Otwórz modal do wpisania opisu klimatycznego — nagrody po zatwierdzeniu przez Arcymistrza
+      let location, actionLabel, definition;
       try {
-        outcome = executeLocationAction({
-          locationId,
-          userId: user.id,
-          actionIndex,
-          discordThreadId: interaction.channelId,
-          db,
-        });
+        location = db.prepare('SELECT id, name, actions FROM locations WHERE id=?').get(locationId);
+        if (!location) throw new Error('Lokacja nie istnieje.');
+        const actions = JSON.parse(location.actions || '[]');
+        actionLabel = Array.isArray(actions) ? actions[actionIndex] : null;
+        if (!actionLabel) throw new Error('To działanie nie jest dostępne.');
+        definition = buildLocationActionDefinition(location, actionLabel, actionIndex);
       } catch (error) {
         await interaction.reply({ content: `❌ ${error.message}`, ephemeral: true });
         return true;
       }
 
-      const effectLines = [
-        outcome.effects?.xpAwarded > 0 && `✨ +${outcome.effects.xpAwarded} XP`,
-        outcome.effects?.skirnirySpent > 0 && `🪙 −${outcome.effects.skirnirySpent} Skirnirów`,
-        outcome.effects?.itemAdded && `🎁 ${outcome.effects.itemAdded}`,
-      ].filter(Boolean);
+      const modal = new ModalBuilder()
+        .setCustomId(`locnarr_${locationId.slice(0, 30)}_${ownerDiscordId}_${actionIndex}`)
+        .setTitle(actionLabel.slice(0, 45));
 
-      const embed = new EmbedBuilder()
-        .setColor(0x8ecae6)
-        .setTitle(`⚔️ ${outcome.definition.label}`)
-        .setDescription(
-          `<@${interaction.user.id}> ${outcome.result}\n\n${outcome.definition.prompt}` +
-          (outcome.duplicate ? '\n\n*To działanie było już wcześniej wykonane — nagrody i koszty nie są naliczane ponownie.*' : '')
-        )
-        .setFooter({ text: 'Działanie zapisane w kronice lokacji' })
-        .setTimestamp();
-      if (effectLines.length > 0) embed.addFields({ name: 'Efekty', value: effectLines.join('\n'), inline: false });
+      const textInput = new TextInputBuilder()
+        .setCustomId('location_text')
+        .setLabel('Opisz co robi twoja postać')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMinLength(30)
+        .setMaxLength(2000)
+        .setRequired(true)
+        .setPlaceholder(definition.prompt.slice(0, 100));
 
-      await interaction.reply({
-        embeds: [embed],
-        allowedMentions: { users: [interaction.user.id] },
-      });
+      modal.addComponents(new ActionRowBuilder().addComponents(textInput));
+      await interaction.showModal(modal);
       return true;
     }
 
@@ -2857,10 +2927,170 @@ export class DurmstrangDiscordBot {
       return true;
     }
 
+    // Zatwierdzenie działania lokacji: laprv_{reviewId}
+    if (customId.startsWith('laprv_')) {
+      const reviewId = customId.slice(6);
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const member = interaction.member;
+      if (!member?.roles?.cache?.has(ARXYMISTRZOW_ROLE_ID)) {
+        await interaction.editReply({ content: '⛔ Tylko Arxymistrzowie mogą zatwierdzać odpowiedzi.' });
+        return true;
+      }
+
+      try {
+        const { review, outcome } = approveLocationNarrative(reviewId, interaction.user.id, db);
+        const playerRow = db.prepare('SELECT discord_id FROM users WHERE id=?').get(review.user_id);
+
+        try {
+          const thread = await this.client.channels.fetch(review.discord_thread_id).catch(() => null);
+          if (thread) {
+            const effectLines = [
+              outcome.effects?.xpAwarded > 0 && `✨ +${outcome.effects.xpAwarded} XP`,
+              outcome.effects?.skirnirySpent > 0 && `🪙 −${outcome.effects.skirnirySpent} Skirnirów`,
+              outcome.effects?.itemAdded && `🎁 ${outcome.effects.itemAdded}`,
+            ].filter(Boolean);
+
+            const playerMention = playerRow?.discord_id ? `<@${playerRow.discord_id}>` : '';
+            const resultEmbed = new EmbedBuilder()
+              .setColor(0x8ecae6)
+              .setTitle(`✅ ${review.action_label}`)
+              .setDescription(
+                `${playerMention} ${outcome.result}`.trim() +
+                (outcome.duplicate ? '\n\n*To działanie było już wcześniej wykonane — nagrody nie zostały naliczone ponownie.*' : '')
+              )
+              .setFooter({ text: 'Działanie zatwierdzone przez Arcymistrza' })
+              .setTimestamp();
+            if (effectLines.length > 0) resultEmbed.addFields({ name: 'Efekty', value: effectLines.join('\n'), inline: false });
+
+            await thread.send({
+              embeds: [resultEmbed],
+              allowedMentions: { users: playerRow?.discord_id ? [playerRow.discord_id] : [] },
+            });
+          }
+        } catch (_) {}
+
+        try {
+          const originalEmbed = interaction.message.embeds[0];
+          const updatedEmbed = EmbedBuilder.from(originalEmbed)
+            .setColor(0x22c55e)
+            .setTitle(`✅ ZATWIERDZONE — ${originalEmbed.title?.replace('⚔️ Recenzja działania — ', '') || ''}`);
+          await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+        } catch (_) {}
+
+        await interaction.editReply({ content: '✅ Działanie zatwierdzone! Gracz otrzymał nagrody.' });
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
+    // Odrzucenie działania lokacji: lrejt_{reviewId}
+    if (customId.startsWith('lrejt_')) {
+      const reviewId = customId.slice(6);
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const member = interaction.member;
+      if (!member?.roles?.cache?.has(ARXYMISTRZOW_ROLE_ID)) {
+        await interaction.editReply({ content: '⛔ Tylko Arxymistrzowie mogą odrzucać odpowiedzi.' });
+        return true;
+      }
+
+      try {
+        const { review } = rejectLocationNarrative(reviewId, interaction.user.id, db);
+        const playerRow = db.prepare('SELECT discord_id FROM users WHERE id=?').get(review.user_id);
+
+        try {
+          const thread = await this.client.channels.fetch(review.discord_thread_id).catch(() => null);
+          if (thread) {
+            const playerMention = playerRow?.discord_id ? `<@${playerRow.discord_id}>` : '';
+            const rejEmbed = new EmbedBuilder()
+              .setColor(0xef4444)
+              .setTitle(`❌ Działanie odrzucone — ${review.action_label}`)
+              .setDescription(
+                `${playerMention} Arcymistrz odrzucił tę próbę. Możesz spróbować ponownie — kliknij przycisk działania i opisz akcję jeszcze raz.`.trim()
+              )
+              .setTimestamp();
+            await thread.send({
+              embeds: [rejEmbed],
+              allowedMentions: { users: playerRow?.discord_id ? [playerRow.discord_id] : [] },
+            });
+          }
+        } catch (_) {}
+
+        try {
+          const originalEmbed = interaction.message.embeds[0];
+          const updatedEmbed = EmbedBuilder.from(originalEmbed)
+            .setColor(0xef4444)
+            .setTitle(`❌ ODRZUCONE — ${originalEmbed.title?.replace('⚔️ Recenzja działania — ', '') || ''}`);
+          await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+        } catch (_) {}
+
+        await interaction.editReply({ content: '❌ Odpowiedź odrzucona. Gracz może spróbować ponownie.' });
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
     return false;
   }
 
   async _handleQuestModalSubmit(interaction) {
+    // Modal działania lokacji: locnarr_{locIdSlug}_{ownerDiscordId}_{actionIndex}
+    if (interaction.customId.startsWith('locnarr_')) {
+      const parts = interaction.customId.split('_');
+      if (parts.length !== 4) return false;
+      const locIdSlug = parts[1];
+      const ownerDiscordId = parts[2];
+      const actionIndex = Number(parts[3]);
+
+      if (interaction.user.id !== ownerDiscordId) {
+        await interaction.reply({ content: '⛔ Ten wątek działań należy do innego adepta.', ephemeral: true });
+        return true;
+      }
+
+      const responseText = interaction.fields.getTextInputValue('location_text') || '';
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const user = db.prepare('SELECT id, full_name FROM users WHERE discord_id=?').get(interaction.user.id);
+      if (!user) {
+        await interaction.editReply({ content: '⚠️ Konto nie jest powiązane z portalem. Użyj `/weryfikuj`.' });
+        return true;
+      }
+
+      const location = db.prepare('SELECT id, name FROM locations WHERE id LIKE ? LIMIT 1').get(`${locIdSlug}%`);
+      if (!location) {
+        await interaction.editReply({ content: '⚠️ Lokacja nie istnieje.' });
+        return true;
+      }
+
+      try {
+        const result = submitLocationNarrative({
+          locationId: location.id,
+          userId: user.id,
+          actionIndex,
+          responseText,
+          discordThreadId: interaction.channelId,
+          db,
+        });
+        await this.sendLocationNarrativeReview(
+          result.reviewId,
+          location.name,
+          result.actionLabel,
+          responseText,
+          interaction.user.id,
+          user.full_name || interaction.user.username
+        );
+        await interaction.editReply({
+          content: '✅ Odpowiedź wysłana! Arcymistrzowie zatwierdzą ją wkrótce — wynik pojawi się w tym wątku.',
+        });
+      } catch (err) {
+        await interaction.editReply({ content: `❌ ${err.message}` });
+      }
+      return true;
+    }
+
     if (!interaction.customId.startsWith('qn_')) return false;
 
     const questIdSlug = interaction.customId.slice(3);
@@ -2919,4 +3149,63 @@ export class DurmstrangDiscordBot {
   }
 }
 
-export const discordBot = new DurmstrangDiscordBot();
+export const questDiscordBot = new DurmstrangDiscordBot({
+  role: 'quest',
+  name: 'Bot Questów Durmstrang'
+});
+
+export const neridaDiscordBot = new DurmstrangDiscordBot({
+  role: 'utility',
+  name: 'Nerida Vulchanova'
+});
+
+class DiscordBotsFacade {
+  // Powitania i status integracji używają klienta Neridy.
+  get client() {
+    return neridaDiscordBot.client;
+  }
+
+  get isReady() {
+    return neridaDiscordBot.isReady;
+  }
+
+  async initialize() {
+    const sameToken = questDiscordBot.token
+      && neridaDiscordBot.token
+      && questDiscordBot.token === neridaDiscordBot.token;
+    const sameClientId = questDiscordBot.clientId
+      && neridaDiscordBot.clientId
+      && questDiscordBot.clientId === neridaDiscordBot.clientId;
+
+    if (sameToken || sameClientId) {
+      console.error('❌ [Discord] Bot questów i Nerida muszą być dwiema różnymi aplikacjami Discord. Nerida nie została uruchomiona.');
+      await questDiscordBot.initialize();
+      return;
+    }
+
+    await Promise.all([
+      questDiscordBot.initialize(),
+      neridaDiscordBot.initialize()
+    ]);
+  }
+
+  stop() {
+    questDiscordBot.stop();
+    neridaDiscordBot.stop();
+  }
+
+  announceRecruitmentApplication(...args) { return neridaDiscordBot.announceRecruitmentApplication(...args); }
+  announceDailyTimetable(...args) { return neridaDiscordBot.announceDailyTimetable(...args); }
+  announceHomeworkCreated(...args) { return neridaDiscordBot.announceHomeworkCreated(...args); }
+  announceExamOpened(...args) { return neridaDiscordBot.announceExamOpened(...args); }
+  announceExamResultsPublished(...args) { return neridaDiscordBot.announceExamResultsPublished(...args); }
+  announceLessonPublished(...args) { return neridaDiscordBot.announceLessonPublished(...args); }
+  announceWorldState(...args) { return questDiscordBot.announceWorldState(...args); }
+
+  openLocationActionsThread(...args) { return questDiscordBot.openLocationActionsThread(...args); }
+  sendQuestSceneToThread(...args) { return questDiscordBot.sendQuestSceneToThread(...args); }
+  sendQuestCompleteToThread(...args) { return questDiscordBot.sendQuestCompleteToThread(...args); }
+}
+
+// Zachowany interfejs dla tras API: każde wywołanie trafia do właściwego bota.
+export const discordBot = new DiscordBotsFacade();

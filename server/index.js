@@ -224,7 +224,7 @@ const server = app.listen(PORT, () => {
   console.log(`  ║  API:      http://localhost:${PORT}/api                   ║`);
   console.log(`  ║  UPLOADS:  http://localhost:${PORT}/uploads               ║`);
   console.log('  ║  DB:       server/durmstrang.db (SQLite)               ║');
-  console.log('  ║  DISCORD:  Rejestrator Wątków & Slash Commands         ║');
+  console.log('  ║  DISCORD:  Bot Questów + Nerida Vulchanova            ║');
   console.log(`  ║  FRONTEND: ${fs.existsSync(distPath) ? 'Serwowany z dist/ (Produkcja)' : 'Vite Dev (http://localhost:5173)'}      ║`);
   console.log('  ╚════════════════════════════════════════════════════════╝');
   console.log('');

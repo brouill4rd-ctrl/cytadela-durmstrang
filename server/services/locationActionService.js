@@ -115,3 +115,56 @@ export function executeLocationAction({ locationId, userId, actionIndex, discord
     throw error;
   }
 }
+
+export function submitLocationNarrative({ locationId, userId, actionIndex, responseText, discordThreadId, db }) {
+  const location = db.prepare('SELECT id, name, actions FROM locations WHERE id=?').get(locationId);
+  if (!location) throw Object.assign(new Error('Lokacja nie istnieje.'), { statusCode: 404 });
+  const actions = parseActions(location.actions);
+  const actionLabel = Number.isInteger(actionIndex) ? actions[actionIndex] : null;
+  if (!actionLabel) throw Object.assign(new Error('To działanie nie jest dostępne.'), { statusCode: 400 });
+
+  const existing = db.prepare(
+    `SELECT id FROM location_narrative_reviews WHERE user_id=? AND location_id=? AND action_index=? AND status='pending'`
+  ).get(userId, locationId, actionIndex);
+  if (existing) throw Object.assign(new Error('Odpowiedź już wysłana — czeka na zatwierdzenie Arcymistrza.'), { statusCode: 409 });
+
+  const id = randomUUID();
+  db.prepare(`
+    INSERT INTO location_narrative_reviews
+      (id, location_id, user_id, action_index, action_label, discord_thread_id, response_text)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, locationId, userId, actionIndex, actionLabel, discordThreadId, responseText);
+
+  return { reviewId: id, actionLabel, locationName: location.name };
+}
+
+export function approveLocationNarrative(reviewId, reviewerDiscordId, db) {
+  const review = db.prepare('SELECT * FROM location_narrative_reviews WHERE id=?').get(reviewId);
+  if (!review) throw new Error('Recenzja nie istnieje.');
+  if (review.status !== 'pending') throw new Error('Ta recenzja nie jest już oczekująca.');
+
+  db.prepare(
+    `UPDATE location_narrative_reviews SET status='approved', reviewer_discord_id=?, reviewed_at=datetime('now') WHERE id=?`
+  ).run(reviewerDiscordId, reviewId);
+
+  const outcome = executeLocationAction({
+    locationId: review.location_id,
+    userId: review.user_id,
+    actionIndex: review.action_index,
+    discordThreadId: review.discord_thread_id,
+    db,
+  });
+  return { review, outcome };
+}
+
+export function rejectLocationNarrative(reviewId, reviewerDiscordId, db) {
+  const review = db.prepare('SELECT * FROM location_narrative_reviews WHERE id=?').get(reviewId);
+  if (!review) throw new Error('Recenzja nie istnieje.');
+  if (review.status !== 'pending') throw new Error('Ta recenzja nie jest już oczekująca.');
+
+  db.prepare(
+    `UPDATE location_narrative_reviews SET status='rejected', reviewer_discord_id=?, reviewed_at=datetime('now') WHERE id=?`
+  ).run(reviewerDiscordId, reviewId);
+
+  return { review };
+}

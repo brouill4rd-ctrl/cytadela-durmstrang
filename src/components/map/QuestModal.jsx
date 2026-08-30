@@ -64,6 +64,14 @@ export function QuestModal({ questId, isOpen, onClose, onQuestComplete, autoStar
     if (isOpen && questId) loadState();
   }, [isOpen, questId, loadState]);
 
+  // Odśwież stan questa gdy użytkownik wraca do karty (np. po wykonaniu etapu na Discordzie)
+  useEffect(() => {
+    if (!isOpen || !questId) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') loadState(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [isOpen, questId, loadState]);
+
 
   const handleAction = async (actionId) => {
     setSubmitting(actionId);

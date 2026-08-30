@@ -1,7 +1,7 @@
 @echo off
-title BOT DISCORD - TWIERDZA MAGII DURMSTRANG
+title BOT QUESTOW + NERIDA - TWIERDZA MAGII DURMSTRANG
 echo ===================================================
-echo   URUCHAMIANIE BOTA DISCORD TWIERDZY MAGII DURMSTRANG
+echo   URUCHAMIANIE BOTA QUESTOW I NERIDY VULCHANOVEJ
 echo ===================================================
 node server/bot_standalone.js
 pause
