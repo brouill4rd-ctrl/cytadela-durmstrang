@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { api } from '../api';
@@ -680,7 +680,7 @@ export const DiscordVerificationModal = ({ isOpen, onClose }) => {
 
         {/* Modal Footer */}
         <div style={{ marginTop: '1.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.2rem', fontSize: '0.78rem', color: '#64748b' }}>
-          <span>Cytadela Durmstrang • Discord Integration Engine</span>
+          <span>TWIERDZA MAGII DURMSTRANG • Discord Integration Engine</span>
           <button
             onClick={onClose}
             style={{

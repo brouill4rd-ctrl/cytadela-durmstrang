@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import db, { dbCompletedQuestToFrontend, dbUserToFrontend, calculateHouseRankings } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { awardPoints } from '../services/pointsService.js';
@@ -320,7 +320,7 @@ router.post('/complete', requireAuth, (req, res) => {
           amount: rewardGalleons,
           category: 'quest',
           title: `Nagroda: ${questTitle || questId}`,
-          note: `Lokacja: ${locationName || 'Cytadela Durmstrang'}`,
+          note: `Lokacja: ${locationName || 'TWIERDZA MAGII DURMSTRANG'}`,
           sourceType: 'QUEST',
           sourceId: questId,
           idempotencyKey: `skr-${idemKey}`

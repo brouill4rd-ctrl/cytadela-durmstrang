@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getWorldState } from '../worldState.js';
@@ -136,7 +136,7 @@ router.get('/me', requireAuth, (req, res) => {
           title: 'Stypendium na Wyprawkę Adepta',
           note: 'Jednorazowe wsparcie Skarbca Cytadeli na zakup obowiązkowej wyprawki adepta Durmstrangu.',
           sourceType: 'PROLOGUE', sourceId: 'PREPARATION',
-          actorId: 'cytadela-treasury', actorName: 'Skarbiec Cytadeli Durmstrang',
+          actorId: 'cytadela-treasury', actorName: 'Skarbiec Twierdzy Magii Durmstrang',
           idempotencyKey: grantKey
         });
       } catch (_) { /* duplicate — safe */ }
@@ -182,7 +182,7 @@ router.post('/advance', requireAuth, (req, res) => {
           sourceType: 'PROLOGUE',
           sourceId: 'PREPARATION',
           actorId: 'cytadela-treasury',
-          actorName: 'Skarbiec Cytadeli Durmstrang',
+          actorName: 'Skarbiec Twierdzy Magii Durmstrang',
           idempotencyKey: `prologue-kit-grant-${user.id}`
         });
       } catch (_) { /* duplicate grant — safe to ignore */ }

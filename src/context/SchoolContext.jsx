@@ -1765,7 +1765,7 @@ Dyrektor Cytadeli Durmstrang`
       questId,
       questTitle: questTitle || questId,
       locationId: locationId || '',
-      locationName: locationName || 'Cytadela Durmstrang',
+      locationName: locationName || 'Twierdza Magii Durmstrang',
       rewardPoints,
       rewardXp,
       rewardGalleons,
@@ -1799,7 +1799,7 @@ Dyrektor Cytadeli Durmstrang`
     }
 
     awardHousePoints(null, rewardPoints, `Side Quest Mapy: ${questTitle || questId}`);
-    addCurrency(rewardGalleons, `Nagroda za quest w lokacji: ${locationName || 'Cytadela'}`);
+    addCurrency(rewardGalleons, `Nagroda za quest w lokacji: ${locationName || 'Twierdza'}`);
     showNotification('Misja z Mapy Ukończona! 🧭', `Brawo! Zdobywasz +${rewardPoints} pkt, +${rewardXp} XP i +${rewardGalleons} Skirnirów!`, 'success');
   };
 

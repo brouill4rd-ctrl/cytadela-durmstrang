@@ -1,4 +1,4 @@
-export const SEED_LOCATIONS = [
+﻿export const SEED_LOCATIONS = [
   {
     id: "wielka-sala",
     name: "Wielka Sala Uczt i Edyktów",
@@ -31,7 +31,7 @@ W centralnej części sali znajduje się Kamień Przysięgi Założycieli — to
                   "item": "Srebrna Odznaka Przysięgi"
             },
             "description": "Kamień Przysięgi Założycieli zaczął pulsować chłodnym, kobaltowym światłem. Mistrz Ceremonii Brokk szuka adepta zdolnego odczytać ukryty pod płaskorzeźbą edykt.",
-            "initialBotMessage": "🏰 **[CYTADELA BOT - SEKTOR: WIELKA SALA]**\nStoisz przed monolitem z czarnego granitu. Płomienie w kandelabrach przygasają do błękitu.\n*„Kto dotyka Kamienia Przysięgi bez znajomości prastarej formuły milczenia, poczuje mróz w kościach.”*\n\nWybierz działanie lub rzuć zaklęcie w wątku:",
+            "initialBotMessage": "🏰 **[TMD BOT - SEKTOR: WIELKA SALA]**\nStoisz przed monolitem z czarnego granitu. Płomienie w kandelabrach przygasają do błękitu.\n*„Kto dotyka Kamienia Przysięgi bez znajomości prastarej formuły milczenia, poczuje mróz w kościach.”*\n\nWybierz działanie lub rzuć zaklęcie w wątku:",
             "suggestedActions": [
                   {
                         "label": "🕯️ Dotknij runy Tiwaz",
@@ -92,7 +92,7 @@ Wnętrze wieży wyłożone jest ciemnym ametystem i regałami z zakazanymi grimu
                   "item": "Pióro Kruka Cienia"
             },
             "description": "Duch Skalda Einara zawodzi na szczycie wieży, gubiąc wersy swojej pieśni o upadku lodowej fortecy. Tylko adept o silnej woli potrafi nawiązać z nim kontakt astralny.",
-            "initialBotMessage": "🦅 **[CYTADELA BOT - SEKTOR: WIEŻA NOCNYCH SZEPTÓW]**\nPomiędzy ametystowymi kolumnami unosi się przejrzysta zjawa wikinga z lutnią ze srebrnego świerku.\n*„Zabrakło mi słowa na określenie północnego wiatru niosącego duszę wojownika... Podpowiedz mi, adepcie!”*",
+            "initialBotMessage": "🦅 **[TMD BOT - SEKTOR: WIEŻA NOCNYCH SZEPTÓW]**\nPomiędzy ametystowymi kolumnami unosi się przejrzysta zjawa wikinga z lutnią ze srebrnego świerku.\n*„Zabrakło mi słowa na określenie północnego wiatru niosącego duszę wojownika... Podpowiedz mi, adepcie!”*",
             "suggestedActions": [
                   {
                         "label": "👻 Rzuć zaklęcie: Vox Umbrae",
@@ -154,7 +154,7 @@ To tutaj młodzi adepci uczą się sztuki przetrwania, pieśni ochronnych i niez
                   "item": "Węglik Wiecznego Ciepła"
             },
             "description": "Wieczny Ogień Hallbjörna zaczyna dogasać z powodu lodowego szkwału. Wymagane jest złożenie rytu z suszonych ziół tundrowych i zaintonowanie pieśni ochrony.",
-            "initialBotMessage": "🦌 **[CYTADELA BOT - SEKTOR: REINHALL]**\nPalenisko syczy i dymi sinym dymem. Strażnik Ognia Hallbjörn spogląda na ciebie surowym wzrokiem.\n*„Potrzebujemy żywicy sosny syberyjskiej i właściwej intencji. Czy twoja wola jest czysta jak polarny lód?”*",
+            "initialBotMessage": "🦌 **[TMD BOT - SEKTOR: REINHALL]**\nPalenisko syczy i dymi sinym dymem. Strażnik Ognia Hallbjörn spogląda na ciebie surowym wzrokiem.\n*„Potrzebujemy żywicy sosny syberyjskiej i właściwej intencji. Czy twoja wola jest czysta jak polarny lód?”*",
             "suggestedActions": [
                   {
                         "label": "🌿 Wrzuć gałązkę jałowca",
@@ -215,7 +215,7 @@ Adepci Niedźwiedzia rozpoczynają każdy świt od treningu w zwarciu i rzucania
                   "item": "Żelazny Runiczny Szpon"
             },
             "description": "Kowal Kveldulf potrzebuje adepta o silnym ramieniu i precyzyjnym skupieniu do zakucia runy Thurisaz w ostrze ceremonialnego topora.",
-            "initialBotMessage": "🐻 **[CYTADELA BOT - SEKTOR: BJÖRNHALL KUŹNIA]**\nŻar z paleniska bije w twarz, a dźwięk uderzeń młota o kowadło niesie się echem po kamiennych korytarzach.\n*„Ostrze ostygnie za trzy uderzenia serca! Wymierz cios z właściwym skupieniem woli!”*",
+            "initialBotMessage": "🐻 **[TMD BOT - SEKTOR: BJÖRNHALL KUŹNIA]**\nŻar z paleniska bije w twarz, a dźwięk uderzeń młota o kowadło niesie się echem po kamiennych korytarzach.\n*„Ostrze ostygnie za trzy uderzenia serca! Wymierz cios z właściwym skupieniem woli!”*",
             "suggestedActions": [
                   {
                         "label": "🔨 Uderz młotem runicznym w punkt skupienia",
@@ -277,7 +277,7 @@ W dormitoriach słychać kojący szum krystalicznych wodospadów, a z probówek 
                   "item": "Flakon Wody Zorzy"
             },
             "description": "Temperatura w trzeciej komorze retorty wulkanicznej gwałtownie wzrosła. Należy ustabilizować ciśnienie lodowym kryształem i zebrać destylat.",
-            "initialBotMessage": "🦦 **[CYTADELA BOT - SEKTOR: OTERGARD CIEPLICE]**\nSzmaragdowa para bulgocze w szklanych wężownicach. Mistrzyni Astrid gorączkowo obserwuje barometr parowy.\n*„Szybko! Jeśli ciśnienie wzrośnie o 2 jednostki runiczne, rozerwie retorftę z wyciągiem z tojeści!”*",
+            "initialBotMessage": "🦦 **[TMD BOT - SEKTOR: OTERGARD CIEPLICE]**\nSzmaragdowa para bulgocze w szklanych wężownicach. Mistrzyni Astrid gorączkowo obserwuje barometr parowy.\n*„Szybko! Jeśli ciśnienie wzrośnie o 2 jednostki runiczne, rozerwie retorftę z wyciągiem z tojeści!”*",
             "suggestedActions": [
                   {
                         "label": "🧊 Schłodź kocioł zaklęciem: Glacius",
@@ -338,7 +338,7 @@ W Dziale Ksiąg Zapomnianych badane są teksty z czasów przed powstaniem Międz
                   "item": "Złota Zakładka Kustosza"
             },
             "description": "Jeden z grimuarów w Dziale Zapomnianym szarpie się na srebrnych łańcuchach. Z okładki wyziera świecący runiczny rebus: ᚠ - ᚢ - ᚦ - ᚨ - ᚱ - ᚲ.",
-            "initialBotMessage": "📚 **[CYTADELA BOT - SEKTOR: ARCHIWUM RUNICZNE]**\nKustosz Torben stoi z wyciągniętą różdżką, powstrzymując kłapiącą zębami oprawnymi w żelazo księgę.\n*„Księga wymaga ułożenia runicznego hasła w porządku starszego Futharku! Pomożesz mi uśpić jej szał?”*",
+            "initialBotMessage": "📚 **[TMD BOT - SEKTOR: ARCHIWUM RUNICZNE]**\nKustosz Torben stoi z wyciągniętą różdżką, powstrzymując kłapiącą zębami oprawnymi w żelazo księgę.\n*„Księga wymaga ułożenia runicznego hasła w porządku starszego Futharku! Pomożesz mi uśpić jej szał?”*",
             "suggestedActions": [
                   {
                         "label": "📜 Odczytaj pierwszą trójkę: Fehu-Uruz-Thurisaz",
@@ -400,7 +400,7 @@ Temperatura w krypcie nigdy nie przekracza zera, a ściany pokryte są grubą wa
                   "item": "Kryształ Północnej Zorzy"
             },
             "description": "Siedem kręgów runicznych przestało rezonować w unisonie. Należy stanąć w centrum i połączyć energię żywiołów za pomocą kryształu skupiającego.",
-            "initialBotMessage": "🕯️ **[CYTADELA BOT - SEKTOR: KRYPTA RYTUALNA]**\nŚciany pokrywa pulsujący szron w kolorze fioletu i szmaragdu.\n*„Siedem kręgów czeka na adepta o nienagannej koncentracji. Rzuć zaklęcie harmonizujące węzły geomagnetyczne.”*",
+            "initialBotMessage": "🕯️ **[TMD BOT - SEKTOR: KRYPTA RYTUALNA]**\nŚciany pokrywa pulsujący szron w kolorze fioletu i szmaragdu.\n*„Siedem kręgów czeka na adepta o nienagannej koncentracji. Rzuć zaklęcie harmonizujące węzły geomagnetyczne.”*",
             "suggestedActions": [
                   {
                         "label": "🌀 Rzuć zaklęcie: Harmonisa Telluris",
@@ -461,7 +461,7 @@ Kadeci uczą się tu bezwzględnej dyscypliny taktycznej, walki bezróżdżkowej
                   "item": "Złoty Glejt Fechtunku"
             },
             "description": "Instruktor Viktor Storm rzuca wyzwanie: odeprzyj potrójną salwę lodowych pocisków i odpowiedz precyzyjnym zaklęciem rozbrajającym.",
-            "initialBotMessage": "⚔️ **[CYTADELA BOT - SEKTOR: ARENA HÓLMGANGA]**\nManekin treningowy z czarnego dębu unosi różdżkę. Pylony areny jarzą się na czerwono.\n*„Trzy... dwa... jeden... INCIPIO! Manekin wystrzeliwuje lodowy pocisk!”*",
+            "initialBotMessage": "⚔️ **[TMD BOT - SEKTOR: ARENA HÓLMGANGA]**\nManekin treningowy z czarnego dębu unosi różdżkę. Pylony areny jarzą się na czerwono.\n*„Trzy... dwa... jeden... INCIPIO! Manekin wystrzeliwuje lodowy pocisk!”*",
             "suggestedActions": [
                   {
                         "label": "🛡️ Tarcza Protego Borealis",
@@ -523,7 +523,7 @@ Wstęp do lasu dozwolony jest wyłącznie pod opieką profesora lub podczas ofic
                   "item": "Kieł Mroźnego Wilka"
             },
             "description": "Gajowy Stellan Varg zauważył ślady rzadkiego alfy Frostúlfa w pobliżu pradawnego kurhanu. Zwierzę jest niespokojne przez lodową anomalię.",
-            "initialBotMessage": "🌲 **[CYTADELA BOT - SEKTOR: JÖTUNSKÓGR]**\nŚnieg skrzypi pod butami. W gęstwinie sosen widać parę świecących na błękitno ślepi potężnego wilka polarnym.\n*„Cicho... nie wykonuj gwałtownych ruchów. Pokaż mu, że nie masz wrogich zamiarów.”*",
+            "initialBotMessage": "🌲 **[TMD BOT - SEKTOR: JÖTUNSKÓGR]**\nŚnieg skrzypi pod butami. W gęstwinie sosen widać parę świecących na błękitno ślepi potężnego wilka polarnym.\n*„Cicho... nie wykonuj gwałtownych ruchów. Pokaż mu, że nie masz wrogich zamiarów.”*",
             "suggestedActions": [
                   {
                         "label": "🍖 Rzuć przysmak z suszonego mięsa",
@@ -585,7 +585,7 @@ W głębinach jeziora żyją kelpie fiordowe oraz gigantyczna kałamarnica pół
                   "item": "Złoty Talizman Fiordu"
             },
             "description": "Na dnie fiordu, w pobliżu kadłuba magicznego drakkara, rozbłysła stara kotwica założycielki. Syrena Astrid kusi zagadką głębin.",
-            "initialBotMessage": "⛵ **[CYTADELA BOT - SEKTOR: PRZYSTAŃ KALDAVATN]**\nCzarne wody fiordu falują delikatnie, a mgła unosi się nad pokładem drakkara.\n*„Cztery wiatry dmą w żagiel czarny, lecz tylko jeden odepchnie prąd cieni. Jaki to wiatr?”*",
+            "initialBotMessage": "⛵ **[TMD BOT - SEKTOR: PRZYSTAŃ KALDAVATN]**\nCzarne wody fiordu falują delikatnie, a mgła unosi się nad pokładem drakkara.\n*„Cztery wiatry dmą w żagiel czarny, lecz tylko jeden odepchnie prąd cieni. Jaki to wiatr?”*",
             "suggestedActions": [
                   {
                         "label": "🌬️ Odpowiedz: Wiatr Północy (Norðan)",
@@ -645,7 +645,7 @@ W głębinach jeziora żyją kelpie fiordowe oraz gigantyczna kałamarnica pół
                   "item": "Amulet Gwiazdy Polarnej"
             },
             "description": "Teleskop krasnoludzki wymaga zgrania z kątem deklinacji zorzy polarnej, aby odczytać mapę koniunkcji na nadchodzący semestr.",
-            "initialBotMessage": "🔭 **[CYTADELA BOT - SEKTOR: OBSERWATORIUM]**\nMosiężne koła zębate skrzypią, a przez wielką szczelinę w kopule widać tańczącą szmaragdową zorzę.\n*„Podaj kąt nachylenia zwierciadła dla koniunkcji Skadi i Gwiazdy Północy!”*",
+            "initialBotMessage": "🔭 **[TMD BOT - SEKTOR: OBSERWATORIUM]**\nMosiężne koła zębate skrzypią, a przez wielką szczelinę w kopule widać tańczącą szmaragdową zorzę.\n*„Podaj kąt nachylenia zwierciadła dla koniunkcji Skadi i Gwiazdy Północy!”*",
             "suggestedActions": [
                   {
                         "label": "📐 Ustaw kąt: 64 stopnie północ",
@@ -705,7 +705,7 @@ W głębinach jeziora żyją kelpie fiordowe oraz gigantyczna kałamarnica pół
                   "item": "Liść Złotej Tojeści"
             },
             "description": "Lodowa mandragora potrzebuje nowej gleby z popiołu wulkanicznego. Uważaj na jej kriogeniczny krzyk!",
-            "initialBotMessage": "🌿 **[CYTADELA BOT - SEKTOR: SZKLARNIE]**\nZ donicy dobiega głuche stukanie korzeni. Temperatura wokół rośliny spada poniżej zera.\n*„Załóż nauszniki z wełny renifera i przygotuj nawóz wulkaniczny!”*",
+            "initialBotMessage": "🌿 **[TMD BOT - SEKTOR: SZKLARNIE]**\nZ donicy dobiega głuche stukanie korzeni. Temperatura wokół rośliny spada poniżej zera.\n*„Załóż nauszniki z wełny renifera i przygotuj nawóz wulkaniczny!”*",
             "suggestedActions": [
                   {
                         "label": "🎧 Załóż nauszniki ochronne",
@@ -766,7 +766,7 @@ Na biurku z dębu skandynawskiego spoczywa Złota Księga Przyjęć, w której n
                   "item": "Pióro z Gryfiego Skrzydła"
             },
             "description": "Arcymistrzyni Valgerda poszukuje adepta godnego przepisania tajnego edyktu założycielskiego za pomocą znikającego atramentu Północy.",
-            "initialBotMessage": "🦅 **[CYTADELA BOT - SEKTOR: GABINET DYREKCJI]**\nW kominku trzaskają szmaragdowe płomienie. Kruk Huginn bacznie obserwuje każdy twój ruch z oparcia wielkiego fotela.\n*„Złota Księga otwiera się tylko przed tymi, którzy znają dewizę prawdziwej siły.”*",
+            "initialBotMessage": "🦅 **[TMD BOT - SEKTOR: GABINET DYREKCJI]**\nW kominku trzaskają szmaragdowe płomienie. Kruk Huginn bacznie obserwuje każdy twój ruch z oparcia wielkiego fotela.\n*„Złota Księga otwiera się tylko przed tymi, którzy znają dewizę prawdziwej siły.”*",
             "suggestedActions": [
                   {
                         "label": "👑 Cytuj dewizę: Virtus in Glacie",
@@ -827,7 +827,7 @@ Wokół stoją cztery kamienne monolity symbolizujące cztery Zakony.`,
                   "item": "Okruch Czarnego Bazaltu"
             },
             "description": "Cztery monolity rzucają przecinające się cienie na bazaltowy bruk. Odszukaj punkt przecięcia i aktywuj ukrytą płytę.",
-            "initialBotMessage": "🐺 **[CYTADELA BOT - SEKTOR: DZIEDZINIEC WILKÓW]**\nŚnieg pada na czarne płyty bazaltu. Wokół monolitów zbierają się kadeci przygotowujący się do wieczornego apelu.\n*„Odszukaj centralny punkt, w którym łączą się znaki czterech Zakonów!”*",
+            "initialBotMessage": "🐺 **[TMD BOT - SEKTOR: DZIEDZINIEC WILKÓW]**\nŚnieg pada na czarne płyty bazaltu. Wokół monolitów zbierają się kadeci przygotowujący się do wieczornego apelu.\n*„Odszukaj centralny punkt, w którym łączą się znaki czterech Zakonów!”*",
             "suggestedActions": [
                   {
                         "label": "🔍 Zbadaj centralną płytę bazaltową",
@@ -888,7 +888,7 @@ Lochy wyposażone są w łańcuchy tłumiące magię (Galdra-Fjötrar), uniemoż
                   "item": "Wytrych z Kości Renifera"
             },
             "description": "W celi nr 9 za obluzowaną cegłą słychać cichy szelest starych pergaminów. Dozorca Bård odszedł na obchód korytarza.",
-            "initialBotMessage": "⛓️ **[CYTADELA BOT - SEKTOR: LOCHY KARY]**\nWilgoć kapie ze sklepienia, a łańcuchy tłumiące magię cicho brzęczą przy kratach.\n*„Masz niecałe dwie minuty zanim dozorca powróci z pochodnią. Działaj szybko i bezszelestnie!”*",
+            "initialBotMessage": "⛓️ **[TMD BOT - SEKTOR: LOCHY KARY]**\nWilgoć kapie ze sklepienia, a łańcuchy tłumiące magię cicho brzęczą przy kratach.\n*„Masz niecałe dwie minuty zanim dozorca powróci z pochodnią. Działaj szybko i bezszelestnie!”*",
             "suggestedActions": [
                   {
                         "label": "🗝️ Otwórz skrytkę za obluzowaną cegłą",
@@ -948,7 +948,7 @@ Lochy wyposażone są w łańcuchy tłumiące magię (Galdra-Fjötrar), uniemoż
                   "item": "Złota Pieczęć Pocztowa"
             },
             "description": "W opuszczonym gnieździe na najwyższej żerdzi leży zapieczętowany czarnym woskiem list adresowany do ówczesnego dyrektora.",
-            "initialBotMessage": "✉️ **[CYTADELA BOT - SEKTOR: KRUCZA POCZTA]**\nKruki posłańcze kraczą cicho, spoglądając na ciebie bystrymi paciorkami oczu.\n*„Żerdź jest oblodzona i wysoka. Wymaga to delikatnego zaklęcia przyciągającego lub zręcznego wejścia.”*",
+            "initialBotMessage": "✉️ **[TMD BOT - SEKTOR: KRUCZA POCZTA]**\nKruki posłańcze kraczą cicho, spoglądając na ciebie bystrymi paciorkami oczu.\n*„Żerdź jest oblodzona i wysoka. Wymaga to delikatnego zaklęcia przyciągającego lub zręcznego wejścia.”*",
             "suggestedActions": [
                   {
                         "label": "🪶 Rzuć zaklęcie przyciągające: Accio List",

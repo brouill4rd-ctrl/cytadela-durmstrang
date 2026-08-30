@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -147,7 +147,7 @@ export const BankView = () => {
       role: 'treasury',
       roleLabel: 'Skarbiec Oficjalny',
       house: t.house,
-      houseName: t.house ? (houses[t.house]?.name || t.house) : 'Cytadela TMD',
+      houseName: t.house ? (houses[t.house]?.name || t.house) : 'Twierdza TMD',
       icon: t.icon,
       rune: t.rune,
       color: t.color,
@@ -501,7 +501,7 @@ export const BankView = () => {
                     <span>{userHouse?.crestIcon || 'ᛟ'}</span>
                     <span>{bankAccount?.vaultTier || (currentUser?.role === 'admin' ? 'Najwyższy Skarbiec Dyrekcji' : currentUser?.role === 'professor' ? 'Krypta Profesorska' : 'Skrytka Adepta')}</span>
                     <span>•</span>
-                    <span>{userHouse ? userHouse.fullName : 'Cytadela Durmstrang'}</span>
+                    <span>{userHouse ? userHouse.fullName : 'Twierdza Magii Durmstrang'}</span>
                   </div>
                 </div>
               </div>

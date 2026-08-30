@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+﻿import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -870,6 +870,27 @@ db.exec(`
     detail TEXT DEFAULT '',
     metadata TEXT DEFAULT '{}',
     created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- ==================== EKSTERNISTYCZNE ZALICZENIA ====================
+  CREATE TABLE IF NOT EXISTS externist_applications (
+    id TEXT PRIMARY KEY,
+    student_id INTEGER NOT NULL,
+    student_name TEXT NOT NULL,
+    house TEXT DEFAULT '',
+    subject_id TEXT NOT NULL,
+    subject_name TEXT NOT NULL,
+    motivation TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending',
+    professor_id INTEGER,
+    professor_name TEXT DEFAULT '',
+    requirements_type TEXT DEFAULT '',
+    requirements_note TEXT DEFAULT '',
+    homework_assignment_id TEXT DEFAULT '',
+    decision_note TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    decided_at TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
   );
 
   -- ==================== KRUCZA POCZTA I WIADOMOŚCI ====================
@@ -1885,7 +1906,7 @@ if (false && userCount === 0) {
     'admin', 'approved', null,
     'Arcymistrzyni Cytadeli Durmstrang • Strażniczka Paktu 1294',
     'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
-    'edykty', 'Rada Dyrekcji Cytadeli', 'edykty',
+    'edykty', 'Rada Dyrekcji Twierdzy', 'edykty',
     'Komnaty Najwyższej Wieży Durmstrang',
     'Najwyższa Magia Północy, Starożytne Pieczęcie i Prawa Cytadeli',
     null, null, 1, 0, 500, 0, 0, null, null, null, null, null,
@@ -2195,8 +2216,8 @@ if (false && lessonCount === 0) {
       id: 'msg-les1-5',
       discordId: 'dmsg-1005',
       userId: 'usr-bot-cytadela',
-      authorName: 'Cytadela Bot',
-      authorDisplayName: 'Cytadela Bot',
+      authorName: 'TMD Bot',
+      authorDisplayName: 'TMD Bot',
       authorAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80',
       authorHouse: '',
       content: '',
@@ -2241,7 +2262,7 @@ if (false && lessonCount === 0) {
       timestamp: '2026-08-22 18:42:15',
       orderIndex: 6,
       replyToId: 'dmsg-1005',
-      replyToAuthor: 'Cytadela Bot',
+      replyToAuthor: 'TMD Bot',
       replyToContent: 'QUIZ ELIKSIRÓW: Który składnik stabilizuje Eliksir Wiggenowy...',
       isBot: 0, isSystem: 0, isCommand: 0, commandData: '{}',
       embeds: '[]',
@@ -3471,12 +3492,12 @@ if (false && bankAccountCount === 0) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertTx.run('tx-skr-101', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-valdemar', 'Valdemar Krag-Hansen', 150, 'inflow', 'stypendium', 'Stypendium Naukowe Katedry Czarnej Magii', 'Nagroda za wzorowe opanowanie wiązania cieni.', 'completed', 'SKR-TX-84920', '2026-08-20 14:30', '2026-08-20 14:30');
+  insertTx.run('tx-skr-101', 'cytadela-treasury', 'Skarbiec Twierdzy', 'usr-valdemar', 'Valdemar Krag-Hansen', 150, 'inflow', 'stypendium', 'Stypendium Naukowe Katedry Czarnej Magii', 'Nagroda za wzorowe opanowanie wiązania cieni.', 'completed', 'SKR-TX-84920', '2026-08-20 14:30', '2026-08-20 14:30');
   insertTx.run('tx-skr-102', 'usr-valdemar', 'Valdemar Krag-Hansen', 'shop-brokkur', 'Kuźnia Różdżek Brokkura & Oivinda', 280, 'outflow', 'zakup', 'Zakup: Różdżka Cisowa (Wilcze Serce)', 'Płatność na rynku Kaupangr.', 'completed', 'SKR-TX-84711', '2026-08-19 11:15', '2026-08-19 11:15');
-  insertTx.run('tx-skr-103', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-morana', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Wiązanie Cieni', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84602', '2026-08-18 16:45', '2026-08-18 16:45');
-  insertTx.run('tx-skr-104', 'cytadela-treasury', 'Skarbiec Główny Cytadeli', 'usr-gunnar', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Pojedynki na Lodzie', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84590', '2026-08-17 17:00', '2026-08-17 17:00');
+  insertTx.run('tx-skr-103', 'cytadela-treasury', 'Skarbiec Twierdzy', 'usr-morana', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Wiązanie Cieni', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84602', '2026-08-18 16:45', '2026-08-18 16:45');
+  insertTx.run('tx-skr-104', 'cytadela-treasury', 'Skarbiec Twierdzy', 'usr-gunnar', '', 300, 'inflow', 'pensja', 'Uposażenie Profesorskie — Lekcja: Pojedynki na Lodzie', 'Automatyczna wypłata honorarium.', 'completed', 'SKR-TX-84590', '2026-08-17 17:00', '2026-08-17 17:00');
   insertTx.run('tx-skr-105', 'lottery-pool', 'Skandynawska Loteria Odyna', 'usr-valdemar', 'Valdemar Krag-Hansen', 120, 'inflow', 'loteria', 'Wygrana II Stopnia — Losowanie Letniego Przesilenia', 'Trafienie 2 run Futharku: Thurisaz i Algiz.', 'completed', 'SKR-TX-84310', '2026-08-15 20:00', '2026-08-15 20:00');
-  insertTx.run('tx-skr-106', 'cytadela-treasury', 'Rada Dyrekcji Cytadeli', 'usr-valdemar', 'Valdemar Krag-Hansen', 100, 'inflow', 'nagroda_wyprawka', 'Nagroda za skompletowanie: Wyprawka Adepta Roku I', 'Premia za pomyślne przygotowanie do roku szkolnego.', 'completed', 'SKR-TX-84102', '2026-08-10 12:00', '2026-08-10 12:00');
+  insertTx.run('tx-skr-106', 'cytadela-treasury', 'Rada Dyrekcji Twierdzy', 'usr-valdemar', 'Valdemar Krag-Hansen', 100, 'inflow', 'nagroda_wyprawka', 'Nagroda za skompletowanie: Wyprawka Adepta Roku I', 'Premia za pomyślne przygotowanie do roku szkolnego.', 'completed', 'SKR-TX-84102', '2026-08-10 12:00', '2026-08-10 12:00');
 }
 
 const storeItemsCount = db.prepare('SELECT COUNT(*) as count FROM store_items').get().count;
@@ -3644,7 +3665,7 @@ if (false && documentsCount === 0) {
     'Fundamentalny kodeks prawny określający prawa i obowiązki każdego mieszkańca Twierdzy Durmstrang.',
     JSON.stringify([
       { type: 'heading', text: 'Rozdział I: Tożsamość i Suwerenność Twierdzy' },
-      { type: 'paragraph', text: 'Cytadela Durmstrang jest niezależną twierdzą sztuk magicznych, chronioną przez pradawne pieczęcie lodowe i przysięgę czterech Zakonów: Reinhall, Björnhall, Ravnheim oraz Otergard.' }
+      { type: 'paragraph', text: 'TWIERDZA MAGII DURMSTRANG jest niezależną twierdzą sztuk magicznych, chronioną przez pradawne pieczęcie lodowe i przysięgę czterech Zakonów: Reinhall, Björnhall, Ravnheim oraz Otergard.' }
     ]),
     JSON.stringify(['Statut', 'Pakt 1294', 'Konstytucja', 'Prawo']),
     1,

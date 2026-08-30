@@ -1,13 +1,13 @@
-INSTRUKCJA: Każdy blok pomiędzy separatorami to osobna wiadomość na Discordzie. Usuń linię separatora przed wklejeniem, jeśli chcesz.
+﻿INSTRUKCJA: Każdy blok pomiędzy separatorami to osobna wiadomość na Discordzie. Usuń linię separatora przed wklejeniem, jeśli chcesz.
 
 ===== WIADOMOŚĆ 1/22 =====
-**Cytadela Durmstrang — pełna analiza projektu i kierunki dalszego rozwoju**
+**TWIERDZA MAGII DURMSTRANG — pełna analiza projektu i kierunki dalszego rozwoju**
 
 > Audyt koncepcyjny stanu projektu na 24 sierpnia 2026 r. Dokument powstał na podstawie rzeczywistej struktury i kodu aplikacji. Nie opisuje zmian wykonanych w projekcie — jest wyłącznie mapą pomysłów.
 
 **1. Wniosek główny**
 
-Cytadela Durmstrang nie jest już prostą stroną szkoły. To duży portal RPG-lite z nauką, ekonomią, społecznością, eksploracją, minigrami, gazetą, integracją Discorda i rozbudowaną administracją. Projekt ma już wiele efektownych pojedynczych atrakcji. Największy skok jakościowy nie powstanie przez dodanie kolejnych niezależnych okien, lecz przez połączenie obecnych modułów w jeden świat, który:
+TWIERDZA MAGII DURMSTRANG nie jest już prostą stroną szkoły. To duży portal RPG-lite z nauką, ekonomią, społecznością, eksploracją, minigrami, gazetą, integracją Discorda i rozbudowaną administracją. Projekt ma już wiele efektownych pojedynczych atrakcji. Największy skok jakościowy nie powstanie przez dodanie kolejnych niezależnych okien, lecz przez połączenie obecnych modułów w jeden świat, który:
 
 - ma własny rytm dnia, pogody i roku szkolnego;
 - pamięta działania gracza;
@@ -844,7 +844,7 @@ To wydarzenie nie wymaga budowy nowego świata od zera. Wykorzystuje istniejące
 
 **27. Ostateczna rekomendacja**
 
-Cytadela ma już szerokość dużego produktu. Teraz potrzebuje przede wszystkim **głębi, pamięci i połączeń**.
+Twierdza ma już szerokość dużego produktu. Teraz potrzebuje przede wszystkim **głębi, pamięci i połączeń**.
 
 Najlepszy następny krok koncepcyjny to nie „jeszcze jedna komnata”, lecz wdrożenie trzech filarów:
 

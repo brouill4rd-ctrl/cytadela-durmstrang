@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -26,10 +26,12 @@ import {
   MessageSquare,
   Flame,
   CornerDownRight,
-  RefreshCw
+  RefreshCw,
+  ScrollText
 } from 'lucide-react';
 import { HomeworkCalendarView } from './HomeworkCalendarView';
 import { HomeworkArchiveView } from './HomeworkArchiveView';
+import { ExternistView } from './ExternistView';
 import { HomeworkTemplatesModal } from '../components/HomeworkTemplatesModal';
 import { HomeworkQuickCommentsModal } from '../components/HomeworkQuickCommentsModal';
 
@@ -204,7 +206,7 @@ export const HomeworkCenterView = () => {
           <div className="header-rune-seal">ᛞ</div>
           <div className="header-badge-pillar">
             <span className="pillar-dot"></span>
-            <span>CYTADELA DURMSTRANG • KATEDRY AKADEMICKIE</span>
+            <span>TWIERDZA MAGII DURMSTRANG • KATEDRY AKADEMICKIE</span>
             <span className="pillar-dot"></span>
           </div>
           <h1 className="homework-main-title">PRACE DOMOWE & WYPRACOWANIA</h1>
@@ -235,6 +237,13 @@ export const HomeworkCenterView = () => {
               <Archive size={16} />
               <span>Archiwum Roczników</span>
             </button>
+            <button
+              className={`switcher-btn ${subView === 'externist' ? 'active' : ''}`}
+              onClick={() => { playWandSwoosh(); setSubView('externist'); }}
+            >
+              <ScrollText size={16} />
+              <span>Eksternistycznie</span>
+            </button>
           </div>
         </div>
       </div>
@@ -245,6 +254,9 @@ export const HomeworkCenterView = () => {
         <span className="rune">ᛟ ᚱ ᛞ ᚦ</span>
         <span className="line"></span>
       </div>
+
+      {/* SUB-VIEW 4: EKSTERNISTYCZNIE */}
+      {subView === 'externist' && <ExternistView />}
 
       {/* SUB-VIEW 1: CALENDAR */}
       {subView === 'calendar' && (

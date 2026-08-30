@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+﻿import React, { useEffect, useCallback, useState } from 'react';
 import { api } from '../api';
 import './PrologueView.css';
 
@@ -34,11 +34,11 @@ const scenes = {
     title: 'Fiord',
     locationLabel: 'FIORD',
     atmosphere: 'Nad wodą drży światło Magicznej Północy. Skały zwierają się jak dłonie zamkniętej bramy.',
-    text: 'Cytadela wyrasta z lodowca powoli, jak wspomnienie. Patrzysz na mury, które od dziś będą Twoim miejscem pracy — i pytasz siebie, czym napełnisz te korytarze.',
+    text: 'Twierdza wyrasta z lodowca powoli, jak wspomnienie. Patrzysz na mury, które od dziś będą Twoim miejscem pracy — i pytasz siebie, czym napełnisz te korytarze.',
     choices: [
       { id: 'recall', label: 'Wspominasz własne lata nauki — i kogo chciałbyś/chciałabyś wychować' },
       { id: 'plan', label: 'Piszesz w myślach plan pierwszej lekcji' },
-      { id: 'silent', label: 'Milczysz. Cytadela mówi sama za siebie' }
+      { id: 'silent', label: 'Milczysz. Twierdza mówi sama za siebie' }
     ]
   },
   BORDER_CONTROL: {
@@ -46,15 +46,15 @@ const scenes = {
     title: 'Kontrola Graniczna',
     locationLabel: 'BRAMA',
     atmosphere: null,
-    text: 'Strażnik w zbroi runicznej sprawdza Twój Akt Mianowania. „Kadra" — mówi krótko i kiwa głową. Brama otwiera się inaczej niż dla adeptów — szerzej, jakby Cytadela wiedziała, że wchodzi nauczyciel.',
+    text: 'Strażnik w zbroi runicznej sprawdza Twój Akt Mianowania. „Kadra" — mówi krótko i kiwa głową. Brama otwiera się inaczej niż dla adeptów — szerzej, jakby Twierdza wiedziała, że wchodzi nauczyciel.',
     choices: [
       { id: 'documents', label: 'Okazujesz Akt Mianowania i przekraczasz próg' }
     ]
   },
   GREAT_HALL: {
-    kicker: 'Za Wrotami Cytadeli',
+    kicker: 'Za Wrotami Twierdzy',
     title: 'Wielka Sala',
-    locationLabel: 'CYTADELA',
+    locationLabel: 'TWIERDZA',
     atmosphere: 'Herby Reinhall, Björnhall, Ravnheim i Otergard płoną w półmroku.',
     text: 'Stoisz po stronie podium — nie pośród adeptów, lecz naprzeciwko nich. Wielka Sala jest teraz Twoją salą. Pytanie brzmi: czego będziesz ich tu uczyć?',
     choices: [
@@ -62,11 +62,11 @@ const scenes = {
     ]
   },
   ARRIVED: {
-    kicker: 'Pierwsza Noc w Cytadeli',
+    kicker: 'Pierwsza Noc w Twierdzy',
     title: 'Witaj w Durmstrangu',
     locationLabel: 'TWIERDZA',
     atmosphere: null,
-    text: 'Klucz do gabinetu zimny w dłoni. Brama zamknęła się z głębokim, runicznym dźwiękiem. Od tej chwili mury Cytadeli są w Twojej pieczy — tak samo, jak adepci, którzy jutro staną przed Tobą.',
+    text: 'Klucz do gabinetu zimny w dłoni. Brama zamknęła się z głębokim, runicznym dźwiękiem. Od tej chwili mury Twierdzy są w Twojej pieczy — tak samo, jak adepci, którzy jutro staną przed Tobą.',
     choices: [
       { id: 'complete', label: 'Zapal świecę w gabinecie i rozpocznij swoją sagę' }
     ]
@@ -189,7 +189,7 @@ export const TeacherPrologueView = ({ onComplete }) => {
                 <span className="pl-env-to">Do rąk własnych:</span>
                 <strong className="pl-env-name">{data.character.fullName}</strong>
                 <span className="pl-env-school">Twierdza Magii Durmstrang</span>
-                <span className="pl-env-subtitle">Wydział Kadry Akademickiej · Cytadela</span>
+                <span className="pl-env-subtitle">Wydział Kadry Akademickiej · Twierdza</span>
               </div>
             </div>
             <button
@@ -257,7 +257,7 @@ export const TeacherPrologueView = ({ onComplete }) => {
               wymagana przy Północnej Bramie.
             </p>
             <p className="pl-parchment-body">
-              Cytadela powierza {letter.panDative} adeptów i tradycję. Durmstrang kształtuje nie tylko umysły,
+              Twierdza powierza {letter.panDative} adeptów i tradycję. Durmstrang kształtuje nie tylko umysły,
               lecz charaktery. Spodziewamy się, że Wasza Osoba spełni to powołanie zgodnie z Paktem.
             </p>
 

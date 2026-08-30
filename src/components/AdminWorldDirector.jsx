@@ -180,7 +180,7 @@ export function AdminWorldDirector() {
             </div>
           </div>
           <div className="director-stats">
-            <span>Cytadela<b>{pl(s.citadelState)}</b></span>
+            <span>Twierdza<b>{pl(s.citadelState)}</b></span>
             <span>Zagrożenie<b className={`threat-text-${s.threatLevel}`}>{s.threatLevel} — {THREAT_LABEL[s.threatLevel] || '—'}</b></span>
             <span>Efekty<b>{s.activeEffects?.length || 0}</b></span>
             <span>Ślady<b>{s.worldScars?.length || 0}</b></span>

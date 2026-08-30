@@ -1,4 +1,4 @@
-// Ancient Runes & Magical Alphabets Data for Durmstrang Institute (TMD)
+﻿// Ancient Runes & Magical Alphabets Data for Durmstrang Institute (TMD)
 
 export const RUNIC_ALPHABETS = [
   {
@@ -38,7 +38,7 @@ export const RUNIC_ALPHABETS = [
     id: 'alchemy',
     name: 'Symbole Alchemiczne & Metale',
     shortName: 'Alchemia (10)',
-    origin: 'Hermetyczne Laboratoria & Cytadela Durmstrang',
+    origin: 'Hermetyczne Laboratoria & TWIERDZA MAGII DURMSTRANG',
     icon: '🜂',
     color: '#e879f9',
     border: 'rgba(232, 121, 249, 0.4)',

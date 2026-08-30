@@ -1,5 +1,5 @@
 @echo off
-title CYTADELA DURMSTRANG - PELNY PAKIET
+title TWIERDZA MAGII DURMSTRANG - PELNY PAKIET
 echo ===================================================
 echo   URUCHAMIANIE SERWERA, BOTA I STRONY DURMSTRANG
 echo ===================================================

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { api } from '../api';
 import {
@@ -69,8 +69,8 @@ export const DiscordLessonSimulatorModal = ({ isOpen, onClose }) => {
       setMessages([
         {
           id: `msg-${Date.now()}-init`,
-          authorDisplayName: 'Cytadela Bot [SYSTEM]',
-          authorName: 'Cytadela Bot',
+          authorDisplayName: 'TMD Bot [SYSTEM]',
+          authorName: 'TMD Bot',
           authorAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
           content: `📖 **ROZPOCZĘTO SESJĘ LEKCYJNĄ CYTADELI DURMSTRANG**\n\n**Przedmiot:** ${subj?.name || 'Eliksiry'}\n**Klasa:** ${classYear}\n**Prowadzący:** ${professorName}\n**Temat:** ${topic}\n\n*Wszystkie wypowiedzi, załączniki, embedy i reakcje w tym wątku są automatycznie archiwizowane.*`,
           timestamp: new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),

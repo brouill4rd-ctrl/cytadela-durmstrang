@@ -1,4 +1,4 @@
-# CYTADELA DURMSTRANG
+﻿# TWIERDZA MAGII DURMSTRANG
 ## Master World Bible & Blueprint
 ### Wersja 1.0 — fundament projektu
 
@@ -6,7 +6,7 @@
 
 # 01. TOŻSAMOŚĆ PROJEKTU
 
-**Nazwa:** Cytadela Durmstrang
+**Nazwa:** TWIERDZA MAGII DURMSTRANG
 
 **Rodzaj:** internetowy świat magicznej akademii, społeczność RPG-lite, portal szkolny, system profili, edukacji, ekonomii i eksploracji.
 
@@ -25,7 +25,7 @@
 - lekko niepokojący,
 - ale nadal grywalny i przyjazny dla społeczności.
 
-Cytadela nie ma być kopią Hogwartu ani kopią istniejących polskich szkół RPG.
+Twierdza nie ma być kopią Hogwartu ani kopią istniejących polskich szkół RPG.
 
 Ma sprawiać wrażenie miejsca, które posiada własną historię, kulturę, politykę, tradycje, sekrety i pamięć.
 
@@ -33,7 +33,7 @@ Ma sprawiać wrażenie miejsca, które posiada własną historię, kulturę, pol
 
 # 02. GŁÓWNA IDEA
 
-Cytadela nie jest wyłącznie stroną internetową.
+Twierdza nie jest wyłącznie stroną internetową.
 
 Jest cyfrową bramą do świata szkoły.
 
@@ -177,7 +177,7 @@ Wizualnie:
 
 Centralnie:
 
-# CYTADELA DURMSTRANG
+# TWIERDZA MAGII DURMSTRANG
 
 Pod spodem:
 
@@ -998,7 +998,7 @@ Lore powinno być częściowo ukryte i eksploracyjne.
 
 # 34. SEKRETY
 
-Cytadela ma posiadać ukryte elementy.
+Twierdza ma posiadać ukryte elementy.
 
 Przykłady:
 
@@ -1353,7 +1353,7 @@ Nie należy budować MVP w sposób, który uniemożliwi rozwój.
 
 # 50. KLUCZOWA ZASADA PROJEKTOWA
 
-Cytadela ma być:
+Twierdza ma być:
 
 **immersyjna, ale użyteczna.**
 

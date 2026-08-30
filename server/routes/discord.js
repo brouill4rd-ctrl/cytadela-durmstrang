@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -210,8 +210,8 @@ router.post('/start-lesson', requireAuth, requireRole('admin', 'professor'), (re
       id: `msg-${Date.now()}-init`,
       discordMessageId: `dmsg-${Date.now()}-0`,
       discordUserId: 'bot-cytadela',
-      authorName: 'Cytadela Bot',
-      authorDisplayName: 'Cytadela Bot [SYSTEM]',
+      authorName: 'TMD Bot',
+      authorDisplayName: 'TMD Bot [SYSTEM]',
       authorAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80',
       authorHouse: '',
       content: `📖 **ROZPOCZĘTO SESJĘ LEKCYJNĄ CYTADELI DURMSTRANG**\n\n**Przedmiot:** ${subjectName}\n**Klasa:** ${classYear}\n**Prowadzący:** ${professorName}\n**Temat:** ${topic}\n\n*Wszystkie wypowiedzi, załączniki, embedy i reakcje w tym wątku są automatycznie archiwizowane.*`,
@@ -229,11 +229,11 @@ router.post('/start-lesson', requireAuth, requireRole('admin', 'professor'), (re
           title: `🏰 Rozpoczęto lekcję: ${topic}`,
           description: `Zajęcia prowadzone przez ${professorName} w Katedrze: ${subjectName}.`,
           color: '#c59f4e',
-          footer: { text: 'Cytadela Durmstrang • Rejestrator Wątków Dydaktycznych' },
+          footer: { text: 'TWIERDZA MAGII DURMSTRANG • Rejestrator Wątków Dydaktycznych' },
           timestamp: new Date().toISOString()
         }
       ],
-      reactions: [{ emoji: '🔥', count: 1, users: ['Cytadela Bot'] }],
+      reactions: [{ emoji: '🔥', count: 1, users: ['TMD Bot'] }],
       attachments: []
     };
 

@@ -1,5 +1,5 @@
-/**
- * CYTADELA DURMSTRANG — OFICJALNY BOT DISCORD (DISCORD.JS v14)
+﻿/**
+ * TWIERDZA MAGII DURMSTRANG — OFICJALNY BOT DISCORD (DISCORD.JS v14)
  * 
  * Służy do prowadzenia lekcji na żywo na serwerze Discord Cytadeli:
  * 1. Slash commands: /lekcja rozpocznij, /lekcja zakoncz, /quiz, /pytanie, /zaklecie, /losowanie
@@ -113,12 +113,12 @@ export function buildWelcomePayload(member = null, guild = null) {
   if (hasCrest) {
     embed.setThumbnail('attachment://tmd_herb.png');
     embed.setAuthor({
-      name: 'CYTADELA DURMSTRANG • BRAMA GŁÓWNA',
+      name: 'TWIERDZA MAGII DURMSTRANG • BRAMA GŁÓWNA',
       iconURL: 'attachment://tmd_herb.png'
     });
   } else {
     embed.setAuthor({
-      name: 'CYTADELA DURMSTRANG • BRAMA GŁÓWNA'
+      name: 'TWIERDZA MAGII DURMSTRANG • BRAMA GŁÓWNA'
     });
   }
 
@@ -648,7 +648,7 @@ export class DurmstrangDiscordBot {
                 `✨ Bot natychmiast nada Ci barwy Twojego Zakonu, rangę, szaty i ustawi oficjalny pseudonim!`
               )
               .setColor(0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • System Tożsamości Runicznej' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • System Tożsamości Runicznej' });
 
             await interaction.reply({ embeds: [helpEmbed], ephemeral: true });
             return;
@@ -681,7 +681,7 @@ export class DurmstrangDiscordBot {
                 }
               )
               .setColor(0x2EC4B6)
-              .setFooter({ text: 'Cytadela Durmstrang • Cztery Totemy Północy' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Cztery Totemy Północy' });
 
             await interaction.reply({ embeds: [housesEmbed], ephemeral: true });
             return;
@@ -797,7 +797,7 @@ export class DurmstrangDiscordBot {
             });
 
             const publicEmbed = new EmbedBuilder()
-              .setTitle('📖 CYTADELA DURMSTRANG — ROZPOCZĘTO SESJĘ LEKCYJNĄ')
+              .setTitle('📖 TWIERDZA MAGII DURMSTRANG — ROZPOCZĘTO SESJĘ LEKCYJNĄ')
               .setDescription(`Oficjalny wątek lekcyjny Katedry został otwarty i jest archiwizowany.`)
               .addFields(
                 { name: '🏛️ Katedra / Przedmiot', value: przedmiot, inline: true },
@@ -806,7 +806,7 @@ export class DurmstrangDiscordBot {
                 { name: '✨ Temat Zajęć', value: `**${temat}**` }
               )
               .setColor(0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Wątków Lekcyjnych' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Archiwum Wątków Lekcyjnych' });
 
             await interaction.channel.send({ embeds: [publicEmbed] });
 
@@ -847,7 +847,7 @@ export class DurmstrangDiscordBot {
                 { name: 'Uczestnicy', value: `${participants?.count || 0}`, inline: true }
               )
               .setColor(0x10B981)
-              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Wątków Lekcyjnych' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Archiwum Wątków Lekcyjnych' });
 
             await interaction.channel.send({ embeds: [publicSummaryEmbed] });
 
@@ -1118,7 +1118,7 @@ export class DurmstrangDiscordBot {
               .setTitle('❌ BŁĄD WERYFIKACJI TOŻSAMOŚCI')
               .setDescription(`Podany kod **${cleanCode}** jest nieprawidłowy, został już wykorzystany lub jego czas ważności wygasł.\n\n👉 **Jak połączyć konto?**\n1. Zaloguj się w portalu Cytadeli Durmstrang.\n2. Przejdź do zakładki **Profil** i kliknij **Połącz konto Discord**.\n3. Skopiuj nowy, 20-minutowy kod runiczny i wpisz go ponownie tutaj.`)
               .setColor(0xEF4444)
-              .setFooter({ text: 'Cytadela Durmstrang • System Weryfikacji Adeptów' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • System Weryfikacji Adeptów' });
 
             await interaction.editReply({ embeds: [errEmbed] });
             return;
@@ -1291,7 +1291,7 @@ export class DurmstrangDiscordBot {
           const houseDisplay = user.role === 'student' ? (houseNames[user.house?.toLowerCase()] || user.house || 'Nieprzydzielony') : 'Kadra (Poza Zakonami)';
 
           const successEmbed = new EmbedBuilder()
-            .setTitle('🏰 TOŻSAMOŚĆ POTWIERDZONA — CYTADELA DURMSTRANG')
+            .setTitle('🏰 TOŻSAMOŚĆ POTWIERDZONA — TWIERDZA MAGII DURMSTRANG')
             .setDescription(`Witaj w murach Cytadeli, **${user.full_name}**! Twoje konto Discord zostało pomyślnie powiązane z Twoją kartą w Wiecznej Księdze Paktu.`)
             .addFields(
               { name: '👤 Adept / Czarodziej', value: `**${user.full_name}** (\`@${user.username}\`)`, inline: true },
@@ -1302,7 +1302,7 @@ export class DurmstrangDiscordBot {
             )
             .setColor(user.role === 'student' ? (houseColors[user.house?.toLowerCase()] || 0xC59F4E) : 0xC59F4E)
             .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
-            .setFooter({ text: 'Cytadela Durmstrang • Weryfikacja zakończona sukcesem' })
+            .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Weryfikacja zakończona sukcesem' })
             .setTimestamp();
 
           await interaction.editReply({ embeds: [successEmbed] });
@@ -1401,7 +1401,7 @@ export class DurmstrangDiscordBot {
             .setTitle('🔄 ROLE ZSYNCHRONIZOWANE')
             .setDescription(`Zaktualizowano role i dane dla adepta **${user.full_name}** zgodnie z bieżącym stanem w portalu Cytadeli.`)
             .setColor(0x10B981)
-            .setFooter({ text: 'Cytadela Durmstrang • Synchronizacja Tożsamości' });
+            .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Synchronizacja Tożsamości' });
 
           await interaction.editReply({ embeds: [syncEmbed] });
         }
@@ -1440,7 +1440,7 @@ export class DurmstrangDiscordBot {
             )
             .setColor(houseColors[user.house?.toLowerCase()] || 0xC59F4E)
             .setThumbnail(user.avatar || interaction.user.displayAvatarURL())
-            .setFooter({ text: 'Cytadela Durmstrang • Portal Dzienników i Magii' });
+            .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Portal Dzienników i Magii' });
 
           await interaction.editReply({ embeds: [pEmbed] });
         }
@@ -1511,7 +1511,7 @@ export class DurmstrangDiscordBot {
               )
               .setColor(houseColors[person.house?.toLowerCase()] || 0xC59F4E)
               .setThumbnail(person.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100')
-              .setFooter({ text: 'Cytadela Durmstrang • Izba Pamięci' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Izba Pamięci' });
 
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
@@ -1547,7 +1547,7 @@ export class DurmstrangDiscordBot {
                 { name: '🌟 Ostatni Triumf', value: latestWin ? `**${latestWin.name}**` : 'Oczekuje na zwycięstwo', inline: true }
               )
               .setColor(houseColors[hKey] || 0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • Sala Pucharów' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Sala Pucharów' });
 
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
@@ -1579,7 +1579,7 @@ export class DurmstrangDiscordBot {
                 { name: '⚔️ Główne Wydarzenie', value: year.highlight_event || 'Ceremonia Paktu', inline: false }
               )
               .setColor(houseColors[year.winning_house?.toLowerCase()] || 0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • Archiwum Lat Szkolnych' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Archiwum Lat Szkolnych' });
 
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
@@ -1606,7 +1606,7 @@ export class DurmstrangDiscordBot {
               .setTitle('🏆 SALA PUCHARÓW CYTADELI DURMSTRANG')
               .setDescription(`Lista ostatnich zdobywców Pucharu Twierdzy Magii:\n\n${pDesc || 'Kroniki są uzupełniane.'}`)
               .setColor(0xC59F4E)
-              .setFooter({ text: 'Cytadela Durmstrang • Sala Chwały' });
+              .setFooter({ text: 'TWIERDZA MAGII DURMSTRANG • Sala Chwały' });
 
             const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder()

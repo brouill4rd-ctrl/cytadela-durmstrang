@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import {
@@ -65,7 +65,7 @@ export const MarauderQuestModal = ({ location, isOpen, onClose }) => {
     setMessages([
       {
         id: `msg-${Date.now()}-init`,
-        author: 'Cytadela Bot [SYSTEM]',
+        author: 'TMD Bot [SYSTEM]',
         avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
         isBot: true,
         timestamp: initTime,
@@ -143,7 +143,7 @@ export const MarauderQuestModal = ({ location, isOpen, onClose }) => {
             ...prev,
             {
               id: `msg-${Date.now()}-bot-roll`,
-              author: 'Cytadela Bot [SYSTEM]',
+              author: 'TMD Bot [SYSTEM]',
               avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
               isBot: true,
               timestamp: botTime,
@@ -160,7 +160,7 @@ export const MarauderQuestModal = ({ location, isOpen, onClose }) => {
             ...prev,
             {
               id: `msg-${Date.now()}-bot-roll`,
-              author: 'Cytadela Bot [SYSTEM]',
+              author: 'TMD Bot [SYSTEM]',
               avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
               isBot: true,
               timestamp: botTime,
@@ -193,7 +193,7 @@ export const MarauderQuestModal = ({ location, isOpen, onClose }) => {
           ...prev,
           {
             id: `msg-${Date.now()}-bot-success`,
-            author: 'Cytadela Bot [SYSTEM]',
+            author: 'TMD Bot [SYSTEM]',
             avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
             isBot: true,
             timestamp: botTime,
@@ -210,7 +210,7 @@ export const MarauderQuestModal = ({ location, isOpen, onClose }) => {
           ...prev,
           {
             id: `msg-${Date.now()}-bot-default`,
-            author: 'Cytadela Bot [SYSTEM]',
+            author: 'TMD Bot [SYSTEM]',
             avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
             isBot: true,
             timestamp: botTime,

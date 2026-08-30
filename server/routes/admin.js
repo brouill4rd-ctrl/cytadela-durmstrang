@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db, { dbUserToFrontend, dbPointTxToFrontend, dbBankTransactionToFrontend } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -171,7 +171,7 @@ router.get('/backup-export', (req, res) => {
     };
 
     const backupData = {
-      system: 'Cytadela Durmstrang — Pełna Kopia Zapasowa Archiwum',
+      system: 'TWIERDZA MAGII DURMSTRANG — Pełna Kopia Zapasowa Archiwum',
       exportedAt: new Date().toISOString(),
       exportedBy: req.user.fullName,
       version: '2.0.0',

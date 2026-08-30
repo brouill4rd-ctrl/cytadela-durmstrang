@@ -1,5 +1,5 @@
 @echo off
-title CYTADELA DURMSTRANG - PRODUKCJA
+title TWIERDZA MAGII DURMSTRANG - PRODUKCJA
 echo ===================================================
 echo   BUDOWANIE I URUCHAMIANIE WERSJI PRODUKCYJNEJ
 echo ===================================================

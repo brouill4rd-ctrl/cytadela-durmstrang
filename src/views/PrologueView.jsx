@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+﻿import React, { useEffect, useCallback, useState } from 'react';
 import { api } from '../api';
 import { useSchool } from '../context/SchoolContext';
 import './PrologueView.css';
@@ -37,7 +37,7 @@ const scenes = {
     title: 'Fiord',
     locationLabel: 'FIORD',
     atmosphere: 'Nad wodą drży światło Magicznej Północy. Zorzę widać nawet w biały dzień.',
-    text: 'Skały zwierają się wokół statku jak szczęki olbrzyma. W oddali, pod lodowym niebem, wyrasta Cytadela Durmstrangu.',
+    text: 'Skały zwierają się wokół statku jak szczęki olbrzyma. W oddali, pod lodowym niebem, wyrasta Twierdza Magii Durmstrang.',
     choices: [
       { id: 'watch', label: 'Wpatrujesz się w mury Twierdzy' },
       { id: 'listen', label: 'Wsłuchujesz się w szept fiordu' },
@@ -55,9 +55,9 @@ const scenes = {
     ]
   },
   GREAT_HALL: {
-    kicker: 'Za Wrotami Cytadeli',
+    kicker: 'Za Wrotami Twierdzy',
     title: 'Wielka Sala',
-    locationLabel: 'CYTADELA',
+    locationLabel: 'TWIERDZA',
     atmosphere: 'W półmroku płoną herby wszystkich czterech Zakonów.',
     text: 'Symbole Reinhall, Björnhall, Ravnheim i Otergard świecą w mroku Wielkiej Sali. Twoje miejsce pośród Zakonów nie zostało jeszcze wyznaczone.',
     choices: [
@@ -65,7 +65,7 @@ const scenes = {
     ]
   },
   ARRIVED: {
-    kicker: 'Pierwsza Noc w Cytadeli',
+    kicker: 'Pierwsza Noc w Twierdzy',
     title: 'Witaj w Durmstrangu',
     locationLabel: 'TWIERDZA',
     atmosphere: null,
@@ -268,7 +268,7 @@ export const PrologueView = ({ onComplete }) => {
                 <span className="pl-env-to">Do rąk własnych:</span>
                 <strong className="pl-env-name">{data.character.fullName}</strong>
                 <span className="pl-env-school">Twierdza Magii Durmstrang</span>
-                <span className="pl-env-subtitle">Droga Północna · Cytadela</span>
+                <span className="pl-env-subtitle">Droga Północna · Twierdza</span>
               </div>
             </div>
             <button

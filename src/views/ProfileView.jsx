@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { api } from '../api';
@@ -216,7 +216,7 @@ export const ProfileView = () => {
             <div className="profile-kicker">
               <span>Profil czarodzieja</span>
               <i />
-              <span>{house ? `Zakon ${house.name}` : 'Cytadela Durmstrangu'}</span>
+              <span>{house ? `Zakon ${house.name}` : 'Twierdza Magii Durmstrang'}</span>
             </div>
             <div className="profile-personalia-line">
               <h1 id="profile-name">{activeUser.fullName}</h1>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { api } from '../api';
 import {
@@ -615,7 +615,7 @@ export function EnrollmentChamberView() {
             <Block title="Informacje o Zapisach" rune="ᛗ">
               <div style={{ color: '#d1d5db', fontSize: '0.82rem', lineHeight: 1.7, display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <p>
-                  <strong style={{ color: GOLD }}>Cytadela Durmstrang</strong> prowadzi system zapisów na rok szkolny <strong style={{ color: GOLD_GLOW }}>{config.schoolYear}</strong>.
+                  <strong style={{ color: GOLD }}>TWIERDZA MAGII DURMSTRANG</strong> prowadzi system zapisów na rok szkolny <strong style={{ color: GOLD_GLOW }}>{config.schoolYear}</strong>.
                   Zapisy pozwalają profesorom zgłaszać chęć prowadzenia wybranych przedmiotów, a Dyrekcji — zarządzać obsadą zajęć.
                 </p>
                 <div style={{ background: 'rgba(197,159,78,0.05)', border: '1px solid rgba(197,159,78,0.15)', borderRadius: 6, padding: '0.9rem' }}>

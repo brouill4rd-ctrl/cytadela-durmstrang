@@ -1,4 +1,4 @@
-# ❄️ CYTADELA DURMSTRANG — WIELKI PRZEWODNIK KLIMATYCZNY I PLAN ROZWOJU IMERSJI
+﻿# ❄️ TWIERDZA MAGII DURMSTRANG — WIELKI PRZEWODNIK KLIMATYCZNY I PLAN ROZWOJU IMERSJI
 ## Analiza moduł po module: Atmosfera, Imersja, Mroczno-Nordycki Design i Unikalne Mechaniki RPG
 
 > *"Nie każda magia powinna zostać poznana. Za murami Cytadeli wiedza ma swoją wagę, a potęga swoją cenę."*
@@ -27,7 +27,7 @@
 
 ## 1. WIZJA ARTYSTYCZNA & TOŻSAMOŚĆ DURMSTRANGU
 
-Cytadela Durmstrang to nie ciepły, bezpieczny zamek w stylu szkockiego zamczyska. To **surowa, granitowo-lodowa twierdza ukryta w bezkresie Skandynawii**, otoczona zamarzniętym fiordem, tundrą i mrokiem nocy polarnej. 
+TWIERDZA MAGII DURMSTRANG to nie ciepły, bezpieczny zamek w stylu szkockiego zamczyska. To **surowa, granitowo-lodowa twierdza ukryta w bezkresie Skandynawii**, otoczona zamarzniętym fiordem, tundrą i mrokiem nocy polarnej. 
 
 ### Filary Estetyczne:
 * **Dark Academia & Nordic Gothic:** Surowe drewno dębowe, czarny żelazny kuty metal, chropowaty łupek, spękany lód, runiczne inskrypcje świecące fosforyzującym błękitem i złotem.

@@ -76,13 +76,24 @@ export function initPointsService(db) {
   }
 }
 
-function resolveRecipient(studentId) {
-  if (!studentId) return null;
+function resolveRecipient(studentId, studentName) {
+  if (studentId) {
+    const byPortalId = _db.prepare('SELECT * FROM users WHERE id = ?').get(studentId);
+    if (byPortalId) return byPortalId;
 
-  const byPortalId = _db.prepare('SELECT * FROM users WHERE id = ?').get(studentId);
-  if (byPortalId || !_usersHaveDiscordIdColumn) return byPortalId || null;
+    if (_usersHaveDiscordIdColumn) {
+      const byDiscord = _db.prepare('SELECT * FROM users WHERE discord_id = ?').get(studentId);
+      if (byDiscord) return byDiscord;
+    }
+  }
 
-  return _db.prepare('SELECT * FROM users WHERE discord_id = ?').get(studentId) || null;
+  // Fallback: resolve by full name (covers Discord imports where student_id is a Discord ID
+  // that hasn't been linked to a portal account yet, but the name matches a known student)
+  if (studentName) {
+    return _db.prepare("SELECT * FROM users WHERE full_name = ? AND role = 'student' AND status = 'approved'").get(studentName) || null;
+  }
+
+  return null;
 }
 
 function resolveRecipientHouse(recipient, requestedHouse) {
@@ -125,7 +136,7 @@ export function awardPoints({
   idempotencyKey = ''
 }) {
   const numericPoints = Number(points);
-  const recipient = resolveRecipient(studentId);
+  const recipient = resolveRecipient(studentId, studentName);
   const effectiveStudentId = recipient?.id || studentId;
   const effectiveHouse = resolveRecipientHouse(recipient, house);
   // Zakon jest opcjonalny dla punktów osobistych — wymagany użytkownik lub Zakon.

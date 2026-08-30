@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+﻿import { randomUUID } from 'crypto';
 
 let _db;
 
@@ -102,7 +102,7 @@ export function credit({
         amount, type, category, title, note, status, reference_code,
         date, source_type, source_id, actor_id, actor_name,
         school_year, idempotency_key, created_at
-      ) VALUES (?, 'cytadela-treasury', 'Skarbiec Cytadeli', ?, ?, ?, 'inflow', ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ) VALUES (?, 'cytadela-treasury', 'Skarbiec Twierdzy', ?, ?, ?, 'inflow', ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(
       txId, userId, userName,
       absAmount, category, title || 'Nagroda z aktywności', note || '',
@@ -172,7 +172,7 @@ export function debit({
       ) VALUES (?, ?, ?, ?, ?, ?, 'outflow', ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(
       txId, userId, userName,
-      recipientId || 'cytadela-treasury', recipientName || 'Skarbiec Cytadeli',
+      recipientId || 'cytadela-treasury', recipientName || 'Skarbiec Twierdzy',
       -absAmount, category, title || 'Wydatek', note || '',
       refCode, nowStr, sourceType, sourceId,
       actorId || userId, actorName || userName,
@@ -225,7 +225,7 @@ export function transfer({
   } else if (!recipientName) {
     recipientName = recipientId.startsWith('house-treasury-')
       ? `Skarbiec Zakonu ${recipientId.replace('house-treasury-', '').toUpperCase()}`
-      : 'Skarbiec Główny Cytadeli';
+      : 'Skarbiec Twierdzy';
   }
 
   const txId = `tx-transfer-${Date.now()}-${randomUUID().slice(0, 6)}`;

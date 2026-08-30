@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -36,6 +36,7 @@ import beltRoutes from './routes/belt.js';
 import ordersRoutes from './routes/orders.js';
 import absencesRoutes from './routes/absences.js';
 import enrollmentsRoutes from './routes/enrollments.js';
+import externistRoutes from './routes/externist.js';
 import emailPreviewRoutes from './routes/emailPreview.js';
 import housesRoutes from './routes/houses.js';
 import locationsRoutes from './routes/locations.js';
@@ -159,6 +160,7 @@ app.use('/api/belt', beltRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/absences', absencesRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
+app.use('/api/externist', externistRoutes);
 app.use('/api/email-preview', emailPreviewRoutes);
 app.use('/api/houses', housesRoutes);
 app.use('/api/locations', locationsRoutes);
@@ -208,7 +210,7 @@ discordBot.initialize().catch(err => {
 const server = app.listen(PORT, () => {
   console.log('');
   console.log('  ╔════════════════════════════════════════════════════════╗');
-  console.log('  ║  🏰 CYTADELA DURMSTRANG — DZIENNIKI LEKCYJNE & API    ║');
+  console.log('  ║  🏰 TWIERDZA MAGII DURMSTRANG — DZIENNIKI LEKCYJNE & API    ║');
   console.log('  ║                                                        ║');
   console.log(`  ║  API:      http://localhost:${PORT}/api                   ║`);
   console.log(`  ║  UPLOADS:  http://localhost:${PORT}/uploads               ║`);
