@@ -167,17 +167,18 @@ export function warsawNextMidnight(date = new Date()) {
   // Zwraca timestamp UTC kolejnej północy w Warsaw
   const dateKey = warsawDateKey(date);
   const [y, m, d] = dateKey.split('-').map(Number);
-  // Następny dzień o 00:00 Warsaw — szukamy UTC tego momentu
-  // Tworzymy datę jako "następny dzień o 00:00 UTC", potem korygujemy offset
+  // Najpierw wylicz prawdziwą datę następnego dnia przez Date.UTC. Sklejanie
+  // `d + 1` tworzyło daty typu 2026-08-32 i wywracało status gry na końcu miesiąca.
   const tomorrow = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
+  const targetDateKey = `${tomorrow.getUTCFullYear()}-${String(tomorrow.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrow.getUTCDate()).padStart(2, '0')}`;
   // Poprawka: użyj Intl do znalezienia offsetu Warsaw dla następnego dnia
-  const tomorrowStr = `${y}-${String(m).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}T00:00:00`;
+  const tomorrowStr = `${targetDateKey}T00:00:00`;
   // Szybkie przybliżenie: Europa/Warszawa to UTC+1 lub UTC+2
   // Użyjemy pętli binarnej by znaleźć dokładny timestamp
   const ref = new Date(`${tomorrowStr}+01:00`); // pesymistyczny offset
   for (let offset = 0; offset <= 2; offset++) {
     const candidate = new Date(ref.getTime() - offset * 3600000);
-    if (warsawDateKey(candidate) === `${y}-${String(m).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`) {
+    if (warsawDateKey(candidate) === targetDateKey) {
       return candidate;
     }
   }

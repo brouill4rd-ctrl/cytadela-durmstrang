@@ -9,10 +9,15 @@ router.get('/', requireAuth, (req, res) => {
   try {
     const user = req.user;
     const rows = db.prepare(`
-      SELECT * FROM raven_messages
-      WHERE recipient = 'Wszyscy Kadeci' OR recipient = ? OR sender_id = ? OR LOWER(recipient) = LOWER(?)
-      ORDER BY rowid DESC
-    `).all(user.fullName, user.id, user.username);
+      SELECT rm.*,
+        COALESCE(state.read, CASE WHEN rm.recipient = 'Wszyscy Kadeci' THEN 0 ELSE rm.read END) AS read,
+        COALESCE(state.starred, 0) AS starred
+      FROM raven_messages rm
+      LEFT JOIN raven_message_user_state state
+        ON state.message_id = rm.id AND state.user_id = ?
+      WHERE rm.recipient = 'Wszyscy Kadeci' OR rm.recipient = ? OR rm.sender_id = ? OR LOWER(rm.recipient) = LOWER(?)
+      ORDER BY rm.rowid DESC
+    `).all(user.id, user.fullName, user.id, user.username);
     res.json(rows.map(dbRavenMessageToFrontend));
   } catch (err) {
     res.status(500).json({ error: 'Błąd pobierania wiadomości kruczych: ' + err.message });
@@ -72,12 +77,18 @@ router.patch('/:id/read', requireAuth, (req, res) => {
     const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
     if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
 
-    const isRecipient = msg.recipient === req.user.fullName || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
+    const isRecipient = msg.recipient === 'Wszyscy Kadeci'
+      || msg.recipient === req.user.fullName
+      || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
     if (!isRecipient && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
     }
 
-    db.prepare('UPDATE raven_messages SET read = 1 WHERE id = ?').run(id);
+    db.prepare(`
+      INSERT INTO raven_message_user_state (message_id, user_id, read, starred)
+      VALUES (?, ?, 1, 0)
+      ON CONFLICT(message_id, user_id) DO UPDATE SET read = 1, updated_at = datetime('now')
+    `).run(id, req.user.id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Błąd oznaczania wiadomości: ' + err.message });
@@ -91,17 +102,24 @@ router.patch('/:id/star', requireAuth, (req, res) => {
     const msg = db.prepare('SELECT * FROM raven_messages WHERE id = ?').get(id);
     if (!msg) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
 
-    const isRecipient = msg.recipient === req.user.fullName || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
+    const isRecipient = msg.recipient === 'Wszyscy Kadeci'
+      || msg.recipient === req.user.fullName
+      || msg.recipient.toLowerCase() === req.user.username.toLowerCase();
     const isSender = msg.sender_id === req.user.id;
-    if ((!isRecipient && !isSender) || msg.recipient === 'Wszyscy Kadeci') {
-      if (req.user.role !== 'admin') return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
-    }
     if (!isRecipient && !isSender && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Brak dostępu do tej wiadomości.' });
     }
 
-    db.prepare('UPDATE raven_messages SET starred = CASE WHEN starred = 1 THEN 0 ELSE 1 END WHERE id = ?').run(id);
-    res.json({ ok: true });
+    const current = db.prepare(
+      'SELECT starred FROM raven_message_user_state WHERE message_id = ? AND user_id = ?'
+    ).get(id, req.user.id);
+    const nextStarred = current?.starred ? 0 : 1;
+    db.prepare(`
+      INSERT INTO raven_message_user_state (message_id, user_id, read, starred)
+      VALUES (?, ?, 0, ?)
+      ON CONFLICT(message_id, user_id) DO UPDATE SET starred = excluded.starred, updated_at = datetime('now')
+    `).run(id, req.user.id, nextStarred);
+    res.json({ ok: true, starred: Boolean(nextStarred) });
   } catch (err) {
     res.status(500).json({ error: 'Błąd aktualizacji gwiazdki: ' + err.message });
   }

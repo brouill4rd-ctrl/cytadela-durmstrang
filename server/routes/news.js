@@ -141,7 +141,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'professor'), (req, res) =>
 // PATCH /api/news/:id/react — add reaction to news item (zalogowani)
 router.patch('/:id/react', requireAuth, (req, res) => {
   const { reactionType } = req.body;
-  if (!reactionType) return res.status(400).json({ error: 'Brak typu reakcji.' });
+  if (!['admiration', 'honor'].includes(reactionType)) {
+    return res.status(400).json({ error: 'Nieznany typ reakcji.' });
+  }
 
   const row = db.prepare('SELECT reactions FROM news WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'News nie istnieje.' });
@@ -149,11 +151,19 @@ router.patch('/:id/react', requireAuth, (req, res) => {
   let reactions = {};
   try { reactions = JSON.parse(row.reactions || '{}'); } catch {}
 
-  reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+  const inserted = db.transaction(() => {
+    const result = db.prepare(`
+      INSERT OR IGNORE INTO news_user_reactions (news_id, user_id, reaction_type)
+      VALUES (?, ?, ?)
+    `).run(req.params.id, req.user.id, reactionType);
+    if (result.changes === 1) {
+      reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+      db.prepare('UPDATE news SET reactions = ? WHERE id = ?').run(JSON.stringify(reactions), req.params.id);
+    }
+    return result.changes === 1;
+  })();
 
-  db.prepare('UPDATE news SET reactions = ? WHERE id = ?').run(JSON.stringify(reactions), req.params.id);
-
-  res.json({ reactions });
+  res.json({ reactions, accepted: inserted });
 });
 
 // DELETE /api/news/:id — tylko admin

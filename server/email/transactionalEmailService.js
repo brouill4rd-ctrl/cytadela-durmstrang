@@ -242,6 +242,44 @@ export async function deliverTransactionalEmail({
   }
 }
 
+export async function processTransactionalEmailOutbox({
+  database,
+  limit = 10,
+  maxAttempts = 5,
+  minRetryAgeSeconds = 300,
+  transport,
+  runtimeConfig = getMailRuntimeConfig()
+}) {
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10));
+  const safeMaxAttempts = Math.max(1, Math.min(20, Number(maxAttempts) || 5));
+  const safeRetryAge = Math.max(EMAIL_RETRY_COOLDOWN_SECONDS, Number(minRetryAgeSeconds) || 300);
+  const candidates = database.prepare(`
+    SELECT user_id, email_type, status
+    FROM transactional_email_deliveries
+    WHERE status = 'pending'
+       OR (
+         status = 'failed'
+         AND attempt_count < ?
+         AND (last_attempt_at IS NULL OR last_attempt_at <= datetime('now', ?))
+       )
+    ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at ASC
+    LIMIT ?
+  `).all(safeMaxAttempts, `-${safeRetryAge} seconds`, safeLimit);
+
+  const results = [];
+  for (const candidate of candidates) {
+    results.push(await deliverTransactionalEmail({
+      database,
+      userId: candidate.user_id,
+      emailType: candidate.email_type,
+      retry: candidate.status === 'failed',
+      transport,
+      runtimeConfig
+    }));
+  }
+  return results;
+}
+
 export function renderEmailPreview(emailType, user, runtimeConfig = getMailRuntimeConfig()) {
   const previewConfig = {
     ...runtimeConfig,

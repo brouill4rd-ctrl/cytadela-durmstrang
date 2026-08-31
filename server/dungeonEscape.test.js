@@ -9,6 +9,7 @@ import {
   requestHint,
   abandonAttempt,
   warsawDateKey,
+  warsawNextMidnight,
   warsawWeekKey,
   DAILY_LIMIT,
   MAX_HP,
@@ -472,6 +473,11 @@ test('(12) Odpowiedzi nie trafiają do danych publicznych podejścia', () => {
   assert.ok(stage2Data, 'Powinien być activeAttempt po przejściu etapu 1');
   assert.ok(!('sequence' in stage2Data), 'sequence nie może być w stageData etapu 2');
   assert.ok(!('hint' in stage2Data), 'hint nie może być w stageData etapu 2');
+});
+
+test('reset dzienny działa na końcu miesiąca i roku', () => {
+  assert.equal(warsawDateKey(warsawNextMidnight(new Date('2026-08-31T12:00:00Z'))), '2026-09-01');
+  assert.equal(warsawDateKey(warsawNextMidnight(new Date('2026-12-31T12:00:00Z'))), '2027-01-01');
 });
 
 test('Wskazówka skraca czas i zwraca tekst', () => {

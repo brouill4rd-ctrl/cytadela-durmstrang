@@ -5,6 +5,7 @@ import { EMAIL_TYPES, HOUSE_EMAIL_THEMES, renderAccountApprovedEmail } from './e
 import {
   deliverTransactionalEmail,
   getUserEmailDeliveries,
+  processTransactionalEmailOutbox,
   queueTransactionalEmail
 } from './email/transactionalEmailService.js';
 
@@ -161,4 +162,28 @@ test('scenariusz F: każdy istniejący Zakon otrzymuje własną, dynamiczną sek
     assert.match(rendered.html, /Serwer Discord/);
     assert.match(rendered.html, /Vademecum Durmstrangu/);
   }
+});
+
+test('worker wysyła oczekującą wiadomość i nie wysyła jej ponownie', async () => {
+  const database = createDatabase();
+  const user = insertUser(database);
+  const sendLog = [];
+  queueTransactionalEmail(database, user, EMAIL_TYPES.ACCOUNT_CREATED);
+
+  const firstRun = await processTransactionalEmailOutbox({
+    database,
+    transport: successfulTransport(sendLog),
+    runtimeConfig
+  });
+  const secondRun = await processTransactionalEmailOutbox({
+    database,
+    transport: successfulTransport(sendLog),
+    runtimeConfig
+  });
+
+  assert.equal(firstRun.length, 1);
+  assert.equal(firstRun[0].sent, true);
+  assert.equal(secondRun.length, 0);
+  assert.equal(sendLog.length, 1);
+  database.close();
 });

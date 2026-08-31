@@ -154,6 +154,19 @@ export const ProfileView = () => {
     })();
   }, [activeTab]);
 
+  const anyModalOpen = profileEditorOpen || passportOpen || grimoireOpen || runeCalligraphyOpen ||
+    duelOpen || oracleOpen || expeditionsOpen || targetOpen || escapeOpen ||
+    hnefataflOpen || fishingOpen || bestiaryOpen || blackMarketOpen || tournamentOpen || discordModalOpen;
+
+  useEffect(() => {
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [anyModalOpen]);
+
   const aurasConfig = {
     none: { name: 'Brak Aury', glow: 'none', border: 'var(--gold-ancient)' },
     frost: { name: 'Aura Lodowego Wichru', glow: '0 0 25px rgba(56, 189, 248, 0.7)', border: '#38bdf8' },

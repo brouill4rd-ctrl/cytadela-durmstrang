@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import db, { isProfessorOfSubject } from '../db.js';
-import { JWT_SECRET } from '../config/security.js';
+import { isSessionVersionValid, JWT_SECRET } from '../config/security.js';
 
 export function requireAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
   let userId = null;
+  let tokenPayload = null;
   const cookies = Object.fromEntries(String(req.headers.cookie || '').split(';').map(part => {
     const index = part.indexOf('=');
     return index === -1 ? ['', ''] : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1))];
@@ -14,8 +15,8 @@ export function requireAuth(req, res, next) {
   if ((authHeader && authHeader.startsWith('Bearer ')) || cookieToken) {
     const token = cookieToken || authHeader.slice(7);
     try {
-      const payload = jwt.verify(token, JWT_SECRET);
-      userId = payload.id;
+      tokenPayload = jwt.verify(token, JWT_SECRET);
+      userId = tokenPayload.id;
     } catch {
       return res.status(401).json({ error: 'Sesja wygasła lub token nieprawidłowy. Zaloguj się ponownie.' });
     }
@@ -26,6 +27,10 @@ export function requireAuth(req, res, next) {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!row) {
     return res.status(401).json({ error: 'Nieprawidłowa tożsamość. Użytkownik nie istnieje.' });
+  }
+
+  if (!isSessionVersionValid(tokenPayload, row)) {
+    return res.status(401).json({ error: 'Sesja została unieważniona. Zaloguj się ponownie.' });
   }
 
   if (row.status !== 'approved') {

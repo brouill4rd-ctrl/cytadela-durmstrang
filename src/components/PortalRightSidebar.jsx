@@ -584,6 +584,11 @@ export const PortalRightSidebar = ({
           {rankingTab === 'students' && (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {(!students || students.length === 0) && (
+                  <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.78rem', padding: '0.75rem 0' }}>
+                    Brak adeptów w rankingu
+                  </div>
+                )}
                 {(students || []).slice(0, 5).map((stud, idx) => {
                   const h = houses[stud.house] || Object.values(houses).find(x => x.id === stud.house);
                   const rankLabels = ['I', 'II', 'III', 'IV', 'V'];
@@ -628,7 +633,7 @@ export const PortalRightSidebar = ({
                             {fullName}
                           </div>
                           <div style={{ fontSize: '0.66rem', color: '#8c95a6', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {h ? h.name : 'Zakon'} • {stud.year ? `Rok ${stud.year}` : 'Adept'}
+                            {h ? h.name : 'Zakon'} • {stud.classYear || 'Adept'}
                           </div>
                         </div>
                       </div>

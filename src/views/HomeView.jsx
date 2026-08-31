@@ -208,6 +208,7 @@ export const HomeView = () => {
       >
         <Search size={15} color="var(--ice-frost)" />
         <input
+          aria-label="Przeszukaj aktualności"
           type="text"
           placeholder="Przeszukaj pergaminy, dekrety i wyniki turniejów..."
           value={searchQuery}

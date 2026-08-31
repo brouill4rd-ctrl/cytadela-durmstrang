@@ -78,7 +78,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.6rem;
-  isolation: isolate;
 }
 
 .profile-hero {
@@ -9869,25 +9868,6 @@ table {
   box-shadow: 0 0 12px var(--order-glow);
 }
 
-.order-segment__divider-rune {
-  position: absolute;
-  top: 50%;
-  right: -5px;
-  z-index: 4;
-  display: flex;
-  width: 10px;
-  height: 21px;
-  align-items: center;
-  justify-content: center;
-  border-top: 1px solid rgba(161, 169, 170, 0.22);
-  border-bottom: 1px solid rgba(161, 169, 170, 0.22);
-  background: #0b0e10;
-  color: rgba(183, 190, 190, 0.35);
-  font-family: serif;
-  font-size: 0.5rem;
-  transform: translateY(-50%);
-}
-
 .orders-board__footer {
   position: relative;
   display: flex;
@@ -9943,10 +9923,6 @@ table {
 
   .order-segment:nth-child(-n + 2) {
     border-bottom: 1px solid rgba(154, 163, 164, 0.15);
-  }
-
-  .order-segment__divider-rune {
-    display: none;
   }
 }
 

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isCorsOriginAllowed,
+  isSessionVersionValid,
   parseCorsOrigins,
   resolveJwtSecret
 } from './config/security.js';
@@ -42,4 +43,10 @@ test('polityka haseł odrzuca wartości krótkie i banalne', () => {
   assert.equal(validatePassword('aaaaaaaaaaaa').valid, false);
   assert.equal(validatePassword('SameLiteryBezCyfry').valid, false);
   assert.equal(validatePassword('DlugieHaslo!2026').valid, true);
+});
+
+test('zmiana wersji sesji unieważnia wcześniej wydany token', () => {
+  assert.equal(isSessionVersionValid({ sessionVersion: 3 }, { session_version: 3 }), true);
+  assert.equal(isSessionVersionValid({ sessionVersion: 2 }, { session_version: 3 }), false);
+  assert.equal(isSessionVersionValid({}, { session_version: 0 }), false);
 });

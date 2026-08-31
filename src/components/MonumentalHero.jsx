@@ -317,9 +317,6 @@ export const MonumentalHero = ({ onOpenCreationModal }) => {
                   </span>
                 </div>
 
-                {index < housesConfig.length - 1 && (
-                  <span className="order-segment__divider-rune" aria-hidden="true">ᛁ</span>
-                )}
               </article>
             );
           })}

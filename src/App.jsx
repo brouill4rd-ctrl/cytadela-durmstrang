@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useSchool } from './context/SchoolContext';
 import { useSound } from './context/SoundContext';
 import { Navbar } from './components/Navbar';
@@ -23,47 +23,58 @@ import { AdeptBelt } from './components/AdeptBelt';
 
 // Views
 import { HomeView } from './views/HomeView';
-import { HousesView } from './views/HousesView';
-import { CeremonyView } from './views/CeremonyView';
-import { AcademicView } from './views/AcademicView';
-import { RuneWorkshopView } from './views/RuneWorkshopView';
-import { MapView } from './views/MapView';
-import { MarkethallView } from './views/MarkethallView';
-import { ProfileView } from './views/ProfileView';
-import { LoreArchiveView } from './views/LoreArchiveView';
-import { RavenPostView } from './views/RavenPostView';
-import { AdminCMSView } from './views/AdminCMSView';
-import { JournalsListView } from './views/JournalsListView';
-import { LessonDetailView } from './views/LessonDetailView';
-import { ProfessorJournalEditor } from './views/ProfessorJournalEditor';
-import { SubjectDetailView } from './views/SubjectDetailView';
-import { TimetableView } from './views/TimetableView';
-import { BankView } from './views/BankView';
-import { RulesGuideView } from './views/RulesGuideView';
-import { DocumentsCodexView } from './views/DocumentsCodexView';
 import { RestrictedAccessView } from './views/RestrictedAccessView';
-import { GazetteView } from './views/GazetteView';
-import { GazetteFlipbook } from './views/GazetteFlipbook';
-import { GazettePanelView } from './views/GazettePanelView';
-import { GazetteArchiveView } from './views/GazetteArchiveView';
-import { ExamCenterView } from './views/ExamCenterView';
-import { ExamTakingView } from './views/ExamTakingView';
-import { ExamResultView } from './views/ExamResultView';
-import { ExamCreatorView } from './views/ExamCreatorView';
-import { ExamGradingView } from './views/ExamGradingView';
-import { ExamBankView } from './views/ExamBankView';
-import { HomeworkCenterView } from './views/HomeworkCenterView';
-import { HomeworkDetailView } from './views/HomeworkDetailView';
-import { HomeworkCreatorView } from './views/HomeworkCreatorView';
-import { HomeworkGradingView } from './views/HomeworkGradingView';
-import { MemoryMainView } from './views/MemoryMainView';
-import { PrologueView } from './views/PrologueView';
-import { TeacherPrologueView } from './views/TeacherPrologueView';
-import { AbsenceChamberView } from './views/AbsenceChamberView';
-import { EnrollmentChamberView } from './views/EnrollmentChamberView';
 import { api } from './api';
 
 import { Sparkles, Info, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
+
+const lazyNamed = (loader, exportName) => lazy(() =>
+  loader().then(module => ({ default: module[exportName] }))
+);
+
+const HousesView = lazyNamed(() => import('./views/HousesView'), 'HousesView');
+const CeremonyView = lazyNamed(() => import('./views/CeremonyView'), 'CeremonyView');
+const AcademicView = lazyNamed(() => import('./views/AcademicView'), 'AcademicView');
+const RuneWorkshopView = lazyNamed(() => import('./views/RuneWorkshopView'), 'RuneWorkshopView');
+const MapView = lazyNamed(() => import('./views/MapView'), 'MapView');
+const MarkethallView = lazyNamed(() => import('./views/MarkethallView'), 'MarkethallView');
+const ProfileView = lazyNamed(() => import('./views/ProfileView'), 'ProfileView');
+const LoreArchiveView = lazyNamed(() => import('./views/LoreArchiveView'), 'LoreArchiveView');
+const RavenPostView = lazyNamed(() => import('./views/RavenPostView'), 'RavenPostView');
+const AdminCMSView = lazyNamed(() => import('./views/AdminCMSView'), 'AdminCMSView');
+const JournalsListView = lazyNamed(() => import('./views/JournalsListView'), 'JournalsListView');
+const LessonDetailView = lazyNamed(() => import('./views/LessonDetailView'), 'LessonDetailView');
+const ProfessorJournalEditor = lazyNamed(() => import('./views/ProfessorJournalEditor'), 'ProfessorJournalEditor');
+const SubjectDetailView = lazyNamed(() => import('./views/SubjectDetailView'), 'SubjectDetailView');
+const TimetableView = lazyNamed(() => import('./views/TimetableView'), 'TimetableView');
+const BankView = lazyNamed(() => import('./views/BankView'), 'BankView');
+const RulesGuideView = lazyNamed(() => import('./views/RulesGuideView'), 'RulesGuideView');
+const DocumentsCodexView = lazyNamed(() => import('./views/DocumentsCodexView'), 'DocumentsCodexView');
+const GazetteView = lazyNamed(() => import('./views/GazetteView'), 'GazetteView');
+const GazetteFlipbook = lazyNamed(() => import('./views/GazetteFlipbook'), 'GazetteFlipbook');
+const GazettePanelView = lazyNamed(() => import('./views/GazettePanelView'), 'GazettePanelView');
+const GazetteArchiveView = lazyNamed(() => import('./views/GazetteArchiveView'), 'GazetteArchiveView');
+const ExamCenterView = lazyNamed(() => import('./views/ExamCenterView'), 'ExamCenterView');
+const ExamTakingView = lazyNamed(() => import('./views/ExamTakingView'), 'ExamTakingView');
+const ExamResultView = lazyNamed(() => import('./views/ExamResultView'), 'ExamResultView');
+const ExamCreatorView = lazyNamed(() => import('./views/ExamCreatorView'), 'ExamCreatorView');
+const ExamGradingView = lazyNamed(() => import('./views/ExamGradingView'), 'ExamGradingView');
+const ExamBankView = lazyNamed(() => import('./views/ExamBankView'), 'ExamBankView');
+const HomeworkCenterView = lazyNamed(() => import('./views/HomeworkCenterView'), 'HomeworkCenterView');
+const HomeworkDetailView = lazyNamed(() => import('./views/HomeworkDetailView'), 'HomeworkDetailView');
+const HomeworkCreatorView = lazyNamed(() => import('./views/HomeworkCreatorView'), 'HomeworkCreatorView');
+const HomeworkGradingView = lazyNamed(() => import('./views/HomeworkGradingView'), 'HomeworkGradingView');
+const MemoryMainView = lazyNamed(() => import('./views/MemoryMainView'), 'MemoryMainView');
+const PrologueView = lazyNamed(() => import('./views/PrologueView'), 'PrologueView');
+const TeacherPrologueView = lazyNamed(() => import('./views/TeacherPrologueView'), 'TeacherPrologueView');
+const AbsenceChamberView = lazyNamed(() => import('./views/AbsenceChamberView'), 'AbsenceChamberView');
+const EnrollmentChamberView = lazyNamed(() => import('./views/EnrollmentChamberView'), 'EnrollmentChamberView');
+
+const viewLoadingFallback = (
+  <div role="status" aria-live="polite" style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+    Ładowanie komnaty…
+  </div>
+);
 
 const RESTRICTED_VIEW_LABELS = {
   'journals': 'Dzienników Lekcyjnych Cytadeli',
@@ -273,9 +284,11 @@ export const App = () => {
   return (
     <div className={`durmstrang-app world-${worldState.weather.toLowerCase()} citadel-${worldState.citadelState.toLowerCase()} presentation-${effectiveMode.toLowerCase()}`}>
       {prologueRequired && (
-        ['teacher', 'professor'].includes(currentUser?.role)
-          ? <TeacherPrologueView onComplete={() => setPrologueRequired(false)} />
-          : <PrologueView onComplete={() => setPrologueRequired(false)} />
+        <Suspense fallback={viewLoadingFallback}>
+          {['teacher', 'professor'].includes(currentUser?.role)
+            ? <TeacherPrologueView onComplete={() => setPrologueRequired(false)} />
+            : <PrologueView onComplete={() => setPrologueRequired(false)} />}
+        </Suspense>
       )}
       {/* Particle Snow Canvas */}
       <SnowCanvas />
@@ -371,7 +384,9 @@ export const App = () => {
             zIndex: 200,
             background: '#030508',
           }}>
-            {renderActiveView()}
+            <Suspense fallback={viewLoadingFallback}>
+              {renderActiveView()}
+            </Suspense>
             <button
               onClick={() => setActiveView('home')}
               title="Opuść mapę (Escape)"
@@ -413,7 +428,9 @@ export const App = () => {
 
             {/* Center Column (Active View / Scrolls) */}
             <main style={{ minWidth: 0 }}>
-              {renderActiveView()}
+              <Suspense fallback={viewLoadingFallback}>
+                {renderActiveView()}
+              </Suspense>
             </main>
 
             {/* Right Column Sidebar */}

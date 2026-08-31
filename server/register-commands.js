@@ -19,7 +19,21 @@ const registrations = [
   }
 ];
 
+const [questRegistration, neridaRegistration] = registrations;
+const sameToken = questRegistration.token
+  && neridaRegistration.token
+  && questRegistration.token === neridaRegistration.token;
+const sameClientId = questRegistration.clientId
+  && neridaRegistration.clientId
+  && questRegistration.clientId === neridaRegistration.clientId;
+
+if (sameToken || sameClientId) {
+  console.error('❌ Bot questów i Nerida muszą mieć różne tokeny oraz Client ID.');
+  process.exit(1);
+}
+
 let registeredBots = 0;
+const guildId = process.env.DISCORD_GUILD_ID;
 
 for (const { bot, token, clientId } of registrations) {
   if (!token || !clientId) {
@@ -30,8 +44,14 @@ for (const { bot, token, clientId } of registrations) {
   try {
     const commands = bot.getSlashCommands().map(command => command.toJSON());
     const rest = new REST({ version: '10' }).setToken(token);
-    await rest.put(Routes.applicationCommands(clientId), { body: commands });
-    console.log(`✅ [${bot.name}] Zarejestrowano ${commands.length} komend globalnych.`);
+    if (guildId) {
+      await rest.put(Routes.applicationCommands(clientId), { body: [] });
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+      console.log(`✅ [${bot.name}] Zsynchronizowano ${commands.length} komend na serwerze; usunięto stare i globalne.`);
+    } else {
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      console.log(`✅ [${bot.name}] Zsynchronizowano ${commands.length} komend globalnych.`);
+    }
     registeredBots += 1;
   } catch (error) {
     console.error(`❌ [${bot.name}] Błąd rejestracji:`, error.message);

@@ -1604,7 +1604,7 @@ router.delete('/:id/exceptions/:studentId', requireAuth, requireRole('professor'
 // ==================== 8. FILE UPLOAD ====================
 
 // POST /api/homework/upload — Upload attachment for assignment or submission
-router.post('/upload', requireAuth, (req, res) => {
+router.post('/upload', requireAuth, async (req, res) => {
   try {
     const { fileName, fileData, fileType } = req.body;
     if (!fileName || !fileData) {
@@ -1617,7 +1617,7 @@ router.post('/upload', requireAuth, (req, res) => {
     const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.txt', '.docx'];
 
     if (!allowedExts.includes(ext)) {
-      return res.status(400).json({ error: `Niedozwolony format pliku: ${ext}. Dozwolone: grafiki, PDF, TXT, DOCX, ZIP.` });
+      return res.status(400).json({ error: `Niedozwolony format pliku: ${ext}. Dozwolone: grafiki, PDF, TXT i DOCX.` });
     }
 
     const uniqueName = `hw-${Date.now()}-${sanitizedName}`;
@@ -1643,7 +1643,7 @@ router.post('/upload', requireAuth, (req, res) => {
     };
     if (buffer.length === 0 || !signatures[ext](buffer)) return res.status(400).json({ error: 'Zawartość pliku nie odpowiada jego rozszerzeniu.' });
 
-    fs.writeFileSync(targetPath, buffer);
+    await fs.promises.writeFile(targetPath, buffer);
 
     const relativeUrl = `/uploads/homework/${uniqueName}`;
 

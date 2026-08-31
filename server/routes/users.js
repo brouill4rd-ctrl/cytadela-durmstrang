@@ -324,8 +324,8 @@ router.patch('/:id/reset-password', requireAuth, requireRole('admin'), (req, res
   const { newPassword } = req.body;
   const passwordCheck = validatePassword(newPassword);
   if (!passwordCheck.valid) return res.status(400).json({ error: passwordCheck.error });
-  const hashed = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashed, req.params.id);
+  const hashed = bcrypt.hashSync(newPassword, 12);
+  db.prepare('UPDATE users SET password = ?, session_version = session_version + 1 WHERE id = ?').run(hashed, req.params.id);
   res.json({ success: true });
 });
 
@@ -341,12 +341,22 @@ router.get('/pending/applications', requireAuth, requireRole('admin'), (req, res
 // POST /api/users/applications — submit recruitment application (publiczny)
 router.post('/applications', (req, res) => {
   const data = req.body;
-  if (!data.name || !data.surname) {
+  const name = String(data.name || '').trim();
+  const surname = String(data.surname || '').trim();
+  const email = String(data.email || '').trim().toLowerCase();
+  const role = data.role === 'professor' ? 'professor' : 'student';
+
+  if (!name || !surname) {
     return res.status(400).json({ error: 'Imię i nazwisko są wymagane.' });
   }
+  if (name.length > 80 || surname.length > 120) {
+    return res.status(400).json({ error: 'Imię lub nazwisko jest zbyt długie.' });
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Podaj poprawny adres e-mail.' });
+  }
 
-  const appId = data.id || `app-${Date.now()}`;
-  const userId = data.studentId || data.userId || null;
+  const appId = `app-${randomUUID()}`;
 
   db.prepare(`
     INSERT OR IGNORE INTO pending_applications
@@ -354,17 +364,17 @@ router.post('/applications', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', date('now'))
   `).run(
     appId,
-    userId,
-    data.email || '',
-    data.name,
-    data.surname,
-    data.role || 'student',
-    data.origin || '',
-    data.wand || '',
-    data.patronus || '',
-    data.companion || '',
-    data.appearance || '',
-    data.backstory || ''
+    null,
+    email,
+    name,
+    surname,
+    role,
+    String(data.origin || '').trim().slice(0, 200),
+    String(data.wand || '').trim().slice(0, 500),
+    String(data.patronus || '').trim().slice(0, 200),
+    String(data.companion || '').trim().slice(0, 200),
+    String(data.appearance || '').trim().slice(0, 2000),
+    String(data.backstory || '').trim().slice(0, 10000)
   );
 
   const created = db.prepare('SELECT * FROM pending_applications WHERE id = ?').get(appId);

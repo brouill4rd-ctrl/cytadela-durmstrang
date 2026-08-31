@@ -13,7 +13,12 @@ import { getMailRuntimeConfig, getMailTransport } from '../email/mailTransport.j
 const router = Router();
 
 function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+  return jwt.sign({
+    id: user.id,
+    role: user.role,
+    username: user.username,
+    sessionVersion: Number(user.session_version || 0)
+  }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
 }
 
 function setSessionCookie(res, token) {
@@ -52,7 +57,7 @@ router.post('/login', (req, res) => {
     return res.status(403).json({ error: 'Twoje podanie rekrutacyjne zostało odrzucone przez Radę Mistrzów.', status: 'rejected' });
   }
 
-  const token = signToken(user);
+  const token = signToken(row);
   setSessionCookie(res, token);
   res.json({ user });
 });
@@ -115,7 +120,7 @@ router.post('/password-recovery/confirm', (req, res) => {
   db.transaction(() => {
     const claimed = db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL").run(record.id);
     if (claimed.changes !== 1) throw new Error('Kod został już wykorzystany.');
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(passwordHash, record.user_id);
+    db.prepare('UPDATE users SET password = ?, session_version = session_version + 1 WHERE id = ?').run(passwordHash, record.user_id);
     db.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL").run(record.user_id);
   })();
   res.json({ success: true, message: 'Hasło zostało bezpiecznie zmienione.' });
@@ -160,7 +165,7 @@ router.post('/register', async (req, res) => {
   }
 
   const rawPassword = data.password;
-  const hashedPassword = bcrypt.hashSync(rawPassword, 10);
+  const hashedPassword = bcrypt.hashSync(rawPassword, 12);
 
   const newId = `usr-${randomUUID()}`;
   const fullName = `${(data.name || '').trim()} ${(data.surname || '').trim()}`;

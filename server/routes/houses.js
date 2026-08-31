@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db, { dbHouseToFrontend } from '../db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.get('/fortress-guardian', (req, res) => {
 });
 
 // PUT /api/houses/fortress-guardian
-router.put('/fortress-guardian', (req, res) => {
+router.put('/fortress-guardian', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const guardianData = req.body;
     if (!guardianData || !guardianData.name) {
@@ -83,7 +84,7 @@ router.put('/fortress-guardian', (req, res) => {
 });
 
 // PUT /api/houses/:id
-router.put('/:id', (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
     const { headOfHouse, prefect, name, startingPoints } = req.body;

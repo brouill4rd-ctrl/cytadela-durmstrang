@@ -55,5 +55,9 @@ export function isCorsOriginAllowed(origin, allowedOrigins, env = process.env) {
   return env.NODE_ENV !== 'production' && allowedOrigins.includes('*');
 }
 
+export function isSessionVersionValid(payload, userRow) {
+  return Number(payload?.sessionVersion) === Number(userRow?.session_version || 0);
+}
+
 export const JWT_SECRET = resolveJwtSecret();
 export const JWT_EXPIRY = process.env.JWT_EXPIRY || '2h';

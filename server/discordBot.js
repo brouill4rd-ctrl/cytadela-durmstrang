@@ -628,8 +628,18 @@ export class DurmstrangDiscordBot {
       if (this.clientId) {
         const rest = new REST({ version: '10' }).setToken(this.token);
         const commandsJson = this.getSlashCommands().map(c => c.toJSON());
-        await rest.put(Routes.applicationCommands(this.clientId), { body: commandsJson });
-        console.log(`⚡ [${this.name}] Zarejestrowano ${commandsJson.length} komend slash.`);
+        const guildId = process.env.DISCORD_GUILD_ID || config?.guild_id || this.client.guilds.cache.first()?.id;
+
+        if (guildId) {
+          // Usuń pozostałości globalne, a następnie ustaw jeden, natychmiastowy
+          // zestaw komend serwerowych. Dzięki temu Discord nie pokazuje duplikatów.
+          await rest.put(Routes.applicationCommands(this.clientId), { body: [] });
+          await rest.put(Routes.applicationGuildCommands(this.clientId, guildId), { body: commandsJson });
+          console.log(`⚡ [${this.name}] Ustawiono ${commandsJson.length} komend na serwerze ${guildId}; wyczyszczono komendy globalne.`);
+        } else {
+          await rest.put(Routes.applicationCommands(this.clientId), { body: commandsJson });
+          console.log(`⚡ [${this.name}] Ustawiono ${commandsJson.length} komend globalnych.`);
+        }
       }
     } catch (err) {
       console.error(`❌ [${this.name}] Błąd logowania bota Discord:`, err.message);
@@ -2304,7 +2314,7 @@ export class DurmstrangDiscordBot {
 
     const parentChannel = await guild.channels.fetch(playChannelId).catch(() => null);
     if (!parentChannel?.threads?.create) {
-      throw new Error('Kanał questów nie obsługuje publicznych wątków.');
+      throw new Error('Kanał questów nie obsługuje wątków.');
     }
 
     const saved = db.prepare(`
@@ -2340,7 +2350,8 @@ export class DurmstrangDiscordBot {
     const thread = await parentChannel.threads.create({
       name: threadName,
       autoArchiveDuration: 1440,
-      type: ChannelType.PublicThread,
+      type: ChannelType.PrivateThread,
+      invitable: false,
       reason: `Quest ${questId} dla ${discordId}`,
     });
 

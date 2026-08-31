@@ -1,0 +1,35 @@
+name: Kontrola jakości
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalacja zależności
+        run: npm ci
+
+      - name: Testy
+        run: npm test
+
+      - name: Build produkcyjny
+        run: npm run build
+
+      - name: Audyt zależności produkcyjnych
+        run: npm audit --omit=dev --audit-level=high

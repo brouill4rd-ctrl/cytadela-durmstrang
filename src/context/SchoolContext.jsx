@@ -749,9 +749,7 @@ Dyrektor Cytadeli Durmstrang`
       const studentRanking = loadedUsers
         .filter(u => u.role === 'student' && u.status === 'approved')
         .sort((a, b) => (b.points || 0) - (a.points || 0));
-      if (studentRanking.length > 0) {
-        setStudents(studentRanking);
-      }
+      setStudents(studentRanking);
 
       // Build staff ranking from loaded users
       const staffRankingData = loadedUsers
@@ -2247,36 +2245,19 @@ Dyrektor Cytadeli Durmstrang`
 
   // React to News
   const reactToNews = async (newsId, reactionType = 'admiration') => {
-    // Optimistic local update
-    setNews(prev => {
-      const updated = prev.map(item => {
-        if (item.id === newsId) {
-          const currentReactions = item.reactions || { admiration: 0, awe: 0, fire: 0, skull: 0 };
-          return {
-            ...item,
-            reactions: { ...currentReactions, [reactionType]: (currentReactions[reactionType] || 0) + 1 }
-          };
-        }
-        return item;
-      });
-      try {
-        localStorage.setItem('durmstrang_news', JSON.stringify(updated));
-      } catch (_) {}
-      return updated;
-    });
-
-    if (backendAvailable) {
-      try {
-        const res = await api.reactToNews(newsId, reactionType);
-        if (res.ok && res.data?.reactions) {
-          setNews(prev => prev.map(item =>
-            item.id === newsId ? { ...item, reactions: res.data.reactions } : item
-          ));
-        }
-      } catch (err) {
-        console.error('[reactToNews] Backend error:', err);
-      }
+    if (!backendAvailable) {
+      showNotification('Tryb offline', 'Reakcja wymaga połączenia z serwerem.', 'warning');
+      return false;
     }
+    const res = await api.reactToNews(newsId, reactionType);
+    if (!res.ok) {
+      showNotification('Nie zapisano reakcji', res.error || 'Serwer odrzucił reakcję.', 'warning');
+      return false;
+    }
+    setNews(prev => prev.map(item =>
+      item.id === newsId ? { ...item, reactions: res.data.reactions } : item
+    ));
+    return res.data.accepted;
   };
 
   const [passwordRecoveryModalOpen, setPasswordRecoveryModalOpen] = useState(false);
@@ -2516,6 +2497,16 @@ Dyrektor Cytadeli Durmstrang`
         return exists ? prev.map(u => u.id === user.id ? user : u) : [user, ...prev];
       });
       setCurrentUserId(user.id);
+
+      // Załaduj pełną listę użytkowników po zalogowaniu (sesja może nie zmienić currentUserId jeśli była zapisana)
+      const usersRes = await api.getUsers();
+      if (usersRes.ok && usersRes.data.length > 0) {
+        const all = usersRes.data.map(u => ({ ...u, points: normalizePointValue(u.points) }));
+        setUsers(all);
+        setStudents(all.filter(u => u.role === 'student' && u.status === 'approved').sort((a, b) => (b.points || 0) - (a.points || 0)));
+        setStaffRanking(all.filter(u => ['professor', 'teacher', 'admin', 'headmaster'].includes(u.role)).sort((a, b) => (b.points || 0) - (a.points || 0)));
+      }
+
       showNotification('Wrota Cytadeli Otwarte', `Zalogowano jako: ${user.fullName} (${user.role === 'student' ? 'Adept' : user.role === 'professor' ? 'Profesor' : (user.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz')})`, 'success');
       return true;
     } else {

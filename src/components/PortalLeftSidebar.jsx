@@ -270,10 +270,12 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
             <form onSubmit={handleSidebarLogin}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <label htmlFor="sidebar-login-username" style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Login:
                   </label>
                   <input
+                    id="sidebar-login-username"
+                    autoComplete="username"
                     type="text"
                     value={sideUsername}
                     onChange={(e) => setSideUsername(e.target.value)}
@@ -284,10 +286,12 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <label htmlFor="sidebar-login-password" style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Hasło:
                   </label>
                   <input
+                    id="sidebar-login-password"
+                    autoComplete="current-password"
                     type="password"
                     value={sidePassword}
                     onChange={(e) => setSidePassword(e.target.value)}

@@ -62,6 +62,7 @@ import { QUEST_DEFINITIONS } from './seed/questDefinitions.js';
 import { WORLD_QUEST_DEFINITIONS } from './seed/worldQuestDefinitions.js';
 import { isCorsOriginAllowed, parseCorsOrigins } from './config/security.js';
 import { rateLimit } from './middleware/rateLimit.js';
+import { processTransactionalEmailOutbox } from './email/transactionalEmailService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -81,6 +82,8 @@ recalculateAllBalances();
 const distPath = path.join(__dirname, '..', 'dist');
 const app = express();
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3001;
+const emailOutboxEnabled = ['1', 'true', 'yes', 'on'].includes(String(process.env.EMAIL_OUTBOX_ENABLED || '').toLowerCase());
+const emailOutboxIntervalMs = Math.max(60, Number(process.env.EMAIL_OUTBOX_INTERVAL_SECONDS) || 300) * 1000;
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
@@ -135,6 +138,7 @@ app.use((req, res, next) => {
 app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, scope: 'auth-login' }));
 app.use('/api/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'auth-register' }));
 app.use('/api/auth/password-recovery', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'password-recovery' }));
+app.use('/api/users/applications', rateLimit({ windowMs: 60 * 60 * 1000, max: 5, scope: 'public-applications' }));
 app.use('/api/homework/upload', rateLimit({ windowMs: 60 * 60 * 1000, max: 20, scope: 'homework-upload' }));
 app.use('/api/discord/upload-attachment', rateLimit({ windowMs: 60 * 60 * 1000, max: 20, scope: 'discord-upload' }));
 app.use('/api/gazette/analytics', rateLimit({ windowMs: 15 * 60 * 1000, max: 100, scope: 'gazette-analytics' }));
@@ -183,9 +187,25 @@ app.use('/api/minigames/wand-fencing', wandFencingRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/quest-engine', questEngineRoutes);
 
-// Health check
+// Health check used by deployment monitors. It verifies the database instead of
+// reporting success solely because the HTTP process is alive.
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  try {
+    db.prepare('SELECT 1 AS ok').get();
+    res.json({
+      status: 'ok',
+      database: 'ok',
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Health] Database check failed:', error.message);
+    res.status(503).json({
+      status: 'degraded',
+      database: 'unavailable',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Production: Serve React frontend build from dist folder
@@ -230,9 +250,36 @@ const server = app.listen(PORT, () => {
   console.log('');
 });
 
+let emailOutboxRunning = false;
+const processEmailOutbox = async () => {
+  if (emailOutboxRunning) return;
+  emailOutboxRunning = true;
+  try {
+    const results = await processTransactionalEmailOutbox({ database: db });
+    const sent = results.filter(result => result.sent).length;
+    if (sent > 0) console.log(`[TransactionalEmail] Worker wysłał ${sent} wiadomości.`);
+  } catch (error) {
+    console.error('[TransactionalEmail] Błąd workera kolejki:', error.message);
+  } finally {
+    emailOutboxRunning = false;
+  }
+};
+
+let emailOutboxStartupTimer = null;
+let emailOutboxTimer = null;
+if (emailOutboxEnabled) {
+  emailOutboxStartupTimer = setTimeout(processEmailOutbox, 5000);
+  emailOutboxTimer = setInterval(processEmailOutbox, emailOutboxIntervalMs);
+  emailOutboxStartupTimer.unref?.();
+  emailOutboxTimer.unref?.();
+  console.log(`[TransactionalEmail] Worker kolejki aktywny (co ${emailOutboxIntervalMs / 1000}s).`);
+}
+
 // Graceful Shutdown
 const gracefulShutdown = (signal) => {
   console.log(`\n[Server] Otrzymano sygnał ${signal}. Bezpieczne zamykanie serwera...`);
+  if (emailOutboxStartupTimer) clearTimeout(emailOutboxStartupTimer);
+  if (emailOutboxTimer) clearInterval(emailOutboxTimer);
   try {
     discordBot.stop();
   } catch (_) {}
