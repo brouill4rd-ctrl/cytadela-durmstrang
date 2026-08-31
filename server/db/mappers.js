@@ -1121,58 +1121,6 @@ export function dbRavenMessageToFrontend(row) {
   };
 }
 
-try {
-  db.exec("ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'czarodziej'");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE users ADD COLUMN discord_id TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE users ADD COLUMN discord_username TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE users ADD COLUMN discord_avatar TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE users ADD COLUMN discord_roles TEXT DEFAULT '[]'");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE users ADD COLUMN discord_verified_at TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE store_items ADD COLUMN image_url TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE discord_bot_config ADD COLUMN welcome_channel_id TEXT DEFAULT ''");
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE discord_bot_config ADD COLUMN welcome_enabled INTEGER DEFAULT 1");
-} catch (_) {}
-
-// News table extended columns
-try { db.exec("ALTER TABLE news ADD COLUMN author_id TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN category_key TEXT DEFAULT 'edykty'"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN banner_custom_text TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN wax_seal TEXT DEFAULT 'gold'"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN house TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN tags TEXT DEFAULT '[]'"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN author_signature TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN read_time TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE news ADD COLUMN subject_id TEXT DEFAULT ''"); } catch (_) {}
-// Professor signature image
-try { db.exec("ALTER TABLE users ADD COLUMN signature_png TEXT DEFAULT ''"); } catch (_) {}
-// HTML transaction e-mail archive and link to the external delivery ledger.
-try { db.exec("ALTER TABLE emails ADD COLUMN html_body TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE emails ADD COLUMN delivery_id TEXT DEFAULT ''"); } catch (_) {}
-try { db.exec("ALTER TABLE subjects ADD COLUMN discord_channel_id TEXT DEFAULT ''"); } catch (_) {}
 
 export function dbRoleMappingToFrontend(row) {
   if (!row) return null;
