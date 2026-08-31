@@ -92,11 +92,11 @@ export const DiscordVerificationModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   // Generate new code
-  const handleGenerateCode = async () => {
+  const handleGenerateCode = async (force = false) => {
     playWandSwoosh();
     setLoading(true);
     try {
-      const res = await api.generateDiscordVerificationCode();
+      const res = await api.generateDiscordVerificationCode(force);
       if (res.ok && res.data) {
         setActiveCode(res.data.code);
         setCodeExpiresAt(res.data.expiresAt);
@@ -546,7 +546,7 @@ export const DiscordVerificationModal = ({ isOpen, onClose }) => {
                   </button>
 
                   <button
-                    onClick={handleGenerateCode}
+                    onClick={() => handleGenerateCode(true)}
                     disabled={loading}
                     style={{
                       padding: '0.65rem 1rem',

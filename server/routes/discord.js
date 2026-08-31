@@ -582,27 +582,29 @@ export function resolveRolesForUser(user) {
 router.post('/verification/generate', requireAuth, (req, res) => {
   try {
     const userId = req.user.id;
+    const force = !!req.body.force;
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     if (!user) {
       return res.status(404).json({ error: 'Użytkownik nie istnieje w bazie Cytadeli.' });
     }
 
-    // Sprawdź czy jest już aktywny niewygasły kod
-    const nowIso = new Date().toISOString();
-    const existing = db.prepare(`
-      SELECT * FROM discord_verifications 
-      WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now') 
-      ORDER BY created_at DESC LIMIT 1
-    `).get(userId);
+    // Sprawdź czy jest już aktywny niewygasły kod (tylko gdy nie wymuszono nowego)
+    if (!force) {
+      const existing = db.prepare(`
+        SELECT * FROM discord_verifications
+        WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now')
+        ORDER BY created_at DESC LIMIT 1
+      `).get(userId);
 
-    if (existing) {
-      return res.json({
-        success: true,
-        code: existing.code,
-        expiresAt: existing.expires_at,
-        message: 'Aktywny kod weryfikacyjny został pobrany.',
-        verification: dbVerificationToFrontend(existing)
-      });
+      if (existing) {
+        return res.json({
+          success: true,
+          code: existing.code,
+          expiresAt: existing.expires_at,
+          message: 'Aktywny kod weryfikacyjny został pobrany.',
+          verification: dbVerificationToFrontend(existing)
+        });
+      }
     }
 
     // Unieważnij poprzednie oczekujące kody
