@@ -592,7 +592,7 @@ router.post('/verification/generate', requireAuth, (req, res) => {
     if (!force) {
       const existing = db.prepare(`
         SELECT * FROM discord_verifications
-        WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now')
+        WHERE user_id = ? AND status = 'pending' AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
         ORDER BY created_at DESC LIMIT 1
       `).get(userId);
 
@@ -654,7 +654,7 @@ router.get('/verification/status', requireAuth, (req, res) => {
 
     const activeVerification = db.prepare(`
       SELECT * FROM discord_verifications 
-      WHERE user_id = ? AND status = 'pending' AND expires_at > datetime('now')
+      WHERE user_id = ? AND status = 'pending' AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
       ORDER BY created_at DESC LIMIT 1
     `).get(userId);
 
@@ -698,7 +698,7 @@ router.post('/verification/verify-manual', requireAuth, (req, res) => {
     const cleanCode = code.trim().toUpperCase();
     const verif = db.prepare(`
       SELECT * FROM discord_verifications 
-      WHERE code = ? AND status = 'pending' AND expires_at > datetime('now')
+      WHERE code = ? AND status = 'pending' AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     `).get(cleanCode);
 
     if (!verif) {

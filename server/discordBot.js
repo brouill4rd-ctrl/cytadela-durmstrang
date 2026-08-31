@@ -1161,7 +1161,7 @@ export class DurmstrangDiscordBot {
 
           const verif = db.prepare(`
             SELECT * FROM discord_verifications 
-            WHERE code = ? AND status = 'pending' AND expires_at > datetime('now')
+            WHERE code = ? AND status = 'pending' AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
           `).get(cleanCode);
 
           if (!verif) {

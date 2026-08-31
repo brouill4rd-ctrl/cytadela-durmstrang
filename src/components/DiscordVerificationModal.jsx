@@ -569,7 +569,7 @@ export const DiscordVerificationModal = ({ isOpen, onClose }) => {
               /* Generate Code Button */
               <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
                 <button
-                  onClick={handleGenerateCode}
+                  onClick={() => handleGenerateCode(false)}
                   disabled={loading}
                   className="btn-durmstrang"
                   style={{

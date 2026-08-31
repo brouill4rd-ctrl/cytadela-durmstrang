@@ -228,7 +228,7 @@ export const api = {
   startDiscordLesson: (data) => apiFetch('/discord/start-lesson', { method: 'POST', body: JSON.stringify(data) }),
   postDiscordMessage: (data) => apiFetch('/discord/post-message', { method: 'POST', body: JSON.stringify(data) }),
   endDiscordLesson: (data) => apiFetch('/discord/end-lesson', { method: 'POST', body: JSON.stringify(data) }),
-  generateDiscordVerificationCode: (force = false) => apiFetch('/discord/verification/generate', { method: 'POST', body: JSON.stringify({ force }) }),
+  generateDiscordVerificationCode: (force = false) => apiFetch('/discord/verification/generate', { method: 'POST', body: JSON.stringify({ force: force === true }) }),
   getDiscordVerificationStatus: () => apiFetch('/discord/verification/status'),
   verifyDiscordManual: (data) => apiFetch('/discord/verification/verify-manual', { method: 'POST', body: JSON.stringify(data) }),
   unlinkDiscordAccount: () => apiFetch('/discord/verification/unlink', { method: 'POST' }),
