@@ -222,6 +222,12 @@ function discordFieldValue(value, fallback = '—') {
   return text.slice(0, 1024);
 }
 
+// Domyślna godzina publikacji planu lekcji (strefa Europe/Warsaw).
+const DEFAULT_TIMETABLE_POST_TIME = '17:00';
+const DEFAULT_TIMETABLE_POST_MINUTES = 17 * 60;
+// Po tylu minutach od wyznaczonej godziny plan nie jest już publikowany tego dnia.
+const TIMETABLE_POST_WINDOW_MINUTES = 60;
+
 function getWarsawDateContext(date = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', {
@@ -243,12 +249,33 @@ function getWarsawDateContext(date = new Date()) {
   };
 }
 
-function parseDailyPostTime(value = '07:00') {
+// Baza SQLite na Render Free resetuje się przy każdym deployu (brak trwałego dysku
+// na tym planie), więc licznik "już wysłano dzisiaj" w school_config nie przetrwa
+// restartu procesu. Kanał Discord jest źródłem prawdy, które przetrwa restart —
+// sprawdzamy jego ostatnią historię, zanim wyślemy plan ponownie.
+async function hasAlreadyPostedTimetableToday(channel, dateKey, botUserId) {
+  try {
+    const recentMessages = await channel.messages.fetch({ limit: 10 });
+    return recentMessages.some(msg => {
+      if (msg.author?.id !== botUserId) return false;
+      const embedTitle = msg.embeds?.[0]?.title || '';
+      if (!embedTitle.includes('PLAN LEKCJI')) return false;
+      return getWarsawDateContext(msg.createdAt).dateKey === dateKey;
+    });
+  } catch (err) {
+    // W razie błędu (np. brak uprawnień do odczytu historii) wolimy wysłać plan
+    // niż milcząco przestać publikować — ryzyko duplikatu jest tu mniejszym złem.
+    console.warn('[Discord Bot] Nie udało się sprawdzić historii kanału planu lekcji:', err.message);
+    return false;
+  }
+}
+
+function parseDailyPostTime(value = DEFAULT_TIMETABLE_POST_TIME) {
   const match = /^(\d{1,2}):(\d{2})$/.exec(String(value).trim());
-  if (!match) return 7 * 60;
+  if (!match) return DEFAULT_TIMETABLE_POST_MINUTES;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
-  if (hour > 23 || minute > 59) return 7 * 60;
+  if (hour > 23 || minute > 59) return DEFAULT_TIMETABLE_POST_MINUTES;
   return hour * 60 + minute;
 }
 
@@ -1919,6 +1946,11 @@ export class DurmstrangDiscordBot {
         return { sent: false, reason: 'channel_not_found' };
       }
 
+      if (await hasAlreadyPostedTimetableToday(channel, context.dateKey, this.client.user.id)) {
+        console.log(`📅 [Discord Bot] Plan na ${context.dateKey} już wisi na #${channel.name} — pomijam ponowną wysyłkę.`);
+        return { sent: false, reason: 'already_posted' };
+      }
+
       const entries = db.prepare(`
         SELECT
           t.*,
@@ -1965,24 +1997,46 @@ export class DurmstrangDiscordBot {
     const enabled = !['0', 'false', 'no', 'off'].includes(String(process.env.DISCORD_TIMETABLE_ENABLED || 'true').toLowerCase());
     if (!enabled || this.timetableScheduler) return;
 
-    const configuredTime = process.env.DISCORD_TIMETABLE_POST_TIME || '07:00';
+    const configuredTime = process.env.DISCORD_TIMETABLE_POST_TIME || DEFAULT_TIMETABLE_POST_TIME;
     const targetMinutes = parseDailyPostTime(configuredTime);
     const checkAndPost = async () => {
       if (this.timetableCheckInProgress || !this.client?.isReady()) return;
       const context = getWarsawDateContext();
-      if (context.minutesSinceMidnight < targetMinutes) return;
+      // Publikujemy wyłącznie w oknie tuż po wyznaczonej godzinie — dzięki temu
+      // restart serwera o dowolnej porze dnia nie wysyła planu ponownie.
+      const minutesSinceTarget = context.minutesSinceMidnight - targetMinutes;
+      if (minutesSinceTarget < 0 || minutesSinceTarget > TIMETABLE_POST_WINDOW_MINUTES) return;
 
-      const lastPostDate = db.prepare("SELECT value FROM school_config WHERE key = 'discord_timetable_last_post_date'").get()?.value;
-      if (lastPostDate === context.dateKey) return;
+      const previousPostDate = db.prepare(
+        "SELECT value FROM school_config WHERE key = 'discord_timetable_last_post_date'"
+      ).get()?.value;
+      if (previousPostDate === context.dateKey) return;
+
+      // Rezerwujemy dzień przed wysłaniem — dwie równoległe instancje bota
+      // (np. serwer HTTP i bot_standalone) nie wyślą przez to planu dwa razy.
+      const claimed = db.prepare(`
+        INSERT INTO school_config (key, value) VALUES ('discord_timetable_last_post_date', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE school_config.value <> excluded.value
+      `).run(context.dateKey).changes > 0;
+      if (!claimed) {
+        // Ktoś (najpewniej inny proces bota działający równolegle) już zarezerwował
+        // dzisiejszy plan. Logujemy to jawnie, żeby dało się wykryć duplikat procesów.
+        console.warn(`📅 [Discord Bot] Pominięto wysyłkę planu na ${context.dateKey} — inny proces już go zarezerwował/wysłał (PID ${process.pid}).`);
+        return;
+      }
 
       this.timetableCheckInProgress = true;
       try {
         const result = await this.announceDailyTimetable(context);
-        if (result.sent) {
-          db.prepare(`
-            INSERT INTO school_config (key, value) VALUES ('discord_timetable_last_post_date', ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-          `).run(context.dateKey);
+        // 'already_posted' oznacza, że plan i tak już wisi na kanale (wg jego historii) —
+        // rezerwacja zostaje, nie ma sensu próbować ponownie w tym oknie.
+        if (!result.sent && result.reason !== 'already_posted') {
+          // Zwalniamy rezerwację, aby kolejna próba w oknie mogła dojść do skutku.
+          if (previousPostDate === undefined) {
+            db.prepare("DELETE FROM school_config WHERE key = 'discord_timetable_last_post_date'").run();
+          } else {
+            db.prepare("UPDATE school_config SET value = ? WHERE key = 'discord_timetable_last_post_date'").run(previousPostDate);
+          }
         }
       } finally {
         this.timetableCheckInProgress = false;
@@ -1992,7 +2046,7 @@ export class DurmstrangDiscordBot {
     void checkAndPost();
     this.timetableScheduler = setInterval(() => void checkAndPost(), 60 * 1000);
     this.timetableScheduler.unref?.();
-    console.log(`📅 [Discord Bot] Codzienny plan lekcji aktywny: ${configuredTime}, strefa Europe/Warsaw.`);
+    console.log(`📅 [Discord Bot] Codzienny plan lekcji aktywny: ${configuredTime}, strefa Europe/Warsaw (PID ${process.pid}).`);
   }
 
   // ==================== MODUŁ PRAC DOMOWYCH — POWIADOMIENIA ====================

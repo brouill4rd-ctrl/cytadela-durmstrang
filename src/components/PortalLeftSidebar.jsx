@@ -341,6 +341,61 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <ProfessorHomeworkWidget />
 
       {/* =========================================================================
+          PLAN LEKCJI & HARMONOGRAM DNIA
+          ========================================================================= */}
+      <div className="menuBlock" style={{ border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : undefined }}>
+        <div
+          className="menuBlockHeaderImage"
+          style={getBlockGraphic('curriculum')?.bgImage ? {
+            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('curriculum').bgImage}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          <div className="frost-overlay" />
+          <div className="runic-watermark">{getBlockGraphic('curriculum')?.rune || 'ᚠ'}</div>
+          <Calendar size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
+        </div>
+
+        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+          <span className="rune-bracket">ᚦ</span>
+          <span>Plan Lekcji</span>
+          <span className="rune-bracket">ᚦ</span>
+        </div>
+
+        <div className="menuBlockContent">
+          {/* Header Day Indicator */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>
+              <Clock size={12} color="var(--gold-ancient)" />
+              <span>Dziś: {todayName}</span>
+            </div>
+            <span style={{ fontSize: '0.68rem', background: 'rgba(197, 159, 78, 0.15)', color: '#f7dca0', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.3)' }}>
+              {todayClasses.length} {todayClasses.length === 1 ? 'lekcja' : 'lekcji'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => handleNav('timetable')}
+            className="btn-durmstrang"
+            style={{
+              width: '100%',
+              padding: '0.45rem',
+              fontSize: '0.8rem',
+              justifyContent: 'center',
+              background: activeView === 'timetable' ? 'linear-gradient(135deg, #c59f4e 0%, #8a6c2f 100%)' : undefined,
+              color: activeView === 'timetable' ? '#05070a' : undefined,
+              fontWeight: 800
+            }}
+          >
+            <Calendar size={13} />
+            <span>Pełny Harmonogram Tygodnia →</span>
+          </button>
+        </div>
+      </div>
+
+
+      {/* =========================================================================
           1. BLOK: GŁÓWNA STRUKTURA TWIERDZY MAGII
           ========================================================================= */}
       <div className="menuBlock">
@@ -751,59 +806,6 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
         </div>
       </div>
 
-      {/* =========================================================================
-          3. BLOK: PLAN LEKCJI & HARMONOGRAM DNIA
-          ========================================================================= */}
-      <div className="menuBlock" style={{ border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : undefined }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('curriculum')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('curriculum').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('curriculum')?.rune || 'ᚠ'}</div>
-          <Calendar size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
-
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
-          <span className="rune-bracket">ᚦ</span>
-          <span>Plan Lekcji</span>
-          <span className="rune-bracket">ᚦ</span>
-        </div>
-
-        <div className="menuBlockContent">
-          {/* Header Day Indicator */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>
-              <Clock size={12} color="var(--gold-ancient)" />
-              <span>Dziś: {todayName}</span>
-            </div>
-            <span style={{ fontSize: '0.68rem', background: 'rgba(197, 159, 78, 0.15)', color: '#f7dca0', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.3)' }}>
-              {todayClasses.length} {todayClasses.length === 1 ? 'lekcja' : 'lekcji'}
-            </span>
-          </div>
-
-          <button
-            onClick={() => handleNav('timetable')}
-            className="btn-durmstrang"
-            style={{
-              width: '100%',
-              padding: '0.45rem',
-              fontSize: '0.8rem',
-              justifyContent: 'center',
-              background: activeView === 'timetable' ? 'linear-gradient(135deg, #c59f4e 0%, #8a6c2f 100%)' : undefined,
-              color: activeView === 'timetable' ? '#05070a' : undefined,
-              fontWeight: 800
-            }}
-          >
-            <Calendar size={13} />
-            <span>Pełny Harmonogram Tygodnia →</span>
-          </button>
-        </div>
-      </div>
 
       {/* =========================================================================
           3b. BLOK: GRIMUAR ZAKLĘĆ & MAGIA
