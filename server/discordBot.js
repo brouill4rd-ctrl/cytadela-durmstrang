@@ -9,8 +9,9 @@
  * 5. Generowanie interaktywnego podsumowania na Discordzie z linkiem do panelu profesora
  */
 
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits } from 'discord.js';
 import { getQuestState, submitAction, submitNarrative, approveNarrative, rejectNarrative } from './services/questService.js';
+import { approveRecruitmentApplication, rejectRecruitmentApplication, RecruitmentReviewError } from './services/recruitmentReview.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -457,15 +458,35 @@ export function buildRecruitmentNotificationPayload(application = {}) {
     .setTimestamp(timestamp);
 
   const frontendUrl = String(process.env.FRONTEND_URL || '').replace(/\/$/, '');
-  const components = /^https?:\/\//i.test(frontendUrl)
-    ? [new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Otwórz panel podań')
-          .setStyle(ButtonStyle.Link)
-          .setURL(`${frontendUrl}/#/admin`)
-          .setEmoji('🏰')
-      )]
-    : [];
+  const actionRow = new ActionRowBuilder();
+
+  // Przyciski decyzji — działają bezpośrednio z Discorda (patrz _handleRecruitmentButton).
+  if (application.userId) {
+    actionRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`recruit_approve_${application.userId}`)
+        .setLabel('Akceptuj podanie')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('✅'),
+      new ButtonBuilder()
+        .setCustomId(`recruit_reject_${application.userId}`)
+        .setLabel('Odrzuć')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('⛔')
+    );
+  }
+
+  if (/^https?:\/\//i.test(frontendUrl)) {
+    actionRow.addComponents(
+      new ButtonBuilder()
+        .setLabel('Otwórz panel podań')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`${frontendUrl}/#/admin`)
+        .setEmoji('🏰')
+    );
+  }
+
+  const components = actionRow.components.length ? [actionRow] : [];
 
   return { embeds: [embed], components, allowedMentions: { parse: [] } };
 }
@@ -696,6 +717,11 @@ export class DurmstrangDiscordBot {
 
           const { customId } = interaction;
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+          if (customId.startsWith('recruit_approve_') || customId.startsWith('recruit_reject_')) {
+            await this._handleRecruitmentButton(interaction);
+            return;
+          }
 
           if (customId === 'welcome_btn_verify_help') {
             const helpEmbed = new EmbedBuilder()
@@ -1900,6 +1926,88 @@ export class DurmstrangDiscordBot {
     }
   }
 
+  // Obsługa przycisków „Akceptuj / Odrzuć" pod powiadomieniem rekrutacyjnym.
+  async _handleRecruitmentButton(interaction) {
+    const { customId } = interaction;
+    const isApprove = customId.startsWith('recruit_approve_');
+    const prefix = isApprove ? 'recruit_approve_' : 'recruit_reject_';
+    const userId = customId.slice(prefix.length);
+
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+    // Uprawnienia: rola Arcymistrza lub administrator serwera Discord.
+    const member = interaction.member;
+    const hasRole = member?.roles?.cache?.has(ARXYMISTRZOW_ROLE_ID);
+    const isGuildAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+    if (!hasRole && !isGuildAdmin) {
+      await interaction.editReply({ content: '⛔ Tylko Arcymistrzowie mogą rozpatrywać podania rekrutacyjne.' });
+      return;
+    }
+
+    const reviewerName = `${member?.displayName || interaction.user.username} (Discord)`;
+
+    try {
+      if (isApprove) {
+        const result = await approveRecruitmentApplication({ userId, reviewerName });
+        const roleLabel = result.user.role === 'professor' ? 'profesora' : 'adepta';
+        let note;
+        if (result.outcome === 'already_approved'
+          || (result.outcome === 'already_processed' && result.user.status === 'approved')) {
+          note = `ℹ️ Podanie **${result.user.fullName}** było już wcześniej zatwierdzone.`;
+        } else if (result.outcome === 'already_processed') {
+          note = `ℹ️ Podanie **${result.user.fullName}** zostało już rozpatrzone (status: ${result.user.status}).`;
+        } else if (result.user.role === 'student') {
+          note = `✅ Zatwierdzono podanie ${roleLabel} **${result.user.fullName}**.`
+            + (result.emailSent ? ' Oficjalny list przyjęcia został wysłany.' : ' List przyjęcia zostanie wysłany wkrótce.');
+        } else {
+          note = `✅ Zatwierdzono nominację ${roleLabel} **${result.user.fullName}**.`;
+        }
+        const decided = result.outcome === 'approved';
+        await this._finalizeRecruitmentMessage(interaction, 'approved', reviewerName, result.user, decided);
+        await interaction.editReply({ content: note });
+      } else {
+        const result = rejectRecruitmentApplication({ userId, reviewerName });
+        await this._finalizeRecruitmentMessage(interaction, 'rejected', reviewerName, result.user, true);
+        await interaction.editReply({ content: `⛔ Odrzucono podanie **${result.user.fullName}**.` });
+      }
+    } catch (err) {
+      if (err instanceof RecruitmentReviewError) {
+        const messages = {
+          not_found: 'Nie znaleziono konta powiązanego z tym podaniem — mogło zostać usunięte.',
+          not_pending: err.message,
+          invalid_house: err.message
+        };
+        await interaction.editReply({ content: `❌ ${messages[err.code] || err.message}` });
+        return;
+      }
+      console.warn('[Discord Bot] Błąd rozpatrywania podania z Discorda:', err.message);
+      await interaction.editReply({ content: `❌ Wystąpił błąd przy rozpatrywaniu podania: ${err.message}` });
+    }
+  }
+
+  // Oznacza oryginalne powiadomienie jako rozpatrzone i usuwa przyciski.
+  async _finalizeRecruitmentMessage(interaction, decision, reviewerName, user, updateFields = true) {
+    try {
+      const original = interaction.message.embeds[0];
+      if (!original) {
+        await interaction.message.edit({ components: [] }).catch(() => {});
+        return;
+      }
+      const approved = decision === 'approved';
+      const banner = approved ? '✅ ZATWIERDZONE' : '⛔ ODRZUCONE';
+      const rawTitle = (original.title || 'Podanie rekrutacyjne').replace(/^(✅ ZATWIERDZONE|⛔ ODRZUCONE) — /, '');
+      const updated = EmbedBuilder.from(original)
+        .setColor(approved ? 0x22c55e : 0xef4444)
+        .setTitle(`${banner} — ${rawTitle}`);
+      if (updateFields) {
+        updated.addFields({ name: 'Decyzja', value: `${banner} przez ${reviewerName}`, inline: false });
+      }
+      await interaction.message.edit({ embeds: [updated], components: [] });
+    } catch (_) {
+      await interaction.message.edit({ components: [] }).catch(() => {});
+    }
+  }
+
   // ==================== CODZIENNY PLAN LEKCJI ====================
 
   async announceDailyTimetable({ dateKey, dayOfWeek } = {}) {
@@ -2503,9 +2611,66 @@ export class DurmstrangDiscordBot {
         SET status='completed', updated_at=datetime('now')
         WHERE quest_id=? AND discord_user_id=?
       `).run(questId, discordId);
+      await this.announceQuestCompletionFeed(discordId, questTitle);
       await thread.setArchived(true, 'Quest ukończony').catch(() => {});
     } catch (err) {
       console.warn('[Quest Complete Thread Error]', err.message);
+    }
+  }
+
+  // Kanał-kronika postępów: ID stałe, nadpisywalne przez DISCORD_PROGRESS_FEED_CHANNEL_ID.
+  async _sendProgressFeed(text) {
+    if (!this.client || !this.isReady) return;
+    try {
+      const channelId = process.env.DISCORD_PROGRESS_FEED_CHANNEL_ID || '1543049326136139888';
+      const channel = this.client.channels.cache.get(channelId)
+        || await this.client.channels.fetch(channelId).catch(() => null);
+      if (!channel || typeof channel.send !== 'function') {
+        console.warn('[Progress Feed] Nie znaleziono kanału kroniki postępów:', channelId);
+        return;
+      }
+      await channel.send({ content: text, allowedMentions: { parse: [] } });
+    } catch (err) {
+      console.warn('[Progress Feed Error]', err.message);
+    }
+  }
+
+  async announceQuestCompletionFeed(discordId, questTitle) {
+    try {
+      const user = db.prepare('SELECT id, full_name FROM users WHERE discord_id=?').get(discordId);
+      if (!user) return;
+      const done = db.prepare(
+        "SELECT COUNT(*) AS c FROM user_quest_progress WHERE user_id=? AND status='completed'"
+      ).get(user.id).c;
+      const total = db.prepare('SELECT COUNT(*) AS c FROM quest_definitions WHERE is_active=1').get().c;
+      await this._sendProgressFeed(
+        `📜 **${user.full_name}** zakończył quest „${questTitle}” (${done}/${total})`
+      );
+    } catch (err) {
+      console.warn('[Progress Feed Quest Error]', err.message);
+    }
+  }
+
+  async announceLocationActionFeed(userId, actionLabel, locationId) {
+    try {
+      const user = db.prepare('SELECT full_name FROM users WHERE id=?').get(userId);
+      if (!user) return;
+      const location = db.prepare('SELECT name FROM locations WHERE id=?').get(locationId);
+      const done = db.prepare(
+        'SELECT COUNT(*) AS c FROM user_location_action_log WHERE user_id=?'
+      ).get(userId).c;
+      let total = 0;
+      for (const row of db.prepare('SELECT actions FROM locations').all()) {
+        try {
+          const parsed = JSON.parse(row.actions || '[]');
+          if (Array.isArray(parsed)) total += parsed.length;
+        } catch (_) {}
+      }
+      await this._sendProgressFeed(
+        `⚔️ **${user.full_name}** zakończył działanie „${actionLabel}” w lokacji „${location?.name || '—'}” (${done}/${total})`
+      );
+    } catch (err) {
+      console.warn('[Progress Feed Location Error]', err.message);
     }
   }
 
@@ -3042,6 +3207,10 @@ export class DurmstrangDiscordBot {
             .setTitle(`✅ ZATWIERDZONE — ${originalEmbed.title?.replace('⚔️ Recenzja działania — ', '') || ''}`);
           await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
         } catch (_) {}
+
+        if (!outcome.duplicate) {
+          await this.announceLocationActionFeed(review.user_id, review.action_label, review.location_id);
+        }
 
         await interaction.editReply({ content: '✅ Działanie zatwierdzone! Gracz otrzymał nagrody.' });
       } catch (err) {

@@ -298,6 +298,7 @@ router.post('/register', async (req, res) => {
     }),
     discordBot.announceRecruitmentApplication({
       applicationId: appId,
+      userId: newId,
       submittedAt: now.toISOString(),
       role,
       fullName,

@@ -3,13 +3,17 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import db, { dbUserToFrontend, dbEmailToFrontend, dbAppToFrontend } from '../db.js';
 import { requireAuth, requireRole, requireSelfOrRole } from '../middleware/auth.js';
-import { EMAIL_TYPES, HOUSE_EMAIL_THEMES } from '../email/emailTemplates.js';
+import { EMAIL_TYPES } from '../email/emailTemplates.js';
 import {
   deliverTransactionalEmail,
-  getUserEmailDeliveries,
-  queueTransactionalEmail
+  getUserEmailDeliveries
 } from '../email/transactionalEmailService.js';
 import { validatePassword } from '../utils/passwordPolicy.js';
+import {
+  approveRecruitmentApplication,
+  rejectRecruitmentApplication,
+  RecruitmentReviewError
+} from '../services/recruitmentReview.js';
 
 const router = Router();
 
@@ -138,131 +142,51 @@ router.patch('/:id', requireAuth, requireSelfOrRole('admin'), (req, res) => {
 // PATCH /api/users/:id/approve — approve user + send acceptance email
 // Wymaga: admin
 router.patch('/:id/approve', requireAuth, requireRole('admin'), async (req, res) => {
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'User not found' });
-
-  const user = dbUserToFrontend(row);
-  if (user.status === 'approved') {
-    const archived = db.prepare(
-      "SELECT * FROM emails WHERE delivery_id = ?"
-    ).get(`txmail-${EMAIL_TYPES.ACCOUNT_APPROVED}-${user.id}`);
-    return res.json({
-      user: { ...user, transactionalEmails: getUserEmailDeliveries(db, user.id) },
-      email: dbEmailToFrontend(archived),
-      emailDelivery: getUserEmailDeliveries(db, user.id)[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
-      alreadyApproved: true
-    });
-  }
-  if (user.status !== 'pending') {
-    return res.status(409).json({ error: `Konto nie oczekuje na akceptację (status: ${user.status}).` });
-  }
-  if (user.role === 'student' && !HOUSE_EMAIL_THEMES[String(user.house || '').toLowerCase()]) {
-    return res.status(422).json({ error: 'Nie można zatwierdzić adepta bez prawidłowego Zakonu z Rytuału Przydziału.' });
-  }
-
-  const newTitle = user.role === 'professor'
-    ? `Profesor • ${user.departmentName}`
-    : `Adept Zakonu ${HOUSE_EMAIL_THEMES[user.house].name}`;
-  const now = new Date();
-  const adminName = req.user.fullName || 'Rada Arcymistrzów';
-
-  const approvePendingUser = db.transaction(() => {
-    const update = db.prepare(
-      "UPDATE users SET status = 'approved', title = ? WHERE id = ? AND status = 'pending'"
-    ).run(newTitle, req.params.id);
-    if (update.changes !== 1) throw new Error('Konto zostało już rozpatrzone przez inną operację.');
-
-    if (user.role === 'student') {
-      db.prepare("INSERT OR IGNORE INTO character_prologues (user_id, stage, completed, accepted_at) VALUES (?, 'LETTER_PENDING', 0, datetime('now'))").run(req.params.id);
-      db.prepare("UPDATE character_prologues SET accepted_at = COALESCE(accepted_at, datetime('now')), updated_at = datetime('now') WHERE user_id = ?").run(req.params.id);
-      queueTransactionalEmail(db, row, EMAIL_TYPES.ACCOUNT_APPROVED);
-    }
-
-    db.prepare("UPDATE pending_applications SET status = 'approved' WHERE user_id = ? AND status = 'pending'").run(req.params.id);
-
-    // Professor: auto-approve pending subject applications and create assignments
-    if (user.role === 'professor') {
-      const pendingApps = db.prepare(
-        `SELECT * FROM professor_subject_applications WHERE professor_id = ? AND status = 'pending'`
-      ).all(req.params.id);
-
-      const schoolYear = db.prepare("SELECT value FROM school_config WHERE key = 'school_year'").get()?.value || 'XIX Rok Szkolny (2026/2027)';
-
-      for (const app of pendingApps) {
-        db.prepare(`
-          UPDATE professor_subject_applications
-          SET status = 'approved', reviewed_by = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
-          WHERE id = ?
-        `).run(adminName, app.id);
-
-        db.prepare(`
-          INSERT OR IGNORE INTO teacher_subject_assignments (id, professor_id, subject_id, role, school_year, status, assigned_by)
-          VALUES (?, ?, ?, 'primary', ?, 'active', ?)
-        `).run(
-          `tsa-${req.params.id}-${app.subject_id}`,
-          req.params.id,
-          app.subject_id,
-          schoolYear,
-          adminName
-        );
-
-        // Set as primary professor if subject has none
-        const subject = db.prepare('SELECT professor_id FROM subjects WHERE id = ?').get(app.subject_id);
-        if (subject && !subject.professor_id) {
-          db.prepare('UPDATE subjects SET professor_id = ?, professor_name = ? WHERE id = ?')
-            .run(req.params.id, user.fullName, app.subject_id);
-        }
-      }
-
-      // Sync taught_subject_ids convenience column
-      const assignedIds = db.prepare(
-        `SELECT subject_id FROM teacher_subject_assignments WHERE professor_id = ? AND status = 'active'`
-      ).all(req.params.id).map(r => r.subject_id);
-      db.prepare('UPDATE users SET taught_subject_ids = ? WHERE id = ?')
-        .run(JSON.stringify(assignedIds), req.params.id);
-    }
-
-    db.prepare(`
-      INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      `log-${randomUUID()}`,
-      now.toISOString(),
-      adminName,
-      `Zatwierdzono podanie (${user.role}): ${user.fullName}`,
-      user.role === 'student'
-        ? `Zakolejkowano oficjalny list przyjęcia na adres: ${user.email}`
-        : 'Zatwierdzono nominację profesorską; list przyjęcia adepta nie ma zastosowania.'
-    );
-  });
-
+  let result;
   try {
-    approvePendingUser();
+    result = await approveRecruitmentApplication({
+      userId: req.params.id,
+      reviewerName: req.user.fullName || 'Rada Arcymistrzów'
+    });
   } catch (error) {
-    if (String(error?.message || '').includes('już rozpatrzone')) {
-      const current = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id));
-      return res.json({
-        user: { ...current, transactionalEmails: getUserEmailDeliveries(db, current.id) },
-        emailDelivery: getUserEmailDeliveries(db, current.id)[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
-        alreadyApproved: current.status === 'approved'
-      });
+    if (error instanceof RecruitmentReviewError) {
+      if (error.code === 'not_found') return res.status(404).json({ error: 'User not found' });
+      if (error.code === 'not_pending') return res.status(409).json({ error: error.message });
+      if (error.code === 'invalid_house') return res.status(422).json({ error: error.message });
     }
     throw error;
   }
 
-  const deliveryResult = user.role === 'student'
-    ? await deliverTransactionalEmail({ database: db, userId: user.id, emailType: EMAIL_TYPES.ACCOUNT_APPROVED })
-    : { delivery: null, sent: false, reason: 'not_applicable' };
+  const deliveries = getUserEmailDeliveries(db, result.user.id);
 
-  const updatedUser = dbUserToFrontend(db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id));
-  const acceptEmail = deliveryResult.delivery
-    ? dbEmailToFrontend(db.prepare('SELECT * FROM emails WHERE delivery_id = ?').get(deliveryResult.delivery.id))
+  if (result.outcome === 'already_approved') {
+    const archived = db.prepare(
+      "SELECT * FROM emails WHERE delivery_id = ?"
+    ).get(`txmail-${EMAIL_TYPES.ACCOUNT_APPROVED}-${result.user.id}`);
+    return res.json({
+      user: { ...result.user, transactionalEmails: deliveries },
+      email: dbEmailToFrontend(archived),
+      emailDelivery: deliveries[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
+      alreadyApproved: true
+    });
+  }
+
+  if (result.outcome === 'already_processed') {
+    return res.json({
+      user: { ...result.user, transactionalEmails: deliveries },
+      emailDelivery: deliveries[EMAIL_TYPES.ACCOUNT_APPROVED] || null,
+      alreadyApproved: result.user.status === 'approved'
+    });
+  }
+
+  const acceptEmail = result.emailDeliveryId
+    ? dbEmailToFrontend(db.prepare('SELECT * FROM emails WHERE delivery_id = ?').get(result.emailDeliveryId))
     : null;
 
   res.json({
-    user: { ...updatedUser, transactionalEmails: getUserEmailDeliveries(db, updatedUser.id) },
+    user: { ...result.user, transactionalEmails: deliveries },
     email: acceptEmail,
-    emailDelivery: deliveryResult.delivery
+    emailDelivery: deliveries[EMAIL_TYPES.ACCOUNT_APPROVED] || null
   });
 });
 
@@ -296,25 +220,17 @@ router.post('/:id/transactional-emails/:type/retry', requireAuth, requireRole('a
 
 // PATCH /api/users/:id/reject — Wymaga: admin
 router.patch('/:id/reject', requireAuth, requireRole('admin'), (req, res) => {
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'User not found' });
-
-  db.prepare("UPDATE users SET status = 'rejected' WHERE id = ?").run(req.params.id);
-  db.prepare("UPDATE pending_applications SET status = 'rejected' WHERE user_id = ?").run(req.params.id);
-
-  const user = dbUserToFrontend(row);
-  const adminName = req.user.fullName || 'Dyrekcja';
-
-  db.prepare(`
-    INSERT INTO audit_logs (id, timestamp, admin, action, detail)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    `log-${Date.now()}`,
-    new Date().toISOString(),
-    adminName,
-    `Odrzucono podanie: ${user.fullName}`,
-    `Zgłoszenie @${user.username} zostało oddalone.`
-  );
+  try {
+    rejectRecruitmentApplication({
+      userId: req.params.id,
+      reviewerName: req.user.fullName || 'Dyrekcja'
+    });
+  } catch (error) {
+    if (error instanceof RecruitmentReviewError && error.code === 'not_found') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    throw error;
+  }
 
   res.json({ success: true });
 });
