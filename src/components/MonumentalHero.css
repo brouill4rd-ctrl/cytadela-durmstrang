@@ -196,7 +196,7 @@
   position: relative;
   z-index: 3;
   width: min(96%, 1560px);
-  margin: -1px auto 0;
+  margin: -1px auto clamp(1rem, 3vh, 1.75rem);
   background:
     repeating-linear-gradient(115deg, transparent 0 78px, rgba(255, 255, 255, 0.012) 78px 79px),
     #070a0c;

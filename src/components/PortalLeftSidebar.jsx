@@ -63,6 +63,33 @@ import {
   Landmark
 } from 'lucide-react';
 
+/**
+ * SidebarNavRow — jeden wzorzec kutego wiersza nawigacji dla całego lewego paska.
+ * Wygląd (kolor ikony/chevrona, separator, hover, active) pochodzi z CSS
+ * (.menuBlockContent ul li button / .is-active / .is-danger), nie z inline style.
+ */
+const SidebarNavRow = ({ icon: Icon, glyph, label, onClick, active = false, danger = false }) => {
+  const cls = [active && 'is-active', danger && 'is-danger'].filter(Boolean).join(' ');
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cls || undefined}
+        aria-current={active ? 'page' : undefined}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          {Icon ? <Icon size={15} /> : glyph ? <span className="sb-glyph">{glyph}</span> : null}
+          {label}
+        </span>
+        <ChevronRight size={13} />
+      </button>
+    </li>
+  );
+};
+
+const GAMES_COLLAPSED_COUNT = 7;
+
 export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
   const {
     setActiveView,
@@ -92,6 +119,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
   // Sidebar mini-login form state
   const [sideUsername, setSideUsername] = useState('');
   const [sidePassword, setSidePassword] = useState('');
+
+  // Games & Activities collapse/expand (local view state only)
+  const [gamesExpanded, setGamesExpanded] = useState(false);
 
   // Modals state
   const [profileEditorModalOpen, setProfileEditorModalOpen] = useState(false);
@@ -154,16 +184,48 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
   const todayDayNumber = jsDay === 0 ? 7 : jsDay;
   const todayName = daysOfWeek?.find(d => d.dayNumber === todayDayNumber)?.name || 'Poniedziałek';
   const todayClasses = (timetable || []).filter(t => t.dayOfWeek === todayDayNumber);
+  const todayLessons = [...todayClasses]
+    .filter(t => t && t.startTime)
+    .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)));
+  const scheduleUnavailable = !Array.isArray(timetable);
+
+  // Gry & Aktywności — pełna lista (kolejność zachowana z poprzedniej wersji)
+  const GAME_ITEMS = [
+    { icon: Sparkles, label: 'Wyrocznia Przeznaczenia (Seidr)', setter: setOracleModalOpen, name: 'Wyrocznia Przeznaczenia (Seidr)' },
+    { icon: Compass, label: 'Ekspedycje do Puszczy & Fiordów', setter: setExpeditionsModalOpen, name: 'Ekspedycje do Puszczy & Fiordów' },
+    { icon: Crosshair, label: 'Runiczna Strzelnica Różdżkowa', setter: setTargetModalOpen, name: 'Runiczna Strzelnica Różdżkowa' },
+    { icon: Key, label: 'Labirynt Tajemnic: Escape Room', setter: setEscapeModalOpen, name: 'Labirynt Tajemnic: Escape Room' },
+    { icon: Gamepad2, label: 'Hnefatafl (Szachy Wikingów)', setter: setHnefataflModalOpen, name: 'Hnefatafl (Szachy Wikingów)' },
+    { icon: Anchor, label: 'Połów w Zamarzniętym Fiordzie', setter: setFishingModalOpen, name: 'Połów w Zamarzniętym Fiordzie' },
+    { icon: Award, label: 'Turniej Szermierki: Droga Mistrza', setter: setTournamentModalOpen, name: 'Turniej Szermierki' },
+    { icon: Eye, label: 'Bestiariusz Północy (Karty Bestii)', setter: setBestiaryModalOpen, name: 'Bestiariusz Północy' },
+    { icon: Skull, label: 'Czarny Rynek Przemytników (Svartálfar)', setter: setBlackMarketModalOpen, name: 'Czarny Rynek' },
+    { icon: Swords, label: 'Wielka Sala Pojedynków (Hólmganga)', setter: setDuelModalOpen, name: 'Sala Pojedynków' },
+    { icon: BookOpen, label: 'Grimuar Pradawnych Zaklęć', setter: setGrimoireModalOpen, name: 'Grimuar Zaklęć' },
+    { glyph: 'ᚠ', label: 'Akademia Kaligrafii Run', setter: setRuneCalligraphyModalOpen, name: 'Kaligrafia Run' }
+  ];
+  const visibleGames = gamesExpanded ? GAME_ITEMS : GAME_ITEMS.slice(0, GAMES_COLLAPSED_COUNT);
+
+  const roleLabel = currentUser
+    ? (currentUser.role === 'admin'
+      ? `${currentUser.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz'} • admin`
+      : currentUser.role === 'professor'
+        ? 'Profesor Katedry'
+        : house ? house.name : 'Adept')
+    : '';
 
   return (
     <aside id="menuContainerLeft">
       {/* =========================================================================
           0. BLOK: KARTA TOŻSAMOŚCI / LOGOWANIE DO CYTADELI
           ========================================================================= */}
-      <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
+      <div
+        className="menuBlock"
+        style={house ? { '--house-accent': house.colors?.secondary } : undefined}
+      >
         <SidebarPanelBanner graphicId="identity" icon={Shield} rune="ᛟ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᛞ</span>
           <span>{currentUser ? 'Karta Tożsamości' : 'Kancelaria Logowania'}</span>
           <span className="rune-bracket">ᛞ</span>
@@ -172,32 +234,28 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
         <div className="menuBlockContent">
           {currentUser ? (
             /* ================= LOGGED IN USER CARD ================= */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="menuBlockIdentity">
+              <div className="menuBlockIdentity__row">
                 <img
                   src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                   alt={currentUser.username}
-                  style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '1.5px solid var(--gold-ancient)',
-                    boxShadow: '0 0 10px rgba(0,0,0,0.8)'
-                  }}
+                  className="menuBlockIdentity__avatar"
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                <div className="menuBlockIdentity__ident">
+                  <div className="menuBlockIdentity__name">
                     {currentUser.fullName || currentUser.name}
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: house ? house.colors.secondary : 'var(--gold-ancient)', fontWeight: 600 }}>
-                    {currentUser.role === 'admin' ? `${currentUser.gender === 'czarodziejka' ? 'Arcymistrzyni' : 'Arcymistrz'} • admin` : currentUser.role === 'professor' ? 'Profesor Katedry' : house ? house.name : 'Adept'}
-                  </div>
+                  <div className="menuBlockIdentity__sub">{roleLabel}</div>
+                </div>
+                <div className="menuBlockIdentity__crest" title={house ? house.name : 'Twierdza Magii Durmstrang'}>
+                  <Shield size={22} />
                 </div>
               </div>
 
+              <div className="menuBlockIdentity__crestline" />
+
               {/* Action Buttons */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+              <div className="menuBlockIdentity__actions">
                 <button
                   onClick={() => setProfileEditorModalOpen(true)}
                   className="btn-durmstrang"
@@ -236,18 +294,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
               <button
                 onClick={logoutUser}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#9ca3af',
-                  fontSize: '0.72rem',
-                  cursor: 'pointer',
-                  padding: '0.2rem',
-                  textAlign: 'center',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                className="menuBlockIdentity__logout"
               >
                 [→ Wyloguj z Cytadeli
               </button>
@@ -255,9 +302,9 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           ) : (
             /* ================= GUEST LOGIN FORM ================= */
             <form onSubmit={handleSidebarLogin}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                <div>
-                  <label htmlFor="sidebar-login-username" style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div className="menuBlockLogin">
+                <div className="menuBlockLogin__field">
+                  <label htmlFor="sidebar-login-username">
                     Login:
                   </label>
                   <input
@@ -272,8 +319,8 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="sidebar-login-password" style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="menuBlockLogin__field">
+                  <label htmlFor="sidebar-login-password">
                     Hasło:
                   </label>
                   <input
@@ -297,11 +344,10 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                   <span>Zaloguj się</span>
                 </button>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                <div className="menuBlockLogin__links">
                   <button
                     type="button"
                     onClick={() => { playWandSwoosh(); setPasswordRecoveryModalOpen(true); }}
-                    style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
                   >
                     Zapomniałeś hasła?
                   </button>
@@ -312,7 +358,6 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
                       if (openAuthModal) openAuthModal('register');
                       else setAuthModalOpen(true);
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--gold-ancient)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Stwórz konto →
                   </button>
@@ -330,41 +375,58 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       {/* =========================================================================
           PLAN LEKCJI & HARMONOGRAM DNIA
           ========================================================================= */}
-      <div className="menuBlock" style={{ border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : undefined }}>
+      <div className={activeView === 'timetable' ? 'menuBlock is-active-panel' : 'menuBlock'}>
         <SidebarPanelBanner graphicId="curriculum" icon={Calendar} rune="ᚠ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
           <span>Plan Lekcji</span>
           <span className="rune-bracket">ᚦ</span>
         </div>
 
         <div className="menuBlockContent">
-          {/* Header Day Indicator */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>
-              <Clock size={12} color="var(--gold-ancient)" />
-              <span>Dziś: {todayName}</span>
+          <div className="menuBlockSchedule">
+            <div className="menuBlockSchedule__head">
+              <span><Clock size={12} /> Dziś: {todayName}</span>
+              <span className="menuBlockSchedule__count">
+                {todayLessons.length} {todayLessons.length === 1 ? 'lekcja' : 'lekcji'}
+              </span>
             </div>
-            <span style={{ fontSize: '0.68rem', background: 'rgba(197, 159, 78, 0.15)', color: '#f7dca0', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(197, 159, 78, 0.3)' }}>
-              {todayClasses.length} {todayClasses.length === 1 ? 'lekcja' : 'lekcji'}
-            </span>
+
+            {todayLessons.length > 0 ? (
+              <div className="menuBlockSchedule__list">
+                {todayLessons.map((t, i) => (
+                  <div
+                    key={t.id || `${t.startTime}-${i}`}
+                    className={[
+                      'menuBlockSchedule__row',
+                      t.status === 'cancelled' && 'is-cancelled',
+                      t.status === 'substitution' && 'is-substitution'
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <span className="menuBlockSchedule__time">{t.startTime}</span>
+                    <span className="menuBlockSchedule__subject">
+                      {t.subjectIcon ? `${t.subjectIcon} ` : ''}{t.subjectName || 'Zajęcia'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="menuBlockSchedule__empty">
+                {scheduleUnavailable
+                  ? 'Plan lekcji chwilowo niedostępny — spróbuj ponownie później.'
+                  : `Brak zajęć na dziś (${todayName}). Ciesz się wolnym dniem.`}
+              </div>
+            )}
           </div>
 
           <button
+            type="button"
+            className="menuBlockCta"
             onClick={() => handleNav('timetable')}
-            className="btn-durmstrang"
-            style={{
-              width: '100%',
-              padding: '0.45rem',
-              fontSize: '0.8rem',
-              justifyContent: 'center',
-              background: activeView === 'timetable' ? 'linear-gradient(135deg, #c59f4e 0%, #8a6c2f 100%)' : undefined,
-              color: activeView === 'timetable' ? '#05070a' : undefined,
-              fontWeight: 800
-            }}
+            style={{ marginTop: '0.6rem' }}
           >
-            <Calendar size={13} />
+            <Calendar size={12} />
             <span>Pełny Harmonogram Tygodnia →</span>
           </button>
         </div>
@@ -385,111 +447,13 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
         <div className="menuBlockContent">
           <ul>
-            <li>
-              <button
-                onClick={() => handleNav('home')}
-                style={{
-                  color: activeView === 'home' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'home' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                  border: activeView === 'home' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Castle size={14} color="var(--gold-ancient)" /> Wrota Wejściowe
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('journals')}
-                style={{
-                  color: activeView === 'journals' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'journals' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  border: activeView === 'journals' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scroll size={14} color="var(--gold-ancient)" /> Dzienniki Lekcyjne
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('timetable')}
-                style={{
-                  color: activeView === 'timetable' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'timetable' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Calendar size={14} color="var(--gold-ancient)" /> Plan Lekcji & Grafik
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('houses')}
-                style={{
-                  color: activeView === 'houses' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'houses' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                  border: activeView === 'houses' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Shield size={14} color="var(--gold-ancient)" /> Cztery Zakony
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('documents')}
-                style={{
-                  color: activeView === 'documents' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  border: activeView === 'documents' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scroll size={14} color="var(--gold-ancient)" /> Dekrety, Regulamin DC & Statut
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('memory')}
-                style={{
-                  color: activeView === 'memory' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'memory' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
-                  border: activeView === 'memory' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Landmark size={14} color="var(--gold-ancient)" /> Izba Pamięci & Kroniki
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('rules-guide')}
-                style={{
-                  color: activeView === 'rules-guide' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'rules-guide' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                  border: activeView === 'rules-guide' ? '1px solid var(--gold-ancient)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scale size={14} color="var(--gold-ancient)" /> Kodeks & Pakt 1294
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
+            <SidebarNavRow icon={Castle} label="Wrota Wejściowe" onClick={() => handleNav('home')} active={activeView === 'home'} />
+            <SidebarNavRow icon={Scroll} label="Dzienniki Lekcyjne" onClick={() => handleNav('journals')} active={activeView === 'journals'} />
+            <SidebarNavRow icon={Calendar} label="Plan Lekcji & Grafik" onClick={() => handleNav('timetable')} active={activeView === 'timetable'} />
+            <SidebarNavRow icon={Shield} label="Cztery Zakony" onClick={() => handleNav('houses')} active={activeView === 'houses'} />
+            <SidebarNavRow icon={Scroll} label="Dekrety, Regulamin DC & Statut" onClick={() => handleNav('documents')} active={activeView === 'documents'} />
+            <SidebarNavRow icon={Landmark} label="Izba Pamięci & Kroniki" onClick={() => handleNav('memory')} active={activeView === 'memory'} />
+            <SidebarNavRow icon={Scale} label="Kodeks & Pakt 1294" onClick={() => handleNav('rules-guide')} active={activeView === 'rules-guide'} />
           </ul>
         </div>
       </div>
@@ -497,132 +461,47 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       {/* =========================================================================
           2. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
           ========================================================================= */}
-      <div className="menuBlock" style={{ border: '1px solid rgba(197, 159, 78, 0.4)' }}>
+      <div className="menuBlock menuBlockGames">
         <SidebarPanelBanner graphicId="activities" icon={Zap} rune="ᛏ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
           <span>Gry & Aktywności</span>
           <span className="rune-bracket">ᚦ</span>
         </div>
 
         <div className="menuBlockContent">
-          <ul>
-            <li>
-              <button onClick={() => openActivity(setOracleModalOpen, 'Wyrocznia Przeznaczenia (Seidr)')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Sparkles size={14} color="var(--gold-ancient)" /> Wyrocznia Przeznaczenia (Seidr)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setExpeditionsModalOpen, 'Ekspedycje do Puszczy & Fiordów')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Compass size={14} color="var(--gold-ancient)" /> Ekspedycje do Puszczy & Fiordów
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setTargetModalOpen, 'Runiczna Strzelnica Różdżkowa')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Crosshair size={14} color="var(--gold-ancient)" /> Runiczna Strzelnica Różdżkowa
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setEscapeModalOpen, 'Labirynt Tajemnic: Escape Room')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Key size={14} color="var(--gold-ancient)" /> Labirynt Tajemnic: Escape Room
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setHnefataflModalOpen, 'Hnefatafl (Szachy Wikingów)')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Gamepad2 size={14} color="var(--gold-ancient)" /> Hnefatafl (Szachy Wikingów)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setFishingModalOpen, 'Połów w Zamarzniętym Fiordzie')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Anchor size={14} color="var(--gold-ancient)" /> Połów w Zamarzniętym Fiordzie
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setTournamentModalOpen, 'Turniej Szermierki')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Award size={14} color="var(--gold-ancient)" /> Turniej Szermierki: Droga Mistrza
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setBestiaryModalOpen, 'Bestiariusz Północy')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Eye size={14} color="var(--gold-ancient)" /> Bestiariusz Północy (Karty Bestii)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setBlackMarketModalOpen, 'Czarny Rynek')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Skull size={14} color="var(--gold-ancient)" /> Czarny Rynek Przemytników (Svartálfar)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setDuelModalOpen, 'Sala Pojedynków')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Swords size={14} color="var(--gold-ancient)" /> Wielka Sala Pojedynków (Hólmganga)
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setGrimoireModalOpen, 'Grimuar Zaklęć')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <BookOpen size={14} color="var(--gold-ancient)" /> Grimuar Pradawnych Zaklęć
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-
-            <li>
-              <button onClick={() => openActivity(setRuneCalligraphyModalOpen, 'Kaligrafia Run')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', fontSize: '0.9rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>ᚠ</span> Akademia Kaligrafii Run
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
+          <ul id="sidebar-games-list">
+            {visibleGames.map((g) => (
+              <SidebarNavRow
+                key={g.label}
+                icon={g.icon}
+                glyph={g.glyph}
+                label={g.label}
+                onClick={() => openActivity(g.setter, g.name)}
+              />
+            ))}
           </ul>
+
+          {GAME_ITEMS.length > GAMES_COLLAPSED_COUNT && (
+            <button
+              type="button"
+              className="menuBlockCta"
+              aria-expanded={gamesExpanded}
+              aria-controls="sidebar-games-list"
+              onClick={() => { playWandSwoosh(); setGamesExpanded(v => !v); }}
+              style={{ marginTop: '0.5rem' }}
+            >
+              {gamesExpanded ? 'Zwiń listę' : `Pokaż wszystkie (${GAME_ITEMS.length})`}
+            </button>
+          )}
         </div>
       </div>
 
       {/* =========================================================================
           2b. BLOK: WIELKA INKWIZYCJA & DEKRETY WŁADZ (DEDYKOWANY MODUŁ PRAWNY)
           ========================================================================= */}
-      <div className="menuBlock" style={{ border: '1px solid rgba(239, 68, 68, 0.45)' }}>
+      <div className="menuBlock menuBlock--danger">
         <SidebarPanelBanner
           graphicId="inquisition"
           icon={ShieldAlert}
@@ -633,9 +512,8 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
         />
 
         <div
-          className="menuBlockTitle menuBlockTitle--accent-crimson"
+          className="menuBlockTitle menuBlockTitle--accent-crimson is-clickable"
           onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
-          style={{ cursor: 'pointer' }}
           title="Otwórz Obowiązki Władz Twierdzy"
         >
           <span className="rune-bracket">ᚦ</span>
@@ -645,109 +523,55 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
         <div className="menuBlockContent">
           <ul>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
-                style={{
-                  color: activeView === 'documents' && activeDocumentCategory === 'wladze' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 'rgba(197, 159, 78, 0.25)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wladze' ? 800 : 500
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Crown size={14} color="var(--gold-ancient)" /> Obowiązki Władz Twierdzy
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('dekrety'); }}
-                style={{
-                  color: '#fca5a5',
-                  background: activeView === 'documents' && activeDocumentCategory === 'dekrety' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'dekrety' ? 800 : 600
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <ShieldAlert size={14} color="#ef4444" /> Dekrety Władz & Edykty
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('wizytacje'); }}
-                style={{
-                  color: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'wizytacje' ? 800 : 500
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <ClipboardCheck size={14} color="var(--gold-ancient)" /> Wizytacje Nauczycieli
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('statut'); }}
-                style={{
-                  color: activeView === 'documents' && activeDocumentCategory === 'statut' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' && activeDocumentCategory === 'statut' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'statut' ? 800 : 500
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scale size={14} color="var(--gold-ancient)" /> Statut Instytutu TMD
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('regulamin-dc'); }}
-                style={{
-                  color: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'regulamin-dc' ? 800 : 500
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <MessageSquare size={14} color="var(--gold-ancient)" /> Regulamin Serwera Discord
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => { playWandSwoosh(); navigateToDocumentModule('zabawy'); }}
-                style={{
-                  color: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 'rgba(197, 159, 78, 0.2)' : 'transparent',
-                  fontWeight: activeView === 'documents' && activeDocumentCategory === 'zabawy' ? 800 : 500
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Gamepad2 size={14} color="var(--gold-ancient)" /> Opis Zabaw & Gier RPG
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
+            <SidebarNavRow
+              icon={Crown}
+              label="Obowiązki Władz Twierdzy"
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'wladze'}
+            />
+            <SidebarNavRow
+              icon={ShieldAlert}
+              label="Dekrety Władz & Edykty"
+              danger
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('dekrety'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'dekrety'}
+            />
+            <SidebarNavRow
+              icon={ClipboardCheck}
+              label="Wizytacje Nauczycieli"
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('wizytacje'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'wizytacje'}
+            />
+            <SidebarNavRow
+              icon={Scale}
+              label="Statut Instytutu TMD"
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('statut'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'statut'}
+            />
+            <SidebarNavRow
+              icon={MessageSquare}
+              label="Regulamin Serwera Discord"
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('regulamin-dc'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'regulamin-dc'}
+            />
+            <SidebarNavRow
+              icon={Gamepad2}
+              label="Opis Zabaw & Gier RPG"
+              onClick={() => { playWandSwoosh(); navigateToDocumentModule('zabawy'); }}
+              active={activeView === 'documents' && activeDocumentCategory === 'zabawy'}
+            />
           </ul>
 
           {(currentUser?.role === 'admin' || currentRole === 'admin') && (
-            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <button
-                onClick={() => { playWandSwoosh(); setCustomPageEditorOpen(true); }}
-                className="btn-durmstrang"
-                style={{ width: '100%', padding: '0.45rem', fontSize: '0.76rem', justifyContent: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(197, 159, 78, 0.3) 100%)', border: '1px solid var(--gold-ancient)' }}
-              >
-                <Plus size={13} />
-                <span>+ Stwórz Nową Podstronę</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => { playWandSwoosh(); setCustomPageEditorOpen(true); }}
+              className="menuBlockCta"
+              style={{ marginTop: '0.6rem' }}
+            >
+              <Plus size={12} />
+              <span>Stwórz Nową Podstronę</span>
+            </button>
           )}
         </div>
       </div>
@@ -759,7 +583,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <div className="menuBlock">
         <SidebarPanelBanner graphicId="grimoire" icon={BookOpen} rune="ᚨ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
           <span>Grimuar & Magia</span>
           <span className="rune-bracket">ᚦ</span>
@@ -798,7 +622,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <div className="menuBlock">
         <SidebarPanelBanner graphicId="markethall" icon={ShoppingBag} rune="ᚲ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
           <span>Rynek Kaupangr</span>
           <span className="rune-bracket">ᚦ</span>
@@ -826,7 +650,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
       <div className="menuBlock">
         <SidebarPanelBanner graphicId="bank" icon={Coins} rune="ᛒ" />
 
-        <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
+        <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
           <span>Bank Skirnirów</span>
           <span className="rune-bracket">ᚦ</span>
@@ -834,10 +658,10 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
         <div className="menuBlockContent">
           {currentUser && studentProfile && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(197, 159, 78, 0.1)', border: '1px solid rgba(197, 159, 78, 0.25)', borderRadius: '4px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>Stan Sakiewki:</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--gold-glow)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Coins size={13} color="var(--gold-ancient)" /> {studentProfile.currency || 0} Skirnirów
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(181, 138, 58, 0.1)', border: '1px solid rgba(181, 138, 58, 0.25)', borderRadius: '2px', padding: '0.4rem 0.6rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#aeb8c7' }}>Stan Sakiewki:</span>
+              <span style={{ fontSize: '0.85rem', color: '#d0a84d', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Coins size={13} color="#b58a3a" /> {studentProfile.currency || 0} Skirnirów
               </span>
             </div>
           )}
@@ -871,36 +695,18 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
 
         <div className="menuBlockContent">
           <ul>
-            <li>
-              <button
-                onClick={() => handleNav('map')}
-                style={{
-                  color: activeView === 'map' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'map' ? 'rgba(164, 200, 225, 0.15)' : 'transparent',
-                  border: activeView === 'map' ? '1px solid rgba(164, 200, 225, 0.3)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Map size={14} color="var(--gold-ancient)" /> Żywa Mapa Twierdzy
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => handleNav('gazette')}
-                style={{
-                  color: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? '#ffffff' : '#a4b2c9',
-                  background: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? 'rgba(197, 159, 78, 0.15)' : 'transparent',
-                  border: activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive' ? '1px solid rgba(197, 159, 78, 0.3)' : '1px solid transparent'
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Scroll size={14} color="var(--gold-ancient)" /> Żelazne Pióro
-                </span>
-                <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
-              </button>
-            </li>
+            <SidebarNavRow
+              icon={Map}
+              label="Żywa Mapa Twierdzy"
+              onClick={() => handleNav('map')}
+              active={activeView === 'map'}
+            />
+            <SidebarNavRow
+              icon={Scroll}
+              label="Żelazne Pióro"
+              onClick={() => handleNav('gazette')}
+              active={activeView === 'gazette' || activeView === 'gazette-reader' || activeView === 'gazette-archive'}
+            />
           </ul>
         </div>
       </div>
