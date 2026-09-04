@@ -351,15 +351,18 @@ export const App = () => {
       {/* Main 3-Column Portal Container */}
       <div id="portal-wrapper">
         {/* =========================================================================
-            1. MONUMENTAL HERO SECTION
+            1. STICKY NAVIGATION — sits at the very top of the page, transparent
+               over the hero castle, condensing to blackened iron on scroll.
             ========================================================================= */}
-        <MonumentalHero onOpenCreationModal={() => openAuthModal('register')} />
-
-        {/* Sticky Streamlined Navigation Bar */}
         <Navbar />
 
         {/* =========================================================================
-            2. RUNIC NEWS TICKER / MARQUEE BAR
+            2. MONUMENTAL HERO SECTION (castle backdrop rises behind the navbar)
+            ========================================================================= */}
+        <MonumentalHero onOpenCreationModal={() => openAuthModal('register')} />
+
+        {/* =========================================================================
+            3. RUNIC NEWS TICKER / MARQUEE BAR
             ========================================================================= */}
         <div className="portal-ticker-bar">
           <div className="ticker-label-badge">
@@ -374,7 +377,7 @@ export const App = () => {
         </div>
 
         {/* =========================================================================
-            3. MAIN 3-COLUMN PORTAL GRID (LEFT MENU, CENTER VIEW, RIGHT MENU)
+            4. MAIN 3-COLUMN PORTAL GRID (LEFT MENU, CENTER VIEW, RIGHT MENU)
             ========================================================================= */}
         {activeView === 'map' ? (
           /* Mapa — pełny viewport, przykrywa navbar i stopkę */

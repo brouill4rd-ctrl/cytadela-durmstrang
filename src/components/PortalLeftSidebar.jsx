@@ -17,6 +17,7 @@ import { BlackMarketModal } from './BlackMarketModal';
 import { TournamentGauntletModal } from './TournamentGauntletModal';
 import { CustomPageEditorModal } from './CustomPageEditorModal';
 import { StudentHomeworkWidget, ProfessorHomeworkWidget } from './HomeworkWidgets';
+import { SidebarPanelBanner } from './SidebarPanelBanner';
 import {
   Castle,
   UserPlus,
@@ -80,14 +81,11 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
     setEmailInboxOpen,
     timetable,
     daysOfWeek,
-    blockGraphics,
     showNotification,
     navigateToDocumentModule,
     activeDocumentCategory,
     navigateToMemory
   } = useSchool();
-
-  const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
   const { playWandSwoosh, playRuneChime } = useSound();
 
@@ -163,18 +161,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           0. BLOK: KARTA TOŻSAMOŚCI / LOGOWANIE DO CYTADELI
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('identity')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('identity').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('identity')?.rune || 'ᛟ'}</div>
-          <Shield size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="identity" icon={Shield} rune="ᛟ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᛞ</span>
@@ -344,18 +331,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           PLAN LEKCJI & HARMONOGRAM DNIA
           ========================================================================= */}
       <div className="menuBlock" style={{ border: activeView === 'timetable' ? '1px solid var(--gold-ancient)' : undefined }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('curriculum')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('curriculum').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('curriculum')?.rune || 'ᚠ'}</div>
-          <Calendar size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="curriculum" icon={Calendar} rune="ᚠ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -399,18 +375,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           1. BLOK: GŁÓWNA STRUKTURA TWIERDZY MAGII
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('locations')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('locations').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('locations')?.rune || 'ᛞ'}</div>
-          <Castle size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="locations" icon={Castle} rune="ᛞ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
@@ -533,18 +498,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           2. BLOK: CENTRUM AKTYWNOŚCI & GIER RPG (FULL SUITE)
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid rgba(197, 159, 78, 0.4)' }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('activities')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('activities').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('activities')?.rune || 'ᛏ'}</div>
-          <Zap size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="activities" icon={Zap} rune="ᛏ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -656,7 +610,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
             <li>
               <button onClick={() => openActivity(setRuneCalligraphyModalOpen, 'Kaligrafia Run')}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>ᚠ</span> Akademia Kaligrafii Run
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', fontSize: '0.9rem', color: 'var(--gold-ancient)', fontWeight: 800 }}>ᚠ</span> Akademia Kaligrafii Run
                 </span>
                 <ChevronRight size={13} color="rgba(255,255,255,0.3)" />
               </button>
@@ -669,27 +623,19 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           2b. BLOK: WIELKA INKWIZYCJA & DEKRETY WŁADZ (DEDYKOWANY MODUŁ PRAWNY)
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid rgba(239, 68, 68, 0.45)' }}>
-        <div
-          className="menuBlockHeaderImage"
+        <SidebarPanelBanner
+          graphicId="inquisition"
+          icon={ShieldAlert}
+          rune="ᛏ"
+          accent="inquisition"
           onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
-          style={{
-            backgroundImage: `linear-gradient(rgba(20, 5, 5, 0.65), rgba(8, 12, 18, 0.85)), url("/tmd_herb.webp")`,
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            cursor: 'pointer'
-          }}
           title="Otwórz Obowiązki Władz Twierdzy"
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">ᛏ</div>
-          <ShieldAlert size={36} color="#ef4444" style={{ position: 'relative', zIndex: 2, opacity: 0.9 }} />
-        </div>
+        />
 
         <div
-          className="menuBlockTitle"
+          className="menuBlockTitle menuBlockTitle--accent-crimson"
           onClick={() => { playWandSwoosh(); navigateToDocumentModule('wladze', 'obowiazki-i-kompetencje-wladz-twierdzy'); }}
-          style={{ color: '#fca5a5', cursor: 'pointer' }}
+          style={{ cursor: 'pointer' }}
           title="Otwórz Obowiązki Władz Twierdzy"
         >
           <span className="rune-bracket">ᚦ</span>
@@ -811,18 +757,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           3b. BLOK: GRIMUAR ZAKLĘĆ & MAGIA
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('grimoire')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('grimoire').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('grimoire')?.rune || 'ᚨ'}</div>
-          <BookOpen size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="grimoire" icon={BookOpen} rune="ᚨ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -861,18 +796,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           3c. BLOK: RYNEK KAUPANGR (MARKETHALL & KRAMY)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('markethall')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('markethall').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('markethall')?.rune || 'ᚲ'}</div>
-          <ShoppingBag size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="markethall" icon={ShoppingBag} rune="ᚲ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -900,18 +824,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           3d. BLOK: BANK SKIRNIRÓW (BANK & SKARBIEC)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('bank')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('bank').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('bank')?.rune || 'ᛒ'}</div>
-          <Coins size={36} color="var(--gold-glow)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="bank" icon={Coins} rune="ᛒ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -948,18 +861,7 @@ export const PortalLeftSidebar = ({ onOpenCreationModal }) => {
           4. BLOK: EKSPLORACJA
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('exploration')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('exploration').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('exploration')?.rune || 'ᚱ'}</div>
-          <Compass size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="exploration" icon={Compass} rune="ᚱ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>

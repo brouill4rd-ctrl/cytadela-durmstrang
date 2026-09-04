@@ -20,6 +20,73 @@ import {
   Radio
 } from 'lucide-react';
 
+/* -------------------------------------------------------------------------
+   Header stat tile — icon in a tinted chip, thin accent rail, hover lift.
+   ------------------------------------------------------------------------- */
+const HeaderStat = ({ icon: Icon, label, value, accent = '#c59f4e', valueColor, small = false }) => {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.85rem',
+        padding: '0.95rem 1.1rem',
+        borderRadius: '12px',
+        background: 'linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, rgba(10, 14, 22, 0.55) 100%)',
+        border: `1px solid ${hover ? 'rgba(197, 159, 78, 0.42)' : 'rgba(255, 255, 255, 0.07)'}`,
+        boxShadow: hover
+          ? `0 14px 30px rgba(0, 0, 0, 0.45), inset 0 0 0 1px ${accent}22`
+          : '0 4px 14px rgba(0, 0, 0, 0.25)',
+        transform: hover ? 'translateY(-3px)' : 'translateY(0)',
+        transition: 'transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease',
+        overflow: 'hidden'
+      }}
+    >
+      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: `linear-gradient(180deg, ${accent}, transparent)` }} />
+      <span
+        style={{
+          flexShrink: 0,
+          display: 'grid',
+          placeItems: 'center',
+          width: '40px',
+          height: '40px',
+          borderRadius: '10px',
+          background: `${accent}1a`,
+          border: `1px solid ${accent}44`,
+          color: accent
+        }}
+      >
+        <Icon size={18} />
+      </span>
+      <span style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
+        <span style={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.1em', lineHeight: 1.3, textTransform: 'uppercase', color: '#8b93a1' }}>
+          {label}
+        </span>
+        <span
+          style={{
+            fontSize: small ? '0.95rem' : '1.5rem',
+            fontWeight: small ? 700 : 800,
+            lineHeight: 1.1,
+            fontFamily: small ? 'var(--font-body)' : 'var(--font-heading)',
+            letterSpacing: '0.02em',
+            color: valueColor || '#f3e8d0',
+            fontVariantNumeric: 'tabular-nums',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem'
+          }}
+        >
+          {value}
+        </span>
+      </span>
+    </div>
+  );
+};
+
 export const JournalsListView = () => {
   const {
     lessons,
@@ -104,50 +171,76 @@ export const JournalsListView = () => {
       <div
         style={{
           position: 'relative',
-          borderRadius: '12px',
-          background: 'linear-gradient(180deg, rgba(20, 26, 38, 0.95) 0%, rgba(10, 13, 20, 0.98) 100%)',
-          border: '1px solid var(--gold-ancient)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(197, 159, 78, 0.08)',
-          padding: '2.5rem 2rem',
+          borderRadius: '16px',
+          background:
+            'radial-gradient(130% 150% at 100% 0%, rgba(197, 159, 78, 0.12) 0%, transparent 55%), ' +
+            'linear-gradient(180deg, rgba(22, 28, 40, 0.96) 0%, rgba(9, 12, 18, 0.98) 100%)',
+          border: '1px solid rgba(197, 159, 78, 0.35)',
+          boxShadow:
+            '0 24px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 0 40px rgba(197, 159, 78, 0.05)',
+          padding: '2.75rem 2.5rem',
           marginBottom: '2rem',
           overflow: 'hidden'
         }}
       >
-        {/* Runic Corner Ornaments */}
-        <div style={{ position: 'absolute', top: '10px', left: '15px', color: 'rgba(197, 159, 78, 0.25)', fontSize: '1.4rem', fontFamily: 'serif' }}>ᚠ ᚢ ᚦ</div>
-        <div style={{ position: 'absolute', top: '10px', right: '15px', color: 'rgba(197, 159, 78, 0.25)', fontSize: '1.4rem', fontFamily: 'serif' }}>ᛞ ᛟ ᛏ</div>
+        {/* Top hairline + runic ornaments + faint watermark */}
+        <div aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, rgba(197, 159, 78, 0.7), transparent)' }} />
+        <div aria-hidden style={{ position: 'absolute', top: '14px', left: '20px', color: 'rgba(197, 159, 78, 0.22)', fontSize: '1.3rem', fontFamily: 'serif', letterSpacing: '0.3em' }}>ᚠ ᚢ ᚦ</div>
+        <div aria-hidden style={{ position: 'absolute', top: '14px', right: '20px', color: 'rgba(197, 159, 78, 0.22)', fontSize: '1.3rem', fontFamily: 'serif', letterSpacing: '0.3em' }}>ᛞ ᛟ ᛏ</div>
+        <div aria-hidden style={{ position: 'absolute', right: '-1rem', bottom: '-4.5rem', fontFamily: 'serif', fontSize: '12rem', lineHeight: 1, color: 'rgba(197, 159, 78, 0.045)', pointerEvents: 'none', userSelect: 'none' }}>ᛟ</div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-              <span style={{ background: 'rgba(197, 159, 78, 0.15)', border: '1px solid var(--gold-ancient)', color: 'var(--gold-glow)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                📖 Kancelaria Dydaktyczna Twierdzy Magii (TMD)
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.75rem' }}>
+          <div style={{ flex: '1 1 460px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'linear-gradient(135deg, rgba(197, 159, 78, 0.2) 0%, rgba(197, 159, 78, 0.06) 100%)',
+                  border: '1px solid rgba(197, 159, 78, 0.5)',
+                  color: 'var(--gold-glow)',
+                  padding: '0.32rem 0.75rem',
+                  borderRadius: '999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                <BookOpen size={12} /> Kancelaria Dydaktyczna TMD
               </span>
-              <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>•</span>
-              <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Archiwum Wątków Discord & Pakt 1294</span>
+              <span style={{ color: '#5b6472', fontSize: '0.8rem' }}>•</span>
+              <span style={{ color: '#9ca3af', fontSize: '0.8rem', letterSpacing: '0.02em' }}>Archiwum Wątków Discord &amp; Pakt 1294</span>
             </div>
 
             <h1
               style={{
                 fontFamily: 'var(--font-heading)',
-                fontSize: '2.2rem',
+                fontSize: 'clamp(2rem, 4vw, 2.7rem)',
                 color: '#ffffff',
-                margin: 0,
+                margin: '1rem 0 0',
                 letterSpacing: '0.05em',
-                textShadow: '0 2px 10px rgba(0, 0, 0, 0.8)'
+                lineHeight: 1.1,
+                textShadow: '0 2px 18px rgba(0, 0, 0, 0.85)'
               }}
             >
               DZIENNIKI LEKCYJNE
             </h1>
 
-            <p style={{ color: '#c5cdd9', fontSize: '0.95rem', maxWidth: '680px', marginTop: '0.6rem', lineHeight: 1.6 }}>
+            <div aria-hidden style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', margin: '0.85rem 0 0' }}>
+              <span style={{ width: '3rem', height: '2px', background: 'linear-gradient(90deg, var(--gold-ancient), transparent)' }} />
+              <span style={{ color: 'rgba(197, 159, 78, 0.55)', fontSize: '0.55rem', letterSpacing: '0.2em' }}>◆ ◆ ◆</span>
+            </div>
+
+            <p style={{ color: '#b7c0cd', fontSize: '0.95rem', maxWidth: '680px', marginTop: '0.9rem', marginBottom: 0, lineHeight: 1.65 }}>
               Oficjalny rejestr zajęć dydaktycznych prowadzonych w salach Twierdzy Magii (TMD) i na Discordzie. Każdy dziennik zawiera zweryfikowany wykaz obecności, przydzielone punkty do Pucharu Zakonów oraz wierne cyfrowe archiwum wątku z mediami i replikami zaklęć.
             </p>
           </div>
 
           {/* Quick Actions Cluster (Tylko dla Profesorów i Dyrekcji) */}
           {canManageLessons && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', minWidth: '220px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', flex: '0 0 auto', minWidth: '240px' }}>
               <button
                 onClick={() => setDiscordSimulatorOpen(true)}
                 className="btn-durmstrang"
@@ -191,41 +284,44 @@ export const JournalsListView = () => {
         {/* Global Statistics Ribbon */}
         <div
           style={{
+            position: 'relative',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
             gap: '1rem',
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
+            marginTop: '2.25rem',
+            paddingTop: '1.75rem',
             borderTop: '1px solid rgba(197, 159, 78, 0.2)'
           }}
         >
-          <div style={{ background: 'rgba(10, 14, 22, 0.7)', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Zarchiwizowane Lekcje</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>
-              {publishedCount}
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(10, 14, 22, 0.7)', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Punkty Zasiliły Zakony</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#3aaa9f', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>
-              +{totalPointsDistributed} pkt
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(10, 14, 22, 0.7)', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Wpisy Uczestników</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f3e8ff', fontFamily: 'var(--font-heading)', marginTop: '0.2rem' }}>
-              {totalParticipantsRecorded}
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(10, 14, 22, 0.7)', padding: '0.8rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status Synchronizacji</div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.4rem' }}>
-              <CheckCircle2 size={15} /> SQLite & Bot Aktywny
-            </div>
-          </div>
+          <HeaderStat
+            icon={BookOpen}
+            label="Zarchiwizowane Lekcje"
+            value={publishedCount}
+            accent="#c59f4e"
+            valueColor="var(--gold-glow)"
+          />
+          <HeaderStat
+            icon={Sparkles}
+            label="Punkty Zasiliły Zakony"
+            accent="#3aaa9f"
+            valueColor="#5fd0c4"
+            value={<>+{totalPointsDistributed}<span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#8b93a1' }}>pkt</span></>}
+          />
+          <HeaderStat
+            icon={Users}
+            label="Wpisy Uczestników"
+            value={totalParticipantsRecorded}
+            accent="#a78bfa"
+            valueColor="#e9d5ff"
+          />
+          <HeaderStat
+            icon={CheckCircle2}
+            label="Status Synchronizacji"
+            accent="#10b981"
+            valueColor="#34d399"
+            small
+            value={<>SQLite &amp; Bot Aktywny</>}
+          />
         </div>
       </div>
 

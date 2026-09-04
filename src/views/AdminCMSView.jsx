@@ -8,6 +8,7 @@ import { CategoryBanner } from '../components/CategoryBanner';
 import { DatabaseExplorerPanel } from '../components/DatabaseExplorerPanel';
 import { MemoryArchiveWizardTab } from './memory/MemoryArchiveWizardTab';
 import { AdminWorldDirector } from '../components/AdminWorldDirector';
+import { SidebarPanelBanner } from '../components/SidebarPanelBanner';
 import { PrologueAdminPanel } from '../components/PrologueAdminPanel';
 import { HOUSE_RUNIC_DATA, HOUSE_CREST_IMAGES } from '../components/HeraldicEmblems';
 import { cleanPersonName } from '../context/schoolUtils';
@@ -3177,18 +3178,7 @@ export const AdminCMSView = () => {
                         Podgląd Karty Bloku w Pasku Bocznym:
                       </div>
                       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)', margin: 0 }}>
-                        <div
-                          className="menuBlockHeaderImage"
-                          style={currentBlock.bgImage ? {
-                            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${currentBlock.bgImage}")`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                          } : undefined}
-                        >
-                          <div className="frost-overlay" />
-                          <div className="runic-watermark">{currentBlock.rune || 'ᛟ'}</div>
-                          <Shield size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-                        </div>
+                        <SidebarPanelBanner graphicId={currentBlock.id} icon={Shield} rune={currentBlock.rune} />
                         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
                           <span className="rune-bracket">ᛞ</span>
                           <span>{currentBlock.title}</span>

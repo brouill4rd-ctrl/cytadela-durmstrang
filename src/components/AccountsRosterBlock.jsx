@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { AccountsRosterModal } from './AccountsRosterModal';
+import { SidebarPanelBanner } from './SidebarPanelBanner';
 import {
   Users,
   BookOpen
@@ -47,16 +48,11 @@ const HOUSE_CONFIG = {
 };
 
 export const AccountsRosterBlock = () => {
-  const {
-    users,
-    blockGraphics
-  } = useSchool();
+  const { users } = useSchool();
 
   const { playWandSwoosh } = useSound();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
   const userList = useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -96,24 +92,11 @@ export const AccountsRosterBlock = () => {
     setIsModalOpen(true);
   };
 
-  const bgGraphic = getBlockGraphic('roster') || getBlockGraphic('identity');
-
   return (
     <>
       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
         {/* Header Image */}
-        <div
-          className="menuBlockHeaderImage"
-          style={bgGraphic?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${bgGraphic.bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{bgGraphic?.rune || 'ᛗ'}</div>
-          <Users size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.9 }} />
-        </div>
+        <SidebarPanelBanner graphicId="roster" icon={Users} rune="ᛗ" fallbackImage="/bloki/blok_spis-kont.webp" />
 
         {/* Title */}
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>

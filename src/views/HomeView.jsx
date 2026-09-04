@@ -88,66 +88,7 @@ export const HomeView = () => {
 
   return (
     <div id="contentSmall">
-      {/* Quick Guide & Rules Callout Banner */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, rgba(20, 26, 38, 0.9), rgba(10, 14, 22, 0.95))',
-          border: '1px solid rgba(197, 159, 78, 0.35)',
-          borderRadius: '8px',
-          padding: '1.1rem 1.4rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.5)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background: 'rgba(197, 159, 78, 0.15)',
-              border: '1px solid var(--gold-ancient)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--gold-ancient)',
-              fontSize: '1.2rem'
-            }}
-          >
-            ⚖️
-          </div>
-          <div>
-            <div style={{ color: '#ffffff', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.95rem' }}>
-              Kodeks, Regulamin & Zasady Cytadeli Durmstrang
-            </div>
-            <div style={{ color: '#9ca3af', fontSize: '0.82rem' }}>
-              Poznaj Pakt z 1294 roku, taryfikator punktów Pucharu Północy, system oceniania lekcji oraz FAQ.
-            </div>
-          </div>
-        </div>
 
-        <button
-          onClick={() => {
-            playWandSwoosh();
-            setActiveView('rules-guide');
-          }}
-          className="btn-durmstrang"
-          style={{
-            padding: '0.45rem 1rem',
-            fontSize: '0.8rem',
-            background: 'rgba(197, 159, 78, 0.2)',
-            borderColor: 'var(--gold-ancient)',
-            color: '#ffffff'
-          }}
-        >
-          <Scroll size={14} color="var(--gold-ancient)" /> Otwórz Księgę Zasad <ChevronRight size={14} />
-        </button>
-      </div>
 
       {/* Category Pills & Quick Filter Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '0.5rem' }}>

@@ -63,6 +63,14 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
+
+  /* Blackened-iron blood red (navbar bell, mail badges) */
+  --ruby-blood: #9b1c1c;
+
+  /* Sticky navbar height — shared by the Hero so the citadel can sit behind it */
+  --nav-h: 84px;
+  /* Panoramic hero band (kept short so nav + hero + board fit one screen) */
+  --hero-h: clamp(360px, 40vw, 440px);
 }
 
 /* ========================================================================== */
@@ -820,7 +828,10 @@ html, body {
   letter-spacing: 0.012em;
   line-height: 1.62;
   min-height: 100vh;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) tames horizontal overflow WITHOUT turning <body>
+     into a scroll container — which is what lets the navbar's position:sticky
+     actually pin to the viewport on scroll. */
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   cursor: var(--cursor-wand-default);
@@ -1089,10 +1100,9 @@ a:hover {
   position: relative;
   width: 100%;
   min-height: 520px;
-  background-image: linear-gradient(180deg, rgba(6, 8, 12, 0.2) 0%, rgba(8, 11, 16, 0.45) 45%, rgba(8, 11, 16, 0.88) 80%, #080b10 100%), url("/durmstang_hero.webp");
+  background-image: linear-gradient(180deg, rgba(6, 8, 12, 0.2) 0%, rgba(8, 11, 16, 0.45) 45%, rgba(8, 11, 16, 0.88) 80%, #080b10 100%), url("/hero_nowe.webp");
   background-size: cover;
   background-position: center 25%;
-  border-bottom: 2px solid rgba(142, 202, 230, 0.3);
   padding: 3.5rem 2rem 2.2rem 2rem;
   display: flex;
   flex-direction: column;
@@ -1107,10 +1117,10 @@ a:hover {
   top: -40px;
   left: 0;
   right: 0;
-  height: 200px;
-  background: radial-gradient(ellipse at 30% 0%, rgba(46, 196, 182, 0.18) 0%, transparent 60%),
-              radial-gradient(ellipse at 70% 0%, rgba(167, 125, 224, 0.16) 0%, transparent 65%);
-  filter: blur(40px);
+  height: 220px;
+  background: radial-gradient(ellipse at 42% 0%, rgba(120, 150, 180, 0.12) 0%, transparent 62%),
+              radial-gradient(ellipse at 62% 4%, rgba(150, 170, 190, 0.10) 0%, transparent 68%);
+  filter: blur(44px);
   pointer-events: none;
 }
 
@@ -1421,11 +1431,11 @@ a:hover {
    ========================================================================== */
 
 .portal-ticker-bar {
-  background: rgba(8, 12, 18, 0.98);
+  background: linear-gradient(180deg, #060a0e 0%, #080c12 100%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(142, 202, 230, 0.18);
-  border-bottom: 1px solid rgba(197, 159, 78, 0.25);
+  border-top: 1px solid rgba(197, 159, 78, 0.14);
+  border-bottom: 1px solid rgba(197, 159, 78, 0.22);
   padding: 0 1.25rem;
   display: flex;
   align-items: center;
@@ -1499,6 +1509,14 @@ a:hover {
   100% { transform: translateX(-100%); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .ticker-content {
+    animation-play-state: paused;
+    transform: translateX(0);
+    padding-left: 0;
+  }
+}
+
 .portal-main-grid {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr) 290px;
@@ -1523,6 +1541,88 @@ a:hover {
   border-color: rgba(142, 202, 230, 0.5);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.95), 0 0 20px rgba(142, 202, 230, 0.18);
 }
+
+/* =========================================================================
+   TMD SIDEBAR VISUAL COLLECTION — jeden color grading dla WSZYSTKICH bannerów
+   bloków (lewy + prawy pasek + podgląd CMS). Rendered przez <SidebarPanelBanner>.
+   Cel: różna treść scen, ale ten sam art direction / ekspozycja / temperatura /
+   overlay / kadrowanie / ikony. Wartości filter/blend/alpha są dostrajalne.
+   ========================================================================= */
+.sidebarPanelBanner {
+  position: relative;
+  width: 100%;
+  height: 92px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #0b1820 0%, #071015 100%);
+  border-bottom: 1px solid rgba(197, 159, 78, 0.22); /* cienka steel/gold linia do nagłówka */
+}
+.sidebarPanelBanner.is-clickable { cursor: pointer; }
+
+.sidebarPanelBanner__img {
+  position: absolute;
+  inset: 0;
+  /* warstwa 1: chłodny steel hue-lock; warstwa 2: właściwe zdjęcie bloku */
+  background-image: linear-gradient(rgba(37, 55, 60, 0.55), rgba(37, 55, 60, 0.55)), var(--sb-src);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-blend-mode: saturation; /* ściąga chromę do niskiego, zimnego nasycenia */
+  filter: saturate(0.55) brightness(0.6) contrast(1.12);
+}
+
+/* depth + chłodny wash — identyczny na każdym bannerze */
+.sidebarPanelBanner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(19, 37, 45, 0.28), rgba(7, 16, 21, 0.52));
+  mix-blend-mode: multiply;
+}
+/* overlay z briefu — przejście obraz -> nagłówek panelu */
+.sidebarPanelBanner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(3, 8, 11, 0.12) 0%,
+    rgba(5, 12, 16, 0.30) 45%,
+    rgba(4, 9, 13, 0.82) 100%);
+}
+
+.sidebarPanelBanner__rune {
+  position: absolute;
+  z-index: 1;
+  font-family: serif;
+  font-size: 3.4rem;
+  color: rgba(142, 202, 230, 0.07);
+  user-select: none;
+  pointer-events: none;
+}
+.sidebarPanelBanner__icon {
+  position: relative;
+  z-index: 2;
+  color: var(--gold-ancient); /* domyślnie muted aged gold, jednakowo wszędzie */
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
+}
+
+/* Sekcje specjalne — obraz zostaje chłodny, zmienia się tylko ikona + mikro-winieta */
+.sidebarPanelBanner--inquisition .sidebarPanelBanner__icon,
+.sidebarPanelBanner--duel .sidebarPanelBanner__icon { color: #b45b5b; }
+.sidebarPanelBanner--inquisition::after,
+.sidebarPanelBanner--duel::after {
+  background:
+    linear-gradient(180deg, rgba(3, 8, 11, 0.12) 0%, rgba(5, 12, 16, 0.30) 45%, rgba(4, 9, 13, 0.82) 100%),
+    radial-gradient(circle at 50% 38%, rgba(120, 32, 32, 0.12), transparent 70%);
+}
+
+/* Przygaszony czerwony akcent tytułu dla sekcji specjalnych (Inkwizycja, Liga) */
+.menuBlockTitle.menuBlockTitle--accent-crimson span:not(.rune-bracket) { color: #d8a5a5; }
 
 .menuBlockHeaderImage {
   position: relative;
@@ -6418,9 +6518,11 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 /* Utility: hide on mobile */
 .hidden-mobile { display: inline !important; }
 
-/* --- Ensure no horizontal overflow globally --- */
+/* --- Ensure no horizontal overflow globally ---
+   `clip` instead of `hidden` so <body> stays a non-scroll-container and the
+   sticky navbar can pin to the viewport. */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
 }
 
@@ -6451,7 +6553,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1rem, 5.8vw, 4.2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 4.2rem);
   }
 
   .hero-motto {
@@ -6725,14 +6827,15 @@ table {
   z-index: 5;
   width: min(100%, 1380px);
   min-height: 80px;
-  margin-top: 10px;
+  margin-top: 0;
   overflow: hidden;
-  border: 1px solid rgba(151, 158, 159, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(197, 159, 78, 0.22);
   border-radius: 2px;
   background:
-    radial-gradient(ellipse at 50% -55%, rgba(255, 255, 255, 0.055), transparent 52%),
+    radial-gradient(ellipse at 50% -55%, rgba(255, 255, 255, 0.04), transparent 52%),
     repeating-linear-gradient(98deg, transparent 0 82px, rgba(255, 255, 255, 0.01) 83px 84px),
-    linear-gradient(180deg, rgba(22, 26, 29, 0.97), rgba(6, 9, 12, 0.99));
+    linear-gradient(180deg, rgba(11, 15, 19, 0.98), rgba(5, 8, 11, 0.99));
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.92),
     inset 0 0 58px rgba(0, 0, 0, 0.5),
@@ -9397,18 +9500,22 @@ table {
   }
 }
 
-/* Hero-to-board integration: one continuous architectural composition. */
+/* Hero-to-board integration: one continuous architectural composition.
+   NOTE: the authoritative hero styling now lives in components/MonumentalHero.css
+   (loaded after this file). This block is kept only so the correct art + seam
+   render before that stylesheet resolves. */
 .monumental-hero-section {
   background-image:
     linear-gradient(
       to bottom,
-      rgba(3, 7, 10, 0.14) 0%,
-      rgba(3, 7, 10, 0.08) 54%,
-      rgba(3, 7, 10, 0.68) 86%,
+      rgba(4, 8, 11, 0.42) 0%,
+      rgba(4, 8, 11, 0.10) 30%,
+      rgba(4, 8, 11, 0.12) 60%,
+      rgba(5, 9, 12, 0.72) 84%,
       #05090c 100%
     ),
-    url("/durmstang_hero.webp");
-  background-position: center 25%;
+    url("/hero_nowe.webp");
+  background-position: center 38%;
   box-shadow: inset 0 -28px 48px rgba(0, 0, 0, 0.54);
 }
 
@@ -10109,7 +10216,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1rem, 5.8vw, 3.2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 3.2rem);
     letter-spacing: 0.06em;
   }
 
@@ -10591,7 +10698,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1rem, 5.8vw, 2.4rem) !important;
+    font-size: clamp(1rem, 5.8vw, 2.4rem);
     letter-spacing: 0.04em;
   }
 
@@ -10810,7 +10917,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: clamp(1rem, 5.8vw, 2rem) !important;
+    font-size: clamp(1rem, 5.8vw, 2rem);
   }
 
   .hero-motto {
@@ -10871,7 +10978,7 @@ table {
   }
 
   .hero-main-title {
-    font-size: 1rem !important;
+    font-size: 1.05rem;
   }
 
   .btn-durmstrang,

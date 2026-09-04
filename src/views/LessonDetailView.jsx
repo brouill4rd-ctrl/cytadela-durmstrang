@@ -507,9 +507,9 @@ export const LessonDetailView = () => {
           <button
             onClick={() => setActiveView('journals')}
             className="btn-durmstrang"
-            style={{ padding: '0.6rem 1.4rem' }}
+            style={{ padding: '0.6rem 1.4rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            ← Wróć do Listy Dzienników
+            <ArrowLeft size={15} /> Wróć do Listy Dzienników
           </button>
         </div>
       </div>
@@ -571,7 +571,7 @@ export const LessonDetailView = () => {
           <ArrowLeft size={16} /> Powrót do Katalogu Dzienników
         </button>
 
-        {/* View Switcher: 📜 DZIENNIK vs 💬 PEŁNY ZAPIS LEKCJI */}
+        {/* View Switcher: DZIENNIK vs PEŁNY ZAPIS LEKCJI */}
         <div
           style={{
             display: 'flex',
@@ -603,7 +603,7 @@ export const LessonDetailView = () => {
               transition: 'all 0.2s ease'
             }}
           >
-            <BookOpen size={15} /> 📜 Dziennik Lekcji
+            <BookOpen size={15} /> Dziennik Lekcji
           </button>
 
           <button
@@ -627,7 +627,7 @@ export const LessonDetailView = () => {
               transition: 'all 0.2s ease'
             }}
           >
-            <MessageSquare size={15} /> 💬 Pełny Zapis Wątku ({messages.length})
+            <MessageSquare size={15} /> Pełny Zapis Wątku ({messages.length})
           </button>
         </div>
 
@@ -638,13 +638,13 @@ export const LessonDetailView = () => {
             className="btn-durmstrang"
             style={{ padding: '0.45rem 1rem', fontSize: '0.82rem', gap: '0.35rem' }}
           >
-            ✏️ Edytuj w Panelu Profesora
+            <Pencil size={13} /> Edytuj w Panelu Profesora
           </button>
         )}
       </div>
 
       {/* =========================================================================
-          TAB 1: 📜 DZIENNIK LEKCJI (OFFICIAL GOTHIC PARCHMENT VIEW)
+          TAB 1: DZIENNIK LEKCJI (OFFICIAL GOTHIC PARCHMENT VIEW)
           ========================================================================= */}
       {activeLessonTab === 'journal' && (
         <div className="animate-fade-in">
@@ -749,7 +749,7 @@ export const LessonDetailView = () => {
               </h1>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.2rem', color: 'var(--gold-glow)', fontSize: '0.9rem', fontFamily: 'var(--font-heading)' }}>
-                <span>⚗️ {lesson.subjectName}</span>
+                <span>{lesson.subjectName}</span>
                 <span>•</span>
                 <span>{lesson.classYear}</span>
                 <span>•</span>
@@ -918,8 +918,9 @@ export const LessonDetailView = () => {
 
             {/* House Points Summary Cards */}
             <div style={{ marginBottom: '2.5rem' }}>
-              <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
-                🏆 Zasilenie Punktacji Zakonów (Puchar Twierdzy):
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
+                <Award size={16} strokeWidth={1.8} />
+                Zasilenie Punktacji Zakonów (Puchar Twierdzy):
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
@@ -1019,8 +1020,9 @@ export const LessonDetailView = () => {
             {/* Participants Table */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <h4 style={{ color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
-                  👥 Wykaz Obecności i Punktacja Adeptów ({rosterEditMode ? rosterParticipants.length : participants.length}):
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gold-glow)', fontFamily: 'var(--font-heading)', fontSize: '0.95rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                  <Users size={16} strokeWidth={1.8} />
+                  Wykaz Obecności i Punktacja Adeptów ({rosterEditMode ? rosterParticipants.length : participants.length}):
                 </h4>
                 {canManage && !rosterEditMode && (
                   <button
@@ -1098,26 +1100,29 @@ export const LessonDetailView = () => {
 
               {/* READ-ONLY TABLE */}
               {!rosterEditMode && (
-              <div style={{ overflowX: 'auto', background: 'rgba(8, 11, 16, 0.7)', borderRadius: '8px', border: '1px solid rgba(197, 159, 78, 0.2)' }}>
+              <div style={{ background: 'rgba(8, 11, 16, 0.7)', borderRadius: '8px', border: '1px solid rgba(197, 159, 78, 0.2)', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
                 <table
                   style={{
                     width: '100%',
+                    minWidth: '620px',
+                    tableLayout: 'fixed',
                     borderCollapse: 'collapse',
                     textAlign: 'left'
                   }}
                 >
                   <thead>
                     <tr style={{ background: 'rgba(197, 159, 78, 0.12)', borderBottom: '1px solid rgba(197, 159, 78, 0.3)' }}>
-                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Adept</th>
-                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Zakon</th>
-                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>Obecność</th>
-                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Punkty</th>
-                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Komentarz Prowadzącego</th>
+                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '22%' }}>Adept</th>
+                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '15%' }}>Zakon</th>
+                      <th style={{ padding: '0.75rem 0.6rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', width: '14%' }}>Obecność</th>
+                      <th style={{ padding: '0.75rem 0.6rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', width: '12%' }}>Punkty</th>
+                      <th style={{ padding: '0.75rem 1rem', color: 'var(--gold-ancient)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', width: '37%' }}>Komentarz Prowadzącego</th>
                     </tr>
                   </thead>
                   <tbody>
                     {participants.map((p, idx) => {
-                      const h = houses[p.house] || { name: p.house, crestIcon: '🛡️', colors: { secondary: '#c59f4e' } };
+                      const h = houses[p.house] || { name: p.house, crestIcon: 'ᛟ', colors: { secondary: '#c59f4e' } };
                       return (
                         <tr
                           key={p.id || idx}
@@ -1136,25 +1141,26 @@ export const LessonDetailView = () => {
                           </td>
                           <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                             {p.isPresent ? (
-                              <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.9rem' }}>✓</span>
+                              <Check size={18} strokeWidth={3} style={{ color: '#10b981', verticalAlign: 'middle' }} />
                             ) : p.excuseStatus === 'approved' ? (
-                              <span title="Usprawiedliwiona nieobecność" style={{ color: '#3b82f6', fontWeight: 800, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
-                                <span>✗</span>
-                                <span style={{ fontSize: '0.65rem', color: '#60a5fa', letterSpacing: '0.03em', fontWeight: 700 }}>USPRAW.</span>
+                              <span title="Usprawiedliwiona nieobecność" style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                                <X size={16} strokeWidth={3} style={{ color: '#3b82f6' }} />
+                                <span style={{ fontSize: '0.65rem', letterSpacing: '0.03em' }}>USPRAW.</span>
                               </span>
                             ) : p.excuseStatus === 'pending' ? (
-                              <span title="Usprawiedliwienie oczekuje" style={{ color: '#c59f4e', fontWeight: 800, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
-                                <span>✗</span>
-                                <span style={{ fontSize: '0.65rem', color: '#c59f4e', letterSpacing: '0.03em', fontWeight: 700 }}>◷ OCZEKUJE</span>
+                              <span title="Usprawiedliwienie oczekuje" style={{ color: '#c59f4e', fontWeight: 700, fontSize: '0.82rem', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                                <X size={16} strokeWidth={3} style={{ color: '#c59f4e' }} />
+                                <span style={{ fontSize: '0.65rem', letterSpacing: '0.03em' }}>OCZEKUJE</span>
                               </span>
                             ) : (
-                              <span style={{ color: '#ef4444', fontWeight: 800, fontSize: '0.9rem' }}>✗</span>
+                              <X size={18} strokeWidth={3} style={{ color: '#ef4444', verticalAlign: 'middle' }} />
                             )}
                           </td>
-                          <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                          <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                             <span
                               style={{
                                 display: 'inline-block',
+                                minWidth: '2.6rem',
                                 padding: '0.2rem 0.6rem',
                                 borderRadius: '4px',
                                 background: p.pointsAwarded > 0 ? 'rgba(46, 196, 182, 0.15)' : 'rgba(255,255,255,0.04)',
@@ -1175,6 +1181,7 @@ export const LessonDetailView = () => {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
               )}
 
@@ -1205,7 +1212,9 @@ export const LessonDetailView = () => {
                                 onChange={(e) => updateRosterParticipant(p.id, 'isPresent', e.target.checked)}
                                 style={{ accentColor: p.isPresent ? '#10b981' : '#ef4444' }}
                               />
-                              {p.isPresent ? '✓' : '✗'}
+                              {p.isPresent
+                                ? <Check size={15} strokeWidth={3} />
+                                : <X size={15} strokeWidth={3} />}
                             </label>
                           </td>
                           <td style={{ padding: '0.5rem 0.8rem' }}>
@@ -1296,7 +1305,7 @@ export const LessonDetailView = () => {
       )}
 
       {/* =========================================================================
-          TAB 2: 💬 PEŁNY ZAPIS LEKCJI (ATMOSPHERIC DISCORD THREAD ARCHIVE)
+          TAB 2: PEŁNY ZAPIS LEKCJI (ATMOSPHERIC DISCORD THREAD ARCHIVE)
           ========================================================================= */}
       {activeLessonTab === 'log' && (
         <div className="animate-fade-in">
@@ -1501,7 +1510,7 @@ export const LessonDetailView = () => {
                                   letterSpacing: '0.05em'
                                 }}
                               >
-                                🤖 BOT
+                                BOT
                               </span>
                             )}
 
@@ -1517,7 +1526,7 @@ export const LessonDetailView = () => {
                                   borderRadius: '3px'
                                 }}
                               >
-                                ⚙ SYSTEM
+                                SYSTEM
                               </span>
                             )}
                           </div>
@@ -1557,7 +1566,7 @@ export const LessonDetailView = () => {
                       >
                         <Zap size={14} color="#818cf8" />
                         <span>
-                          🤖 <strong>{msg.commandData.author || msg.authorDisplayName}</strong> użył slash command:
+                          <strong>{msg.commandData.author || msg.authorDisplayName}</strong> użył slash command:
                           <code style={{ background: '#1e1e2e', padding: '0.15rem 0.4rem', borderRadius: '4px', color: '#38bdf8', marginLeft: '0.3rem' }}>
                             {msg.commandData.name}
                           </code>

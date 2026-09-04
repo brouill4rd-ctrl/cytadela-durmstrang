@@ -30,6 +30,26 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     description: 'Nagłówek panelu podań i rekrutacji do Cytadeli'
   },
   {
+    id: 'inquisition',
+    title: 'Inkwizycja & Dekrety Władz',
+    location: 'Lewy Panel',
+    rune: 'ᛏ',
+    defaultIcon: 'ShieldAlert',
+    color: 'var(--gold-ancient)',
+    bgImage: '/bloki/blok-inkwizycja_dekrety.webp',
+    description: 'Nagłówek modułu prawnego: dekrety, wizytacje, statut'
+  },
+  {
+    id: 'enrollments',
+    title: 'Kancelaria Zapisów',
+    location: 'Prawy Panel',
+    rune: 'ᛜ',
+    defaultIcon: 'ClipboardList',
+    color: 'var(--gold-ancient)',
+    bgImage: '/bloki/blok_spis-kont.webp',
+    description: 'Nagłówek panelu statusu zapisów, statystyk uczniów i profesorów'
+  },
+  {
     id: 'curriculum',
     title: 'Dziś w Cytadeli / Plan Lekcji',
     location: 'Lewy Panel',
@@ -56,7 +76,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛋ',
     defaultIcon: 'Sparkles',
     color: 'var(--gold-ancient)',
-    bgImage: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&auto=format&fit=crop&q=80',
+    bgImage: '/bloki/blok-eksploracja.webp',
     description: 'Nagłówek panelu dźwięków ASMR, zorzy i lumos'
   },
   {
@@ -156,7 +176,7 @@ export const DEFAULT_BLOCK_GRAPHICS = [
     rune: 'ᛒ',
     defaultIcon: 'Coins',
     color: '#10b981',
-    bgImage: 'https://i.pinimg.com/736x/29/1e/d3/291ed3e725ef4458318057131b013755.jpg',
+    bgImage: '/bloki/blok-twierdza_magii.webp',
     description: 'Nagłówek banku, wymiany walut i depozytów'
   },
   {

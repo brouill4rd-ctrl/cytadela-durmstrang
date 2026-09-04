@@ -4,6 +4,7 @@ import { useSchool } from '../context/SchoolContext';
 import { useSound } from '../context/SoundContext';
 import { RunicDuelModal } from './RunicDuelModal';
 import { AccountsRosterBlock } from './AccountsRosterBlock';
+import { SidebarPanelBanner } from './SidebarPanelBanner';
 import {
   Calendar,
   Compass,
@@ -46,7 +47,6 @@ export const PortalRightSidebar = ({
     students,
     staffRanking,
     events,
-    blockGraphics,
     setActiveHouseTab,
     currentUser,
     studentProfile,
@@ -66,8 +66,6 @@ export const PortalRightSidebar = ({
       }
     }).catch(() => {});
   }, []);
-
-  const getBlockGraphic = (id) => (blockGraphics || []).find(b => b.id === id);
 
   const {
     soundEnabled,
@@ -92,18 +90,7 @@ export const PortalRightSidebar = ({
           0. BLOK: AURA & PEJZAŻ DŹWIĘKOWY CYTADELI (ATMOSPHERE & AUDIO CONTROL)
           ========================================================================= */}
       <div className="menuBlock" style={{ border: '1px solid var(--gold-ancient)' }}>
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('atmosphere')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('atmosphere').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('atmosphere')?.rune || 'ᛋ'}</div>
-          <Sparkles size={36} color="var(--gold-ancient)" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="atmosphere" icon={Sparkles} rune="ᛋ" />
 
         <div className="menuBlockTitle" style={{ color: 'var(--gold-glow)' }}>
           <span className="rune-bracket">ᛞ</span>
@@ -217,18 +204,7 @@ export const PortalRightSidebar = ({
           1. BLOK: WYDARZENIA
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('events')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('events').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('events')?.rune || 'ᛃ'}</div>
-          <Calendar size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="events" icon={Calendar} rune="ᛃ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚦ</span>
@@ -271,18 +247,7 @@ export const PortalRightSidebar = ({
           1.5. BLOK: KANCELARIA ZAPISÓW
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('enrollments')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('enrollments').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('enrollments')?.rune || 'ᛜ'}</div>
-          <ClipboardList size={36} color="rgba(197,159,78,0.6)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="enrollments" icon={ClipboardList} rune="ᛜ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᛞ</span>
@@ -352,18 +317,7 @@ export const PortalRightSidebar = ({
           2. BLOK: SALE & KOMNATY
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('locations')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('locations').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('locations')?.rune || 'ᛏ'}</div>
-          <Compass size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="locations" icon={Compass} rune="ᛏ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚲ</span>
@@ -450,18 +404,7 @@ export const PortalRightSidebar = ({
           3. BLOK: WŁADZE CYTADELI
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('authorities')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('authorities').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('authorities')?.rune || 'ᛖ'}</div>
-          <Crown size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="authorities" icon={Crown} rune="ᛖ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᛉ</span>
@@ -503,18 +446,7 @@ export const PortalRightSidebar = ({
           4. BLOK: TABLICA SŁAWY & RANKING (ADEPTOWIE ORAZ NAUCZYCIELE & DYREKCJA)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('ranking')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('ranking').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('ranking')?.rune || 'ᚠ'}</div>
-          <Trophy size={36} color="rgba(164, 200, 225, 0.5)" style={{ position: 'relative', zIndex: 2 }} />
-        </div>
+        <SidebarPanelBanner graphicId="ranking" icon={Trophy} rune="ᚠ" />
 
         <div className="menuBlockTitle">
           <span className="rune-bracket">ᚠ</span>
@@ -740,20 +672,9 @@ export const PortalRightSidebar = ({
           5. BLOK: LIGA BOJOWA & HÓLMGANGA (DUELS)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('duels')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('duels').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('duels')?.rune || 'ᛏ'}</div>
-          <Swords size={36} color="#ff5c5c" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="duels" icon={Swords} rune="ᛏ" accent="duel" />
 
-        <div className="menuBlockTitle" style={{ color: '#ff7b72' }}>
+        <div className="menuBlockTitle menuBlockTitle--accent-crimson">
           <span className="rune-bracket">ᚦ</span>
           <span>Liga Bojowa Hólmganga</span>
           <span className="rune-bracket">ᚦ</span>
@@ -797,18 +718,7 @@ export const PortalRightSidebar = ({
           8. BLOK: KRONIKI & BESTIARIUSZ (LORE & ARCHIVE)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('lore')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('lore').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('lore')?.rune || 'ᚦ'}</div>
-          <Scroll size={36} color="#a4c8e1" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="lore" icon={Scroll} rune="ᚦ" />
 
         <div className="menuBlockTitle" style={{ color: '#a4c8e1' }}>
           <span className="rune-bracket">ᚦ</span>
@@ -836,18 +746,7 @@ export const PortalRightSidebar = ({
           9. BLOK: POCZTA KRUKÓW (RAVEN POST)
           ========================================================================= */}
       <div className="menuBlock">
-        <div
-          className="menuBlockHeaderImage"
-          style={getBlockGraphic('raven')?.bgImage ? {
-            backgroundImage: `linear-gradient(rgba(4, 7, 12, 0.4), rgba(4, 7, 12, 0.7)), url("${getBlockGraphic('raven').bgImage}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
-        >
-          <div className="frost-overlay" />
-          <div className="runic-watermark">{getBlockGraphic('raven')?.rune || 'ᚱ'}</div>
-          <Mail size={36} color="#b18cfe" style={{ position: 'relative', zIndex: 2, opacity: 0.85 }} />
-        </div>
+        <SidebarPanelBanner graphicId="raven" icon={Mail} rune="ᚱ" />
 
         <div className="menuBlockTitle" style={{ color: '#d8b4fe' }}>
           <span className="rune-bracket">ᚦ</span>
